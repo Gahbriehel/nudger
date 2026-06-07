@@ -1,0 +1,283 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { useAuthStore } from "@/store/authStore";
+import { useTaskStore } from "@/store/taskStore";
+import { authService } from "@/services/auth.service";
+import { DashboardHeader } from "./DashboardHeader";
+import { QuickStats } from "./QuickStats";
+import { TaskList } from "./TaskList";
+import { NudgelistView } from "./NudgelistView";
+import { TaskForm } from "./TaskForm";
+import { format } from "@/lib/date-fns";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { Task } from "@/types/database.types";
+
+export function DashboardMain() {
+  const { setSession, setLoading, loading: authLoading, user } = useAuthStore();
+  const { fetchTasks, tasks } = useTaskStore();
+  
+  const [activeTab, setActiveTab] = useState<"dashboard" | "tasks" | "nudgelist">("dashboard");
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [currentTime, setCurrentTime] = useState<Date | null>(null);
+
+  // Sync session on mount
+  useEffect(() => {
+    authService.getSession()
+      .then((session) => {
+        setSession(session);
+        setLoading(false);
+        if (session) {
+          fetchTasks();
+        }
+      })
+      .catch((err) => {
+        console.error("Auth initialization failed:", err);
+        setLoading(false);
+      });
+
+    setCurrentTime(new Date());
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 rounded-full border-2 border-border border-t-foreground animate-spin" />
+          <p className="text-xs text-muted-foreground font-semibold tracking-wider uppercase">Loading session...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Get top 3 urgent tasks for summary
+  const nowTime = new Date().getTime();
+  const urgentTasks = tasks
+    .filter((t: Task) => t.status !== "completed")
+    .filter((t: Task) => {
+      const isOverdue = t.due_date && new Date(t.due_date).getTime() < nowTime;
+      const lastUpdatedTime = new Date(t.updated_at || t.created_at).getTime();
+      const daysSinceInteraction = (nowTime - lastUpdatedTime) / (24 * 60 * 60 * 1000);
+      return isOverdue || daysSinceInteraction >= 3;
+    })
+    .slice(0, 3);
+
+  // Get 3 recently updated tasks
+  const recentTasks = [...tasks]
+    .sort((a: Task, b: Task) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+    .slice(0, 3);
+
+  return (
+    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans pb-12">
+      <DashboardHeader activeTab={activeTab} setActiveTab={setActiveTab} />
+
+      <main className="max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 flex-1 mt-8 space-y-8">
+        
+        {activeTab === "dashboard" && (
+          <div className="space-y-8">
+            {/* Welcoming and Digital Clock banner */}
+            <div className="border border-border bg-card backdrop-blur-md p-6 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-lg">
+              <div className="space-y-1">
+                <h1 className="text-2xl font-bold tracking-tight text-foreground">
+                  Hello, {user?.email?.split("@")[0] || "User"}
+                </h1>
+                <p className="text-xs text-muted-foreground leading-normal max-w-md">
+                  Keep your mind clear. Offload temporary details, schedules, and cues to the system.
+                </p>
+              </div>
+
+              {currentTime && (
+                <div className="text-right flex flex-col md:items-end justify-center">
+                  <span className="text-2xl font-bold tracking-wider text-foreground">
+                    {format(currentTime, "HH:mm")}
+                  </span>
+                  <span className="text-xs text-muted-foreground font-semibold mt-1">
+                    {format(currentTime, "MMMM dd, yyyy")}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Quick Stats Grid */}
+            <QuickStats />
+
+            {/* Action buttons */}
+            <div className="flex gap-3">
+              <Button
+                onClick={() => setShowCreateModal(true)}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold h-10 px-5 rounded-lg text-xs"
+              >
+                + Create New Task
+              </Button>
+              <Button
+                onClick={() => setActiveTab("nudgelist")}
+                variant="outline"
+                className="font-semibold h-10 px-5 rounded-lg text-xs"
+              >
+                Review Nudgelist
+              </Button>
+            </div>
+
+            {/* Dashboard Sections Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              
+              {/* Urgent Action / Nudges Summary */}
+              <div className="border border-border bg-card backdrop-blur-md p-5 rounded-2xl shadow-md space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-bold tracking-wider uppercase text-muted-foreground">Urgent Nudges</h2>
+                  <button
+                    onClick={() => setActiveTab("nudgelist")}
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    View All
+                  </button>
+                </div>
+
+                {urgentTasks.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground text-xs bg-muted/30 rounded-xl border border-border border-dashed">
+                    No urgent tasks to display.
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {urgentTasks.map((t: Task) => (
+                      <div
+                        key={t.id}
+                        onClick={() => {
+                          setActiveTab("tasks");
+                        }}
+                        className="bg-muted/40 border border-border hover:border-foreground/20 p-3.5 rounded-xl flex items-center justify-between gap-3 cursor-pointer transition-all duration-200"
+                      >
+                        <div className="space-y-0.5 truncate">
+                          <p className="font-bold text-xs text-foreground truncate">{t.title}</p>
+                          {t.due_date && (
+                            <p className="text-[10px] text-red-500 dark:text-red-400">
+                              Due: {format(t.due_date, "PP")}
+                            </p>
+                          )}
+                        </div>
+                        <span className="text-[10px] bg-red-500/10 text-red-500 dark:text-red-400 border border-red-500/20 px-2 py-0.5 rounded-full uppercase font-medium">
+                          Nudge
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Recent Activities */}
+              <div className="border border-border bg-card backdrop-blur-md p-5 rounded-2xl shadow-md space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-bold tracking-wider uppercase text-muted-foreground">Recently Updated</h2>
+                  <button
+                    onClick={() => setActiveTab("tasks")}
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    View All
+                  </button>
+                </div>
+
+                {recentTasks.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground text-xs bg-muted/30 rounded-xl border border-border border-dashed">
+                    No tasks created yet.
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {recentTasks.map((t: Task) => (
+                      <div
+                        key={t.id}
+                        onClick={() => setActiveTab("tasks")}
+                        className="bg-muted/40 border border-border hover:border-foreground/20 p-3.5 rounded-xl flex items-center justify-between gap-3 cursor-pointer transition-all duration-200"
+                      >
+                        <div className="space-y-0.5 truncate">
+                          <p className="font-bold text-xs text-foreground truncate">{t.title}</p>
+                          <p className="text-[10px] text-muted-foreground">
+                            Updated: {format(t.updated_at, "PP")}
+                          </p>
+                        </div>
+                        <span className={cn(
+                          "text-[10px] px-2 py-0.5 rounded-full uppercase font-medium",
+                          t.status === "completed"
+                            ? "bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20"
+                            : "bg-muted text-muted-foreground border border-border"
+                        )}>
+                          {t.status}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+            </div>
+          </div>
+        )}
+
+        {activeTab === "tasks" && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight text-foreground">Your Tasks</h1>
+                <p className="text-xs text-muted-foreground mt-1 leading-normal">
+                  View, filter, sort, and manage all your productivity items.
+                </p>
+              </div>
+              <Button
+                onClick={() => setShowCreateModal(true)}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs h-9 px-4 rounded-lg"
+              >
+                + Add Task
+              </Button>
+            </div>
+            <TaskList />
+          </div>
+        )}
+
+        {activeTab === "nudgelist" && (
+          <div className="space-y-6">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight text-foreground">Task Nudgelist</h1>
+              <p className="text-xs text-muted-foreground mt-1 leading-normal">
+                These tasks require engagement or snooze scheduling due to age or missed deadlines.
+              </p>
+            </div>
+            <NudgelistView />
+          </div>
+        )}
+
+      </main>
+
+      {/* Task Creation Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-foreground/30 backdrop-blur-sm"
+            onClick={() => setShowCreateModal(false)}
+          />
+          {/* Modal Container */}
+          <div className="relative border border-border bg-card backdrop-blur-md w-full max-w-lg rounded-2xl shadow-2xl p-6 overflow-hidden max-h-[90vh]">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-lg font-bold text-foreground tracking-tight">Create Memory Task</h2>
+              <button
+                onClick={() => setShowCreateModal(false)}
+                className="text-muted-foreground hover:text-foreground text-lg transition-colors select-none"
+              >
+                &times;
+              </button>
+            </div>
+            <TaskForm
+              onSuccess={() => setShowCreateModal(false)}
+              onCancel={() => setShowCreateModal(false)}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
