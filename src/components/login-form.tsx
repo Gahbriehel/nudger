@@ -49,8 +49,9 @@ export function LoginForm({
     try {
       await authService.signIn(data.email, data.password);
       toast.success("Welcome back! Logged in successfully.");
-      router.push("/");
-      router.refresh();
+      // Use full page load to bypass Next.js App Router client-side cache
+      // and ensure the middleware processes the fresh session cookie.
+      window.location.href = "/";
     } catch (err: any) {
       const msg = err.message || "Failed to sign in. Please check your credentials.";
       toast.error(msg);
