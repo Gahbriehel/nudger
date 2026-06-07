@@ -5,6 +5,8 @@ import { authService } from "@/services/auth.service";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
+import Link from "next/link";
 
 interface DashboardHeaderProps {
   activeTab: "dashboard" | "tasks" | "nudgelist";
@@ -29,10 +31,25 @@ export function DashboardHeader({ activeTab, setActiveTab }: DashboardHeaderProp
     <nav className="w-full border-b border-border bg-background/80 backdrop-blur-md sticky top-0 z-50">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Brand */}
-        <div className="flex items-center gap-3">
-          <span className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2 select-none">
-            🧠 <span className="bg-gradient-to-r from-muted-foreground to-foreground bg-clip-text text-transparent">Task Memory</span>
-          </span>
+        <div className="flex items-center gap-3"> 
+          <Link href="/" className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2 select-none">
+            <Image
+              width={150}
+              height={150}
+              src="/images/nudger-logo-black.svg"
+              alt="Nudger"
+              className="dark:hidden block"
+              priority
+            />
+            <Image
+              width={150}
+              height={150}
+              src="/images/nudger-logo-white.svg"
+              alt="Nudger"
+              className="hidden dark:block"
+              priority
+            />
+          </Link>
         </div>
 
         {/* Tab Links */}

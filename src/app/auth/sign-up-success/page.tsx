@@ -78,66 +78,60 @@ function SignUpSuccessContent() {
   };
 
   return (
-    <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
-      <div className="w-full max-w-md">
-        <div className="flex flex-col gap-6">
-          <Card className="border border-border bg-card backdrop-blur-md shadow-lg text-foreground">
-            <CardHeader>
-              <CardTitle className="text-2xl font-bold tracking-tight text-foreground">
-                Check your email
-              </CardTitle>
-              <CardDescription className="text-muted-foreground">
-                We&apos;ve sent you a confirmation link{email ? ` to ${email}` : ""}.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-6">
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Thank you for signing up! Please click the confirmation link in the email to activate your account.
-              </p>
+    <Card className="border border-border bg-card backdrop-blur-md shadow-lg text-foreground w-full">
+      <CardHeader>
+        <CardTitle className="text-2xl font-bold tracking-tight text-foreground">
+          Check your email
+        </CardTitle>
+        <CardDescription className="text-muted-foreground">
+          We&apos;ve sent you a confirmation link{email ? ` to ${email}` : ""}.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-6">
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          Thank you for signing up! Please click the confirmation link in the email to activate your account.
+        </p>
 
-              <div className="border-t border-border pt-5 space-y-4">
-                <div className="space-y-1">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-amber-500">
-                    Localhost Redirect Workaround
-                  </h4>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    If clicking the email link redirected you to a broken <strong>localhost</strong> page, copy that broken page&apos;s URL (or the token hash) and paste it below to confirm your account directly from here:
-                  </p>
-                </div>
-                <div className="flex flex-col gap-2">
-                  <Input
-                    placeholder="Paste localhost link or token_hash here..."
-                    value={pastedInput}
-                    onChange={(e) => setPastedInput(e.target.value)}
-                    className="text-xs bg-background/50"
-                  />
-                  <Button
-                    onClick={handleVerify}
-                    disabled={verifying}
-                    className="w-full bg-amber-600 hover:bg-amber-600/90 text-white font-semibold text-xs py-2 h-9 rounded-md transition-all flex items-center justify-center"
-                  >
-                    {verifying ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      "Verify & Sign In"
-                    )}
-                  </Button>
-                </div>
-              </div>
-
-              <div className="border-t border-border pt-4">
-                <Link
-                  href="/auth/login"
-                  className="w-full text-center bg-muted hover:bg-muted/80 text-foreground font-semibold transition-all py-2 rounded-md text-sm block"
-                >
-                  Back to Login
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="border-t border-border pt-5 space-y-4">
+          <div className="space-y-1">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-amber-500">
+              Localhost Redirect Workaround
+            </h4>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              If clicking the email link redirected you to a broken <strong>localhost</strong> page, copy that broken page&apos;s URL (or the token hash) and paste it below to confirm your account directly from here:
+            </p>
+          </div>
+          <div className="flex flex-col gap-2">
+            <Input
+              placeholder="Paste localhost link or token_hash here..."
+              value={pastedInput}
+              onChange={(e) => setPastedInput(e.target.value)}
+              className="text-xs bg-background/50"
+            />
+            <Button
+              onClick={handleVerify}
+              disabled={verifying}
+              className="w-full bg-amber-600 hover:bg-amber-600/90 text-white font-semibold text-xs py-2 h-9 rounded-md transition-all flex items-center justify-center"
+            >
+              {verifying ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                "Verify & Sign In"
+              )}
+            </Button>
+          </div>
         </div>
-      </div>
-    </div>
+
+        <div className="border-t border-border pt-4">
+          <Link
+            href="/auth/login"
+            className="w-full text-center bg-muted hover:bg-muted/80 text-foreground font-semibold transition-all py-2 rounded-md text-sm block"
+          >
+            Back to Login
+          </Link>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

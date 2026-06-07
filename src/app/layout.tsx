@@ -10,8 +10,13 @@ const defaultUrl = process.env.VERCEL_URL
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
-  title: "Task Memory System",
-  description: "A production-grade productivity system for tracking tasks, subtasks, recurrence rules, and cognitive memory cues.",
+  title: "Nudger",
+  description: "Productivity system for tracking tasks, subtasks, recurrence rules, and cognitive memory cues.",
+  icons: {
+    icon: "/images/nudger-app-icon.png",
+    shortcut: "/images/nudger-app-icon.png",
+    apple: "/images/nudger-app-icon.png",
+  }
 };
 
 const geistSans = Geist({
