@@ -10,13 +10,15 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 import { useForm, zodResolver } from "@/lib/react-hook-form";
 import { z, infer as zInfer } from "@/lib/zod";
 import { authService } from "@/services/auth.service";
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 
 const signUpSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -31,7 +33,6 @@ export function SignUpForm({
   className,
   ...props
 }: React.ComponentPropsWithoutRef<"div">) {
-  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   const {
@@ -49,16 +50,17 @@ export function SignUpForm({
   });
 
   const onSubmit = async (data: SignUpInput) => {
-    setError(null);
     if (data.password !== data.confirmPassword) {
-      setError("Passwords do not match");
+      toast.error("Passwords do not match");
       return;
     }
     try {
       await authService.signUp(data.email, data.password, data.name);
-      router.push("/auth/sign-up-success");
+      toast.success("Account created! Please check your email to verify.");
+      router.push(`/auth/sign-up-success?email=${encodeURIComponent(data.email)}`);
     } catch (err: any) {
-      setError(err.message || "An error occurred during sign up.");
+      const msg = err.message || "An error occurred during sign up.";
+      toast.error(msg);
     }
   };
 
@@ -106,9 +108,8 @@ export function SignUpForm({
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="password" className="text-sm font-medium">Password</Label>
-                <Input
+                <PasswordInput
                   id="password"
-                  type="password"
                   placeholder="••••••••"
                   {...register("password")}
                   className={cn(
@@ -121,9 +122,8 @@ export function SignUpForm({
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="confirmPassword" className="text-sm font-medium">Confirm Password</Label>
-                <Input
+                <PasswordInput
                   id="confirmPassword"
-                  type="password"
                   placeholder="••••••••"
                   {...register("confirmPassword")}
                   className={cn(
@@ -134,17 +134,16 @@ export function SignUpForm({
                   <p className="text-xs text-destructive mt-1">{errors.confirmPassword.message}</p>
                 )}
               </div>
-              {error && (
-                <div className="bg-destructive/10 border border-destructive/20 text-destructive text-xs rounded-md p-3">
-                  {error}
-                </div>
-              )}
               <Button
                 type="submit"
-                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold transition-all py-2 rounded-md"
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold transition-all py-2 rounded-md flex items-center justify-center"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? "Creating account..." : "Sign up"}
+                {isSubmitting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  "Sign up"
+                )}
               </Button>
             </div>
             <div className="mt-5 text-center text-xs text-muted-foreground">

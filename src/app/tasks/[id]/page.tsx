@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 function TaskDetailContent() {
   const params = useParams();
@@ -57,7 +58,9 @@ function TaskDetailContent() {
 
     try {
       await taskService.toggleSubtask(sub.id, nextVal);
+      toast.success(nextVal ? "Subtask completed" : "Subtask marked as pending");
     } catch (err) {
+      toast.error("Failed to update subtask");
       // roll back
       loadTask();
     }
@@ -69,8 +72,9 @@ function TaskDetailContent() {
       await taskService.addSubtask(id, newSubtask.trim());
       setNewSubtask("");
       loadTask();
+      toast.success("Subtask added");
     } catch (err) {
-      alert("Failed to add subtask");
+      toast.error("Failed to add subtask");
     }
   };
 
@@ -78,8 +82,9 @@ function TaskDetailContent() {
     try {
       await taskService.deleteSubtask(subId);
       loadTask();
+      toast.success("Subtask deleted");
     } catch (err) {
-      alert("Failed to delete subtask");
+      toast.error("Failed to delete subtask");
     }
   };
 
@@ -89,8 +94,9 @@ function TaskDetailContent() {
       await taskService.addMemoryCue(id, newCue.trim());
       setNewCue("");
       loadTask();
+      toast.success("Memory cue added");
     } catch (err) {
-      alert("Failed to add cue");
+      toast.error("Failed to add cue");
     }
   };
 
@@ -98,8 +104,9 @@ function TaskDetailContent() {
     try {
       await taskService.deleteMemoryCue(cueId);
       loadTask();
+      toast.success("Memory cue deleted");
     } catch (err) {
-      alert("Failed to delete memory cue");
+      toast.error("Failed to delete memory cue");
     }
   };
 
@@ -108,8 +115,9 @@ function TaskDetailContent() {
       await taskService.updateTask(id, { notes: notes.trim() || null });
       setIsEditingNotes(false);
       loadTask();
+      toast.success("Notes saved");
     } catch (err) {
-      alert("Failed to save notes");
+      toast.error("Failed to save notes");
     }
   };
 
@@ -117,10 +125,11 @@ function TaskDetailContent() {
     if (!task) return;
     try {
       await taskService.completeTask(task);
+      toast.success("Task completed!");
       router.push("/");
       router.refresh();
     } catch (err) {
-      alert("Failed to complete task");
+      toast.error("Failed to complete task");
     }
   };
 

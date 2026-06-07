@@ -16,6 +16,8 @@ import { useState } from "react";
 import { useForm, zodResolver } from "@/lib/react-hook-form";
 import { z, infer as zInfer } from "@/lib/zod";
 import { authService } from "@/services/auth.service";
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 
 const forgotPasswordSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -28,7 +30,6 @@ export function ForgotPasswordForm({
   ...props
 }: React.ComponentPropsWithoutRef<"div">) {
   const [success, setSuccess] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const {
     register,
@@ -42,12 +43,12 @@ export function ForgotPasswordForm({
   });
 
   const onSubmit = async (data: ForgotPasswordInput) => {
-    setError(null);
     try {
       await authService.resetPasswordForEmail(data.email);
       setSuccess(true);
+      toast.success("Reset link sent successfully!");
     } catch (err: any) {
-      setError(err.message || "Failed to send reset link.");
+      toast.error(err.message || "Failed to send reset link.");
     }
   };
 
@@ -91,17 +92,16 @@ export function ForgotPasswordForm({
                     <p className="text-xs text-destructive mt-1">{errors.email.message}</p>
                   )}
                 </div>
-                {error && (
-                  <div className="bg-destructive/10 border border-destructive/20 text-destructive text-xs rounded-md p-3">
-                    {error}
-                  </div>
-                )}
                 <Button
                   type="submit"
-                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold transition-all py-2 rounded-md"
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold transition-all py-2 rounded-md flex items-center justify-center"
                   disabled={isSubmitting}
                 >
-                  {isSubmitting ? "Sending reset link..." : "Send Reset Link"}
+                  {isSubmitting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    "Send Reset Link"
+                  )}
                 </Button>
               </div>
               <div className="mt-5 text-center text-xs text-muted-foreground">

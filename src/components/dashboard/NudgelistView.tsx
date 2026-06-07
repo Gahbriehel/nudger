@@ -8,6 +8,7 @@ import { Task } from "@/types/database.types";
 import { format } from "@/lib/date-fns";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 export function NudgelistView() {
   const { fetchTasks } = useTaskStore();
@@ -35,9 +36,10 @@ export function NudgelistView() {
       await taskService.completeTask(task);
       await fetchTasks(); // Sync main task store
       await loadNudgelist(); // Reload nudgelist
+      toast.success("Task completed!");
     } catch (err) {
       console.error(err);
-      alert("Failed to complete task");
+      toast.error("Failed to complete task");
     }
   };
 
@@ -51,9 +53,10 @@ export function NudgelistView() {
       });
       await fetchTasks();
       await loadNudgelist();
+      toast.success(`Task snoozed for ${days} day${days > 1 ? "s" : ""}`);
     } catch (err) {
       console.error(err);
-      alert("Failed to snooze task");
+      toast.error("Failed to snooze task");
     }
   };
 
@@ -65,9 +68,10 @@ export function NudgelistView() {
       });
       await fetchTasks();
       await loadNudgelist();
+      toast.success("Task acknowledged");
     } catch (err) {
       console.error(err);
-      alert("Failed to acknowledge task");
+      toast.error("Failed to acknowledge task");
     }
   };
 

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 export function TaskList() {
   const {
@@ -74,14 +75,20 @@ export function TaskList() {
           completed_at: null,
         });
         await fetchTasks();
+        toast.success("Task marked as pending");
       } else {
         // Complete (and rollover if recurring)
         await taskService.completeTask(task);
         await fetchTasks();
+        toast.success(
+          task.task_type === "recurring"
+            ? "Recurring task completed! Next occurrence scheduled."
+            : "Task completed!"
+        );
       }
     } catch (err) {
       console.error(err);
-      alert("Failed to update task completion");
+      toast.error("Failed to update task completion");
       await fetchTasks(); // rollback
     }
   };
@@ -91,8 +98,10 @@ export function TaskList() {
     toggleSubtaskState(taskId, subtask.id, nextVal);
     try {
       await taskService.toggleSubtask(subtask.id, nextVal);
+      toast.success(nextVal ? "Subtask completed" : "Subtask marked as pending");
     } catch (err) {
       console.error(err);
+      toast.error("Failed to update subtask");
       toggleSubtaskState(taskId, subtask.id, subtask.completed); // rollback
     }
   };
@@ -105,9 +114,10 @@ export function TaskList() {
       await taskService.addSubtask(taskId, text);
       setNewSubtaskTexts({ ...newSubtaskTexts, [taskId]: "" });
       await fetchTasks();
+      toast.success("Subtask added");
     } catch (err) {
       console.error(err);
-      alert("Failed to add subtask");
+      toast.error("Failed to add subtask");
     }
   };
 
@@ -115,9 +125,10 @@ export function TaskList() {
     try {
       await taskService.deleteSubtask(subtaskId);
       await fetchTasks();
+      toast.success("Subtask deleted");
     } catch (err) {
       console.error(err);
-      alert("Failed to delete subtask");
+      toast.error("Failed to delete subtask");
     }
   };
 
@@ -129,9 +140,10 @@ export function TaskList() {
       await taskService.addMemoryCue(taskId, text);
       setNewCueTexts({ ...newCueTexts, [taskId]: "" });
       await fetchTasks();
+      toast.success("Memory cue added");
     } catch (err) {
       console.error(err);
-      alert("Failed to add memory cue");
+      toast.error("Failed to add memory cue");
     }
   };
 
@@ -139,9 +151,10 @@ export function TaskList() {
     try {
       await taskService.deleteMemoryCue(cueId);
       await fetchTasks();
+      toast.success("Memory cue deleted");
     } catch (err) {
       console.error(err);
-      alert("Failed to delete memory cue");
+      toast.error("Failed to delete memory cue");
     }
   };
 
@@ -150,9 +163,10 @@ export function TaskList() {
     deleteTaskState(id);
     try {
       await taskService.deleteTask(id);
+      toast.success("Task deleted successfully");
     } catch (err) {
       console.error(err);
-      alert("Failed to delete task from database");
+      toast.error("Failed to delete task");
       await fetchTasks(); // rollback
     }
   };

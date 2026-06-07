@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { Loader2 } from "lucide-react";
 
 const taskSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -429,10 +430,14 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
         </Button>
         <Button
           type="submit"
-          className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+          className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold flex items-center justify-center min-w-[100px]"
           disabled={isSubmitting}
         >
-          {isSubmitting ? "Creating Task..." : "Save Task"}
+          {isSubmitting ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            "Save Task"
+          )}
         </Button>
       </div>
     </form>
