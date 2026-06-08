@@ -21,6 +21,8 @@ export function DashboardMain() {
   const [activeTab, setActiveTab] = useState<"dashboard" | "tasks" | "nudgelist">("dashboard");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
+  // Stats are shown by default on md+ screens; hidden on mobile
+  const [showStats, setShowStats] = useState(false);
 
   // Sync session on mount
   useEffect(() => {
@@ -105,7 +107,57 @@ export function DashboardMain() {
             </div>
 
             {/* Quick Stats Grid */}
-            <QuickStats />
+            {/* Mobile: toggle show/hide. On md+ always show via CSS */}
+            <div>
+              {/* Toggle button – visible only on mobile */}
+              <button
+                id="toggle-stats-btn"
+                onClick={() => setShowStats((prev) => !prev)}
+                className={cn(
+                  "md:hidden w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl border text-xs font-semibold transition-all duration-200 mb-3 shadow-sm",
+                  showStats
+                    ? "bg-muted border-border text-foreground"
+                    : "bg-card border-border text-muted-foreground hover:text-foreground hover:border-foreground/20 hover:bg-muted/50"
+                )}
+              >
+                <div className="flex items-center gap-2.5">
+                  {/* Bar chart icon */}
+                  <svg
+                    className={cn(
+                      "w-4 h-4 flex-shrink-0",
+                      showStats ? "text-foreground" : "text-muted-foreground"
+                    )}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                    />
+                  </svg>
+                  <span>{showStats ? "Hide Stats" : "View Stats"}</span>
+                </div>
+                <svg
+                  className={cn(
+                    "w-4 h-4 flex-shrink-0 transition-transform duration-300",
+                    showStats ? "rotate-180" : ""
+                  )}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {/* Stats grid: hidden on mobile unless showStats, always visible md+ */}
+              <div className={cn("md:block", showStats ? "block" : "hidden")}>
+                <QuickStats />
+              </div>
+            </div>
 
             {/* Action buttons */}
             <div className="flex gap-3">

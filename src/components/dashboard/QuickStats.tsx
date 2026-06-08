@@ -3,7 +3,12 @@
 import { useTaskStore } from "@/store/taskStore";
 import { cn } from "@/lib/utils";
 
-export function QuickStats() {
+interface QuickStatsProps {
+  /** When false the grid is hidden (used for mobile show/hide). Defaults to true. */
+  visible?: boolean;
+}
+
+export function QuickStats({ visible = true }: QuickStatsProps) {
   const tasks = useTaskStore((s) => s.tasks);
   const now = new Date();
 
@@ -37,6 +42,8 @@ export function QuickStats() {
       description: "Successfully checked off",
     },
   ];
+
+  if (!visible) return null;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

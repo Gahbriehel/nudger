@@ -7,11 +7,12 @@ import { Task, Subtask, MemoryCue, Tag } from "@/types/database.types";
 import { format } from "@/lib/date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { FilterSidebar } from "./FilterSidebar";
 
 export function TaskList() {
+  const [filterSidebarOpen, setFilterSidebarOpen] = useState(false);
   const {
     tasks,
     loading,
@@ -221,68 +222,73 @@ export function TaskList() {
 
   const nowTime = new Date().getTime();
 
+  // Count active non-default filters (excludes search)
+  const activeFilterCount = [
+    filters.type !== "all" ? 1 : 0,
+    filters.status !== "all" ? 1 : 0,
+    filters.sort !== "recently_updated" ? 1 : 0,
+  ].reduce((a, b) => a + b, 0);
+
   return (
     <div className="space-y-6">
-      {/* Filters Dashboard */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 border border-border bg-card backdrop-blur-md p-4 rounded-xl shadow-md">
-        {/* Search */}
-        <div className="grid gap-1">
-          <Label htmlFor="search-input" className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Search</Label>
+      {/* Filter Sidebar */}
+      <FilterSidebar
+        open={filterSidebarOpen}
+        onClose={() => setFilterSidebarOpen(false)}
+      />
+
+      {/* Simplified Filter Bar: Search + Filters Button */}
+      <div className="flex items-center gap-3">
+        {/* Search Input */}
+        <div className="relative flex-1">
+          <svg
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
           <Input
             id="search-input"
             placeholder="Search title, tags, notes..."
             value={filters.search}
             onChange={(e) => setFilters({ search: e.target.value })}
-            className="text-xs py-1.5 h-9"
+            className="text-xs h-10 pl-9 pr-3"
           />
         </div>
 
-        {/* Task Type */}
-        <div className="grid gap-1">
-          <Label htmlFor="type-filter" className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Task Type</Label>
-          <select
-            id="type-filter"
-            value={filters.type}
-            onChange={(e: any) => setFilters({ type: e.target.value })}
-            className="bg-background border border-input text-foreground rounded-md p-1.5 text-xs h-9 focus:outline-none focus:ring-2 focus:ring-ring"
+        {/* Filters Trigger Button */}
+        <button
+          id="open-filters-btn"
+          onClick={() => setFilterSidebarOpen(true)}
+          className={cn(
+            "relative flex items-center gap-2 h-10 px-4 rounded-lg border text-xs font-semibold transition-all duration-150 whitespace-nowrap",
+            activeFilterCount > 0
+              ? "bg-foreground text-background border-foreground"
+              : "bg-card text-foreground border-border hover:border-foreground/30 hover:bg-muted"
+          )}
+        >
+          <svg
+            className="w-3.5 h-3.5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
           >
-            <option value="all">All Types</option>
-            <option value="flexible">Flexible</option>
-            <option value="scheduled">Scheduled</option>
-            <option value="recurring">Recurring</option>
-          </select>
-        </div>
-
-        {/* Status */}
-        <div className="grid gap-1">
-          <Label htmlFor="status-filter" className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Status</Label>
-          <select
-            id="status-filter"
-            value={filters.status}
-            onChange={(e: any) => setFilters({ status: e.target.value })}
-            className="bg-background border border-input text-foreground rounded-md p-1.5 text-xs h-9 focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            <option value="all">All Status</option>
-            <option value="pending">Pending</option>
-            <option value="completed">Completed</option>
-          </select>
-        </div>
-
-        {/* Sort */}
-        <div className="grid gap-1">
-          <Label htmlFor="sort-filter" className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Sort By</Label>
-          <select
-            id="sort-filter"
-            value={filters.sort}
-            onChange={(e: any) => setFilters({ sort: e.target.value })}
-            className="bg-background border border-input text-foreground rounded-md p-1.5 text-xs h-9 focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            <option value="recently_updated">Recently Updated</option>
-            <option value="oldest">Oldest Created</option>
-            <option value="due_soon">Due Date (Soonest)</option>
-            <option value="most_subtasks">Most Subtasks</option>
-          </select>
-        </div>
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z"
+            />
+          </svg>
+          Filters
+          {activeFilterCount > 0 && (
+            <span className="w-5 h-5 rounded-full bg-background/20 text-[10px] font-bold flex items-center justify-center">
+              {activeFilterCount}
+            </span>
+          )}
+        </button>
       </div>
 
       {/* Task Cards List */}
