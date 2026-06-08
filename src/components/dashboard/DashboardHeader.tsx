@@ -92,7 +92,7 @@ export function DashboardHeader({ activeTab, setActiveTab }: DashboardHeaderProp
         {/* User Info & Actions */}
         <div className="flex items-center gap-3">
           <span className="hidden sm:inline text-xs text-muted-foreground select-none">
-            {user?.email}
+            {user?.user_metadata?.name || user?.email}
           </span>
           <ThemeSwitcher />
           <button

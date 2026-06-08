@@ -559,7 +559,7 @@ export function TaskList() {
                               className="flex items-center justify-between bg-muted/30 border border-border px-3 py-1.5 rounded-lg text-xs"
                             >
                               <div className="flex items-center gap-2 text-foreground">
-                                <span className="text-amber-500">💡</span>
+                                {/* <span className="text-amber-500">💡</span> */}
                                 <span>{cue.content}</span>
                               </div>
                               <button

@@ -85,7 +85,7 @@ export function DashboardMain() {
             <div className="border border-border bg-card backdrop-blur-md p-6 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-lg">
               <div className="space-y-1">
                 <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                  Hello, {user?.email?.split("@")[0] || "User"}
+                  Hello, {user?.user_metadata?.name || user?.email?.split("@")[0] || "User"}
                 </h1>
                 <p className="text-xs text-muted-foreground leading-normal max-w-md">
                   Keep your mind clear. Offload temporary details, schedules, and cues to the system.

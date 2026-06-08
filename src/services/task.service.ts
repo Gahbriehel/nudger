@@ -56,6 +56,7 @@ export const taskService = {
       return {
         ...task,
         tags,
+        memory_cues: task.task_memory_cues || [],
       } as Task;
     });
   },
@@ -83,6 +84,7 @@ export const taskService = {
     return {
       ...data,
       tags,
+      memory_cues: data.task_memory_cues || [],
     } as Task;
   },
 
