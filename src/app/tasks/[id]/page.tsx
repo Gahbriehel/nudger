@@ -137,7 +137,7 @@ function TaskDetailContent() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
-        <Spinner size="md" />
+        <Spinner size="md" label="Loading task details..." />
       </div>
     );
   }
@@ -451,7 +451,7 @@ export default function TaskDetailPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
-        <Spinner size="md" />
+        <Spinner size="md" label="Loading details..." />
       </div>
     }>
       <TaskDetailContent />

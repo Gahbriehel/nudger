@@ -48,7 +48,7 @@ export default function Page() {
   return (
     <Suspense fallback={
       <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
-        <Spinner size="md" />
+        <Spinner size="md" label="Loading success screen..." />
       </div>
     }>
       <SignUpSuccessContent />

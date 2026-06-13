@@ -176,8 +176,8 @@ export function NudgelistView() {
   return (
     <div className="space-y-6">
       {loading ? (
-        <div className="flex justify-center items-center py-10">
-          <Spinner size="md" />
+        <div className="flex justify-center items-center py-12">
+          <Spinner size="md" label="Analyzing task timelines..." />
         </div>
       ) : totalNudges === 0 ? (
         <div className="text-center py-12 border border-dashed border-border rounded-2xl bg-muted/20 flex flex-col items-center justify-center p-6 space-y-3">

@@ -294,8 +294,8 @@ export function TaskList() {
 
       {/* Task Cards List */}
       {loading ? (
-        <div className="flex justify-center items-center py-10">
-          <Spinner size="md" />
+        <div className="flex justify-center items-center py-12">
+          <Spinner size="md" label="Loading tasks..." />
         </div>
       ) : filteredTasks.length === 0 ? (
         <div className="text-center py-10 text-muted-foreground border border-dashed border-border rounded-xl bg-muted/20">
@@ -315,7 +315,7 @@ export function TaskList() {
               <div
                 key={task.id}
                 className={cn(
-                  "border border-border bg-card backdrop-blur-md rounded-xl transition-all duration-200 overflow-hidden shadow-md hover:border-foreground/20",
+                  "border border-border bg-card backdrop-blur-md rounded-xl transition-all duration-200 overflow-hidden shadow-md hover:border-brand-indigo/20 dark:hover:border-brand-blue/20",
                   task.status === "completed" && "opacity-60 border-border/50"
                 )}
               >
@@ -329,8 +329,8 @@ export function TaskList() {
                       className={cn(
                         "w-5 h-5 rounded border flex items-center justify-center mt-0.5 transition-all",
                         task.status === "completed"
-                          ? "bg-foreground border-foreground text-background hover:opacity-80"
-                          : "border-border hover:border-foreground/50 bg-transparent"
+                          ? "bg-brand-green border-brand-green text-white hover:opacity-90 shadow-sm"
+                          : "border-border hover:border-brand-indigo/60 dark:hover:border-brand-blue/60 bg-transparent"
                       )}
                     >
                       {task.status === "completed" && (
@@ -361,10 +361,10 @@ export function TaskList() {
                         {/* Task Type Badge */}
                         <span
                           className={cn(
-                            "text-[10px] px-2 py-0.5 rounded-full font-medium tracking-wide uppercase",
+                            "text-[10px] px-2 py-0.5 rounded-full font-semibold tracking-wide uppercase",
                             task.task_type === "flexible" && "bg-muted text-muted-foreground border border-border",
-                            task.task_type === "scheduled" && "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20",
-                            task.task_type === "recurring" && "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                            task.task_type === "scheduled" && "bg-brand-blue/10 text-brand-blue border border-brand-blue/20",
+                            task.task_type === "recurring" && "bg-brand-indigo/10 text-brand-indigo dark:text-brand-blue/90 border border-brand-indigo/20"
                           )}
                         >
                           {task.task_type}

@@ -51,7 +51,7 @@ export function DashboardMain() {
   if (authLoading) {
     return (
       <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
-        <Spinner size="md" />
+        <Spinner size="md" label="Restoring session..." />
       </div>
     );
   }
@@ -82,7 +82,7 @@ export function DashboardMain() {
         {activeTab === "dashboard" && (
           <div className="space-y-8">
             {/* Welcoming and Digital Clock banner */}
-            <div className="border border-border bg-card backdrop-blur-md p-6 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-lg">
+            <div className="relative overflow-hidden border border-border bg-card/85 backdrop-blur-md p-6 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-lg before:absolute before:top-0 before:left-0 before:right-0 before:h-[3px] before:bg-gradient-to-r before:from-brand-indigo before:to-brand-blue">
               <div className="space-y-1">
                 <h1 className="text-2xl font-bold tracking-tight text-foreground">
                   Hello, {user?.user_metadata?.name || user?.email?.split("@")[0] || "User"}
