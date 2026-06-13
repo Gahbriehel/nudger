@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { FilterSidebar } from "./FilterSidebar";
+import { Spinner } from "@/components/ui/spinner";
 
 export function TaskList() {
   const [filterSidebarOpen, setFilterSidebarOpen] = useState(false);
@@ -293,8 +294,8 @@ export function TaskList() {
 
       {/* Task Cards List */}
       {loading ? (
-        <div className="text-center py-10 text-muted-foreground text-sm">
-          Loading tasks from database...
+        <div className="flex justify-center items-center py-10">
+          <Spinner size="md" />
         </div>
       ) : filteredTasks.length === 0 ? (
         <div className="text-center py-10 text-muted-foreground border border-dashed border-border rounded-xl bg-muted/20">
@@ -475,7 +476,7 @@ export function TaskList() {
                           onChange={(e) =>
                             setNewSubtaskTexts({ ...newSubtaskTexts, [task.id]: e.target.value })
                           }
-                          className="text-xs py-1 h-8"
+                          className="text-xs h-9 rounded-xl border-border/80"
                           onKeyDown={(e) => {
                             if (e.key === "Enter") {
                               e.preventDefault();
@@ -486,7 +487,7 @@ export function TaskList() {
                         <Button
                           onClick={() => handleAddSubtask(task.id)}
                           variant="outline"
-                          className="text-xs h-8 px-3"
+                          className="text-xs h-9 px-4 rounded-xl font-semibold"
                         >
                           Add
                         </Button>
@@ -494,28 +495,40 @@ export function TaskList() {
 
                       {/* Subtask list */}
                       {task.subtasks && task.subtasks.length > 0 ? (
-                        <div className="space-y-1.5 max-w-xl">
+                        <div className="space-y-2 max-w-xl">
                           {task.subtasks
                             .sort((a: Subtask, b: Subtask) => a.sort_order - b.sort_order)
                             .map((sub: Subtask) => (
                               <div
                                 key={sub.id}
-                                className="flex items-center justify-between bg-muted/30 border border-border px-3 py-1.5 rounded-lg text-xs"
+                                className="flex items-center justify-between bg-muted/30 dark:bg-[#131920] border border-border/80 dark:border-[#222A35]/50 px-4 py-3 rounded-2xl text-xs transition-all hover:bg-muted/40 dark:hover:bg-[#171E27]"
                               >
-                                <label className="flex items-center gap-2.5 cursor-pointer flex-1 text-foreground">
+                                <label className="flex items-center gap-3 cursor-pointer flex-1 text-foreground">
                                   <input
                                     type="checkbox"
                                     checked={sub.completed}
                                     onChange={() => handleToggleSubtask(task.id, sub)}
-                                    className="rounded border-border bg-transparent accent-foreground"
+                                    className="sr-only"
                                   />
-                                  <span className={cn(sub.completed && "line-through text-muted-foreground")}>
+                                  <div className={cn(
+                                    "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all",
+                                    sub.completed 
+                                      ? "bg-foreground border-foreground text-background" 
+                                      : "border-muted-foreground/60 hover:border-foreground"
+                                  )}>
+                                    {sub.completed && (
+                                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3.5">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                      </svg>
+                                    )}
+                                  </div>
+                                  <span className={cn("font-medium select-none text-foreground/90", sub.completed && "line-through text-muted-foreground")}>
                                     {sub.title}
                                   </span>
                                 </label>
                                 <button
                                   onClick={() => handleDeleteSubtask(sub.id)}
-                                  className="text-destructive/60 hover:text-destructive text-[10px]"
+                                  className="text-destructive/70 hover:text-destructive text-[10px] font-semibold transition-colors px-1.5 py-0.5"
                                 >
                                   Delete
                                 </button>
@@ -539,7 +552,7 @@ export function TaskList() {
                           onChange={(e) =>
                             setNewCueTexts({ ...newCueTexts, [task.id]: e.target.value })
                           }
-                          className="text-xs py-1 h-8"
+                          className="text-xs h-9 rounded-xl border-border/80"
                           onKeyDown={(e) => {
                             if (e.key === "Enter") {
                               e.preventDefault();
@@ -550,7 +563,7 @@ export function TaskList() {
                         <Button
                           onClick={() => handleAddCue(task.id)}
                           variant="outline"
-                          className="text-xs h-8 px-3"
+                          className="text-xs h-9 px-4 rounded-xl font-semibold"
                         >
                           Add
                         </Button>
@@ -558,19 +571,19 @@ export function TaskList() {
 
                       {/* Cue list */}
                       {task.memory_cues && task.memory_cues.length > 0 ? (
-                        <div className="space-y-1.5 max-w-xl">
+                        <div className="space-y-2 max-w-xl">
                           {task.memory_cues.map((cue: MemoryCue) => (
                             <div
                               key={cue.id}
-                              className="flex items-center justify-between bg-muted/30 border border-border px-3 py-1.5 rounded-lg text-xs"
+                              className="flex items-center justify-between bg-muted/30 dark:bg-[#131920] border border-border/80 dark:border-[#222A35]/50 px-4 py-3 rounded-2xl text-xs transition-all hover:bg-muted/40 dark:hover:bg-[#171E27]"
                             >
-                              <div className="flex items-center gap-2 text-foreground">
-                                {/* <span className="text-amber-500">💡</span> */}
-                                <span>{cue.content}</span>
+                              <div className="flex items-center gap-3 text-foreground">
+                                <span className="text-amber-500 dark:text-amber-400 select-none flex-shrink-0 text-sm">💡</span>
+                                <span className="font-medium text-foreground/90">{cue.content}</span>
                               </div>
                               <button
                                 onClick={() => handleDeleteCue(cue.id)}
-                                className="text-destructive/60 hover:text-destructive text-[10px]"
+                                className="text-destructive/70 hover:text-destructive text-[10px] font-semibold transition-colors px-1.5 py-0.5"
                               >
                                 Delete
                               </button>

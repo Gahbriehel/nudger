@@ -13,6 +13,7 @@ import { format } from "@/lib/date-fns";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Task } from "@/types/database.types";
+import { Spinner } from "@/components/ui/spinner";
 
 export function DashboardMain() {
   const { setSession, setLoading, loading: authLoading, user } = useAuthStore();
@@ -50,10 +51,7 @@ export function DashboardMain() {
   if (authLoading) {
     return (
       <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 rounded-full border-2 border-border border-t-foreground animate-spin" />
-          <p className="text-xs text-muted-foreground font-semibold tracking-wider uppercase">Loading session...</p>
-        </div>
+        <Spinner size="md" />
       </div>
     );
   }
@@ -313,20 +311,34 @@ export function DashboardMain() {
             onClick={() => setShowCreateModal(false)}
           />
           {/* Modal Container */}
-          <div className="relative border border-border bg-card backdrop-blur-md w-full max-w-lg rounded-2xl shadow-2xl p-6 overflow-hidden max-h-[90vh]">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-lg font-bold text-foreground tracking-tight">Create Memory Task</h2>
+          <div className="relative border border-border bg-card backdrop-blur-md w-full max-w-lg rounded-[24px] shadow-2xl p-6 overflow-hidden max-h-[90vh] flex flex-col">
+            <div className="flex items-start justify-between mb-5 pb-4 border-b border-border/50">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-foreground/5 dark:bg-foreground/10 text-foreground rounded-xl">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-foreground tracking-tight">Create Memory Task</h2>
+                  <p className="text-[11px] text-muted-foreground font-normal mt-0.5">Offload temporary details, schedules, and cues to the system.</p>
+                </div>
+              </div>
               <button
                 onClick={() => setShowCreateModal(false)}
-                className="text-muted-foreground hover:text-foreground text-lg transition-colors select-none"
+                className="text-muted-foreground hover:text-foreground hover:bg-muted/50 p-1.5 rounded-full transition-colors select-none"
               >
-                &times;
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
             </div>
-            <TaskForm
-              onSuccess={() => setShowCreateModal(false)}
-              onCancel={() => setShowCreateModal(false)}
-            />
+            <div className="overflow-y-auto pr-1">
+              <TaskForm
+                onSuccess={() => setShowCreateModal(false)}
+                onCancel={() => setShowCreateModal(false)}
+              />
+            </div>
           </div>
         </div>
       )}

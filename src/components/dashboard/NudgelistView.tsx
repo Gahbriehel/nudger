@@ -9,6 +9,7 @@ import { format } from "@/lib/date-fns";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { Spinner } from "@/components/ui/spinner";
 
 export function NudgelistView() {
   const { fetchTasks } = useTaskStore();
@@ -175,8 +176,8 @@ export function NudgelistView() {
   return (
     <div className="space-y-6">
       {loading ? (
-        <div className="text-center py-10 text-muted-foreground text-sm">
-          Analyzing tasks status...
+        <div className="flex justify-center items-center py-10">
+          <Spinner size="md" />
         </div>
       ) : totalNudges === 0 ? (
         <div className="text-center py-12 border border-dashed border-border rounded-2xl bg-muted/20 flex flex-col items-center justify-center p-6 space-y-3">

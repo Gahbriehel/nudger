@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
 
 const taskSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -146,7 +147,7 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 text-foreground max-h-[80vh] overflow-y-auto px-1">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 text-foreground pb-4 px-1">
       {error && (
         <div className="bg-destructive/10 border border-destructive/20 text-destructive text-xs rounded-md p-3">
           {error}
@@ -275,25 +276,32 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
                 handleAddSubtask();
               }
             }}
+            className="rounded-xl h-10 text-sm"
           />
           <Button
             type="button"
             onClick={handleAddSubtask}
             variant="outline"
-            className="px-4"
+            className="px-4 h-10 rounded-xl font-semibold"
           >
             Add
           </Button>
         </div>
         {subtasks.length > 0 && (
-          <ul className="space-y-2 max-h-[150px] overflow-y-auto bg-muted/20 p-2 rounded-md border border-border">
+          <ul className="space-y-2 mt-2">
             {subtasks.map((sub, idx) => (
-              <li key={idx} className="flex justify-between items-center bg-background px-3 py-1.5 rounded text-sm text-foreground border border-border">
-                <span>{sub}</span>
+              <li
+                key={idx}
+                className="flex justify-between items-center bg-muted/30 dark:bg-[#131920] border border-border/80 dark:border-[#222A35]/50 px-4 py-3 rounded-2xl text-sm text-foreground shadow-sm transition-all hover:bg-muted/40 dark:hover:bg-[#171E27]"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/60 flex-shrink-0" />
+                  <span className="font-semibold text-foreground/90">{sub}</span>
+                </div>
                 <button
                   type="button"
                   onClick={() => handleRemoveSubtask(idx)}
-                  className="text-destructive hover:text-destructive/80 text-xs transition-colors"
+                  className="text-destructive/80 hover:text-destructive text-xs font-semibold transition-colors px-1.5 py-0.5"
                 >
                   Remove
                 </button>
@@ -317,25 +325,32 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
                 handleAddCue();
               }
             }}
+            className="rounded-xl h-10 text-sm"
           />
           <Button
             type="button"
             onClick={handleAddCue}
             variant="outline"
-            className="px-4"
+            className="px-4 h-10 rounded-xl font-semibold"
           >
             Add
           </Button>
         </div>
         {memoryCues.length > 0 && (
-          <ul className="space-y-2 max-h-[150px] overflow-y-auto bg-muted/20 p-2 rounded-md border border-border">
+          <ul className="space-y-2 mt-2">
             {memoryCues.map((cue, idx) => (
-              <li key={idx} className="flex justify-between items-center bg-background px-3 py-1.5 rounded text-sm text-foreground border border-border">
-                <span>{cue}</span>
+              <li
+                key={idx}
+                className="flex justify-between items-center bg-muted/30 dark:bg-[#131920] border border-border/80 dark:border-[#222A35]/50 px-4 py-3 rounded-2xl text-sm text-foreground shadow-sm transition-all hover:bg-muted/40 dark:hover:bg-[#171E27]"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-amber-500 dark:text-amber-400 select-none flex-shrink-0 text-base">💡</span>
+                  <span className="font-semibold text-foreground/90">{cue}</span>
+                </div>
                 <button
                   type="button"
                   onClick={() => handleRemoveCue(idx)}
-                  className="text-destructive hover:text-destructive/80 text-xs transition-colors"
+                  className="text-destructive/80 hover:text-destructive text-xs font-semibold transition-colors px-1.5 py-0.5"
                 >
                   Remove
                 </button>
@@ -359,12 +374,13 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
                 handleAddTag();
               }
             }}
+            className="rounded-xl h-10 text-sm"
           />
           <Button
             type="button"
             onClick={handleAddTag}
             variant="outline"
-            className="px-4"
+            className="px-4 h-10 rounded-xl font-semibold"
           >
             Add Tag
           </Button>
@@ -425,16 +441,17 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
           type="button"
           onClick={onCancel}
           variant="outline"
+          className="rounded-xl font-semibold"
         >
           Cancel
         </Button>
         <Button
           type="submit"
-          className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold flex items-center justify-center min-w-[100px]"
+          className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold flex items-center justify-center min-w-[100px] rounded-xl h-10"
           disabled={isSubmitting}
         >
           {isSubmitting ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Spinner size="sm" className="border-t-primary-foreground border-primary-foreground/30" />
           ) : (
             "Save Task"
           )}

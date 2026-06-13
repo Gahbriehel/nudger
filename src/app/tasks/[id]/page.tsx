@@ -12,6 +12,7 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { Spinner } from "@/components/ui/spinner";
 
 function TaskDetailContent() {
   const params = useParams();
@@ -136,10 +137,7 @@ function TaskDetailContent() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 rounded-full border-2 border-border border-t-foreground animate-spin" />
-          <p className="text-xs text-muted-foreground font-semibold uppercase">Loading task details...</p>
-        </div>
+        <Spinner size="md" />
       </div>
     );
   }
@@ -244,7 +242,7 @@ function TaskDetailContent() {
                 placeholder="Add subtask item..."
                 value={newSubtask}
                 onChange={(e) => setNewSubtask(e.target.value)}
-                className="text-xs py-1 h-8"
+                className="text-xs h-9 rounded-xl border-border/80"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
@@ -255,35 +253,47 @@ function TaskDetailContent() {
               <Button
                 onClick={handleAddSubtask}
                 variant="outline"
-                className="text-xs h-8 px-3"
+                className="text-xs h-9 px-4 rounded-xl font-semibold"
               >
                 Add
               </Button>
             </div>
 
             {task.subtasks && task.subtasks.length > 0 ? (
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 {task.subtasks
                   .sort((a, b) => a.sort_order - b.sort_order)
                   .map((sub) => (
                     <div
                       key={sub.id}
-                      className="flex items-center justify-between bg-muted/30 border border-border px-3 py-2 rounded-lg text-xs"
+                      className="flex items-center justify-between bg-muted/30 dark:bg-[#131920] border border-border/80 dark:border-[#222A35]/50 px-4 py-3 rounded-2xl text-xs transition-all hover:bg-muted/40 dark:hover:bg-[#171E27]"
                     >
-                      <label className="flex items-center gap-2.5 cursor-pointer flex-1 text-foreground">
+                      <label className="flex items-center gap-3 cursor-pointer flex-1 text-foreground">
                         <input
                           type="checkbox"
                           checked={sub.completed}
                           onChange={() => handleToggleSubtask(sub)}
-                          className="rounded border-border bg-transparent accent-foreground"
+                          className="sr-only"
                         />
-                        <span className={cn(sub.completed && "line-through text-muted-foreground")}>
+                        <div className={cn(
+                          "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all",
+                          sub.completed 
+                            ? "bg-foreground border-foreground text-background" 
+                            : "border-muted-foreground/60 hover:border-foreground"
+                        )}>
+                          {sub.completed && (
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3.5">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </div>
+                        <span className={cn("font-medium select-none text-foreground/90", sub.completed && "line-through text-muted-foreground")}>
                           {sub.title}
                         </span>
                       </label>
                       <button
                         onClick={() => handleDeleteSubtask(sub.id)}
-                        className="text-destructive/60 hover:text-destructive text-[10px]"
+                        className="text-destructive/70 hover:text-destructive text-[10px] font-semibold transition-colors px-1.5 py-0.5"
                       >
                         Delete
                       </button>
@@ -304,7 +314,7 @@ function TaskDetailContent() {
                 placeholder="e.g. Put keys in fridge, note on screen..."
                 value={newCue}
                 onChange={(e) => setNewCue(e.target.value)}
-                className="text-xs py-1 h-8"
+                className="text-xs h-9 rounded-xl border-border/80"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
@@ -315,26 +325,26 @@ function TaskDetailContent() {
               <Button
                 onClick={handleAddCue}
                 variant="outline"
-                className="text-xs h-8 px-3"
+                className="text-xs h-9 px-4 rounded-xl font-semibold"
               >
                 Add
               </Button>
             </div>
 
             {task.memory_cues && task.memory_cues.length > 0 ? (
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 {task.memory_cues.map((cue) => (
                   <div
                     key={cue.id}
-                    className="flex items-center justify-between bg-muted/30 border border-border px-3 py-2 rounded-lg text-xs"
+                    className="flex items-center justify-between bg-muted/30 dark:bg-[#131920] border border-border/80 dark:border-[#222A35]/50 px-4 py-3 rounded-2xl text-xs transition-all hover:bg-muted/40 dark:hover:bg-[#171E27]"
                   >
-                    <div className="flex items-center gap-2 text-foreground">
-                      <span className="text-amber-500">💡</span>
-                      <span>{cue.content}</span>
+                    <div className="flex items-center gap-3 text-foreground">
+                      <span className="text-amber-500 dark:text-amber-400 select-none flex-shrink-0 text-sm">💡</span>
+                      <span className="font-medium text-foreground/90">{cue.content}</span>
                     </div>
                     <button
                       onClick={() => handleDeleteCue(cue.id)}
-                      className="text-destructive/60 hover:text-destructive text-[10px]"
+                      className="text-destructive/70 hover:text-destructive text-[10px] font-semibold transition-colors px-1.5 py-0.5"
                     >
                       Delete
                     </button>
@@ -441,7 +451,7 @@ export default function TaskDetailPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
-        <div className="text-muted-foreground text-sm">Loading task details...</div>
+        <Spinner size="md" />
       </div>
     }>
       <TaskDetailContent />

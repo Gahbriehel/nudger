@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { InfoIcon } from "lucide-react";
 import { Suspense } from "react";
+import { Spinner } from "@/components/ui/spinner";
 
 async function UserDetails() {
   const supabase = await createClient();
@@ -26,7 +27,7 @@ export default function ProtectedPage() {
       <div className="flex flex-col gap-2 items-start">
         <h2 className="font-bold text-xl text-foreground mb-2">User Claims / Details</h2>
         <pre className="w-full text-xs font-mono p-4 rounded-xl border border-border bg-card text-card-foreground max-h-64 overflow-auto">
-          <Suspense fallback={<span className="text-muted-foreground">Loading details...</span>}>
+          <Suspense fallback={<Spinner size="sm" />}>
             <UserDetails />
           </Suspense>
         </pre>

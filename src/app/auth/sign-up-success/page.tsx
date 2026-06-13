@@ -10,6 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import Link from "next/link";
+import { Spinner } from "@/components/ui/spinner";
 
 function SignUpSuccessContent() {
   const searchParams = useSearchParams();
@@ -47,7 +48,7 @@ export default function Page() {
   return (
     <Suspense fallback={
       <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
-        <div className="text-sm text-muted-foreground">Loading signup success...</div>
+        <Spinner size="md" />
       </div>
     }>
       <SignUpSuccessContent />
