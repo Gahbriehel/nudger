@@ -25,12 +25,14 @@ A production-grade productivity system for tracking tasks, subtasks, recurrence 
 ### Local Setup
 
 1. **Clone the Repository & Install Dependencies**:
+
    ```bash
    npm install
    ```
 
 2. **Configure Environment Variables**:
    Copy `.env.example` to `.env` and fill in your Supabase project credentials:
+
    ```env
    NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-supabase-anon-key
@@ -48,6 +50,7 @@ A production-grade productivity system for tracking tasks, subtasks, recurrence 
 ## Database Schema
 
 The core database tables managed under `supabase/migrations/` include:
+
 - `tasks`: The primary tasks table supporting metadata, recurrence rules, and status.
 - `subtasks`: Flat checklists related to parent tasks.
 - `tags` / `task_tags`: Many-to-many tag relationships for categorizing tasks.

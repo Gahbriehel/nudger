@@ -5,7 +5,12 @@ interface SpinnerProps extends React.HTMLAttributes<HTMLDivElement> {
   label?: string;
 }
 
-export function Spinner({ className, size = "md", label, ...props }: SpinnerProps) {
+export function Spinner({
+  className,
+  size = "md",
+  label,
+  ...props
+}: SpinnerProps) {
   return (
     <div className="flex flex-col items-center justify-center gap-3.5">
       <div
@@ -16,7 +21,7 @@ export function Spinner({ className, size = "md", label, ...props }: SpinnerProp
             "w-8 h-8": size === "md",
             "w-12 h-12 border-[3px]": size === "lg",
           },
-          className
+          className,
         )}
         {...props}
       />
@@ -28,7 +33,7 @@ export function Spinner({ className, size = "md", label, ...props }: SpinnerProp
               "text-[10px]": size === "sm",
               "text-xs": size === "md",
               "text-sm": size === "lg",
-            }
+            },
           )}
         >
           {label}

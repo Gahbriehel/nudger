@@ -1,8 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useSyncExternalStore } from "react";
 
 export type SetState<T> = (
   nextStateOrFn: Partial<T> | ((state: T) => Partial<T>),
-  replace?: boolean
+  replace?: boolean,
 ) => void;
 
 export type GetState<T> = () => T;
@@ -38,7 +39,7 @@ export function create<T>(createState: CreateState<T>) {
     return useSyncExternalStore(
       subscribe,
       () => selector(state),
-      () => selector(state)
+      () => selector(state),
     );
   };
 

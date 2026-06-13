@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createClient } from "@/lib/supabase/client";
 import { Task, Subtask, Tag, MemoryCue } from "@/types/database.types";
 
@@ -6,7 +7,7 @@ const supabase = createClient();
 function calculateNextDueDate(
   dueDateStr: string | null,
   type: string,
-  interval: number
+  interval: number,
 ): string | null {
   if (!dueDateStr) return null;
   const date = new Date(dueDateStr);
@@ -36,14 +37,16 @@ export const taskService = {
     // We join subtasks, cues, and tag relationships
     const { data, error } = await supabase
       .from("tasks")
-      .select(`
+      .select(
+        `
         *,
         subtasks (*),
         task_memory_cues (*),
         task_tags (
           tag:tags (*)
         )
-      `)
+      `,
+      )
       .order("created_at", { ascending: false });
 
     if (error) throw error;
@@ -64,14 +67,16 @@ export const taskService = {
   async getTaskById(id: string): Promise<Task> {
     const { data, error } = await supabase
       .from("tasks")
-      .select(`
+      .select(
+        `
         *,
         subtasks (*),
         task_memory_cues (*),
         task_tags (
           tag:tags (*)
         )
-      `)
+      `,
+      )
       .eq("id", id)
       .single();
 
@@ -91,13 +96,21 @@ export const taskService = {
   async createTask(
     taskData: Omit<
       Task,
-      "id" | "user_id" | "created_at" | "updated_at" | "status" | "completed_at" | "last_completed_at"
+      | "id"
+      | "user_id"
+      | "created_at"
+      | "updated_at"
+      | "status"
+      | "completed_at"
+      | "last_completed_at"
     >,
     subtasks: string[],
     memoryCues: string[],
-    tagNames: string[]
+    tagNames: string[],
   ): Promise<Task> {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) throw new Error("Unauthenticated");
 
     // 1. Insert task
@@ -173,7 +186,7 @@ export const taskService = {
             .insert({ user_id: user.id, name: cleanName })
             .select()
             .single();
-          
+
           if (newTagError) throw newTagError;
           existingTag = newTag;
         }
@@ -197,18 +210,12 @@ export const taskService = {
   },
 
   async updateTask(id: string, updates: Partial<Task>): Promise<void> {
-    const { error } = await supabase
-      .from("tasks")
-      .update(updates)
-      .eq("id", id);
+    const { error } = await supabase.from("tasks").update(updates).eq("id", id);
     if (error) throw error;
   },
 
   async deleteTask(id: string): Promise<void> {
-    const { error } = await supabase
-      .from("tasks")
-      .delete()
-      .eq("id", id);
+    const { error } = await supabase.from("tasks").delete().eq("id", id);
     if (error) throw error;
   },
 
@@ -220,10 +227,19 @@ export const taskService = {
     if (error) throw error;
   },
 
-  async addSubtask(taskId: string, title: string, sortOrder = 0): Promise<Subtask> {
+  async addSubtask(
+    taskId: string,
+    title: string,
+    sortOrder = 0,
+  ): Promise<Subtask> {
     const { data, error } = await supabase
       .from("subtasks")
-      .insert({ task_id: taskId, title, completed: false, sort_order: sortOrder })
+      .insert({
+        task_id: taskId,
+        title,
+        completed: false,
+        sort_order: sortOrder,
+      })
       .select()
       .single();
     if (error) throw error;
@@ -256,7 +272,9 @@ export const taskService = {
     if (error) throw error;
   },
 
-  async completeTask(task: Task): Promise<{ status: "pending" | "completed"; due_date: string | null }> {
+  async completeTask(
+    task: Task,
+  ): Promise<{ status: "pending" | "completed"; due_date: string | null }> {
     const nowStr = new Date().toISOString();
 
     if (task.task_type === "recurring" && task.recurrence_type) {
@@ -264,7 +282,7 @@ export const taskService = {
       const nextDue = calculateNextDueDate(
         task.due_date || nowStr,
         task.recurrence_type,
-        task.recurrence_interval || 1
+        task.recurrence_interval || 1,
       );
 
       // 2. Roll over task: reset subtasks, update last_completed_at, update due date, keep status pending

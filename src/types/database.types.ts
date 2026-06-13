@@ -62,7 +62,15 @@ export type Database = {
     Tables: {
       tasks: {
         Row: Task;
-        Insert: Omit<Task, "id" | "created_at" | "updated_at" | "status" | "completed_at" | "last_completed_at"> & {
+        Insert: Omit<
+          Task,
+          | "id"
+          | "created_at"
+          | "updated_at"
+          | "status"
+          | "completed_at"
+          | "last_completed_at"
+        > & {
           id?: string;
           status?: TaskStatus;
           completed_at?: string | null;

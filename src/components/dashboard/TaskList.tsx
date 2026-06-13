@@ -25,15 +25,19 @@ export function TaskList() {
   } = useTaskStore();
 
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
-  
+
   // Local inputs for adding items in expanded view
-  const [newSubtaskTexts, setNewSubtaskTexts] = useState<{ [taskId: string]: string }>({});
-  const [newCueTexts, setNewCueTexts] = useState<{ [taskId: string]: string }>({});
+  const [newSubtaskTexts, setNewSubtaskTexts] = useState<{
+    [taskId: string]: string;
+  }>({});
+  const [newCueTexts, setNewCueTexts] = useState<{ [taskId: string]: string }>(
+    {},
+  );
 
   // Fetch tasks on load
   useEffect(() => {
     fetchTasks();
-  }, []);
+  }, [fetchTasks]);
 
   const handleToggleExpand = (id: string) => {
     setExpandedTaskId(expandedTaskId === id ? null : id);
@@ -42,14 +46,10 @@ export function TaskList() {
   const handleToggleTaskCompletion = async (task: Task) => {
     try {
       const originalStatus = task.status;
-      const originalCompletedAt = task.completed_at;
-      const originalLastCompleted = task.last_completed_at;
-      const originalDueDate = task.due_date;
 
       // Optimistic update
       const nowStr = new Date().toISOString();
       let nextStatus = originalStatus;
-      let nextDueDate = originalDueDate;
 
       if (task.task_type === "recurring" && task.recurrence_type) {
         // Just reload after call since recurring math happens in service
@@ -65,7 +65,7 @@ export function TaskList() {
                 status: nextStatus,
                 completed_at: nextStatus === "completed" ? nowStr : null,
               }
-            : t
+            : t,
         ),
       }));
 
@@ -85,7 +85,7 @@ export function TaskList() {
         toast.success(
           task.task_type === "recurring"
             ? "Recurring task completed! Next occurrence scheduled."
-            : "Task completed!"
+            : "Task completed!",
         );
       }
     } catch (err) {
@@ -100,7 +100,9 @@ export function TaskList() {
     toggleSubtaskState(taskId, subtask.id, nextVal);
     try {
       await taskService.toggleSubtask(subtask.id, nextVal);
-      toast.success(nextVal ? "Subtask completed" : "Subtask marked as pending");
+      toast.success(
+        nextVal ? "Subtask completed" : "Subtask marked as pending",
+      );
     } catch (err) {
       console.error(err);
       toast.error("Failed to update subtask");
@@ -182,10 +184,12 @@ export function TaskList() {
         task.title.toLowerCase().includes(term) ||
         (task.description && task.description.toLowerCase().includes(term)) ||
         (task.notes && task.notes.toLowerCase().includes(term)) ||
-        (task.tags && task.tags.some((tag) => tag.name.toLowerCase().includes(term)));
+        (task.tags &&
+          task.tags.some((tag) => tag.name.toLowerCase().includes(term)));
 
       // type filter
-      const matchesType = filters.type === "all" || task.task_type === filters.type;
+      const matchesType =
+        filters.type === "all" || task.task_type === filters.type;
 
       // status filter
       const matchesStatus =
@@ -195,10 +199,14 @@ export function TaskList() {
     })
     .sort((a: Task, b: Task) => {
       if (filters.sort === "recently_updated") {
-        return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+        return (
+          new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+        );
       }
       if (filters.sort === "oldest") {
-        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        return (
+          new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        );
       }
       if (filters.sort === "due_soon") {
         if (!a.due_date) return 1;
@@ -248,7 +256,12 @@ export function TaskList() {
             viewBox="0 0 24 24"
             stroke="currentColor"
           >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
           </svg>
           <Input
             id="search-input"
@@ -267,7 +280,7 @@ export function TaskList() {
             "relative flex items-center gap-2 h-10 px-4 rounded-lg border text-xs font-semibold transition-all duration-150 whitespace-nowrap",
             activeFilterCount > 0
               ? "bg-foreground text-background border-foreground"
-              : "bg-card text-foreground border-border hover:border-foreground/30 hover:bg-muted"
+              : "bg-card text-foreground border-border hover:border-foreground/30 hover:bg-muted",
           )}
         >
           <svg
@@ -316,7 +329,7 @@ export function TaskList() {
                 key={task.id}
                 className={cn(
                   "border border-border bg-card backdrop-blur-md rounded-xl transition-all duration-200 overflow-hidden shadow-md hover:border-brand-indigo/20 dark:hover:border-brand-blue/20",
-                  task.status === "completed" && "opacity-60 border-border/50"
+                  task.status === "completed" && "opacity-60 border-border/50",
                 )}
               >
                 {/* Collapsed view / Header */}
@@ -330,11 +343,15 @@ export function TaskList() {
                         "w-5 h-5 rounded border flex items-center justify-center mt-0.5 transition-all",
                         task.status === "completed"
                           ? "bg-brand-green border-brand-green text-white hover:opacity-90 shadow-sm"
-                          : "border-border hover:border-brand-indigo/60 dark:hover:border-brand-blue/60 bg-transparent"
+                          : "border-border hover:border-brand-indigo/60 dark:hover:border-brand-blue/60 bg-transparent",
                       )}
                     >
                       {task.status === "completed" && (
-                        <svg className="w-3.5 h-3.5" viewBox="0 0 12 12" fill="none">
+                        <svg
+                          className="w-3.5 h-3.5"
+                          viewBox="0 0 12 12"
+                          fill="none"
+                        >
                           <path
                             d="M3.75 6.25L5 7.5L8.25 4.25"
                             stroke="currentColor"
@@ -347,12 +364,16 @@ export function TaskList() {
                     </button>
 
                     {/* Content Summary */}
-                    <div className="flex-1 min-w-0" onClick={() => handleToggleExpand(task.id)}>
+                    <div
+                      className="flex-1 min-w-0"
+                      onClick={() => handleToggleExpand(task.id)}
+                    >
                       <div className="flex flex-wrap items-center gap-2 mb-1 cursor-pointer">
                         <h3
                           className={cn(
                             "font-bold text-sm text-foreground truncate",
-                            task.status === "completed" && "line-through text-muted-foreground"
+                            task.status === "completed" &&
+                              "line-through text-muted-foreground",
                           )}
                         >
                           {task.title}
@@ -362,9 +383,12 @@ export function TaskList() {
                         <span
                           className={cn(
                             "text-[10px] px-2 py-0.5 rounded-full font-semibold tracking-wide uppercase",
-                            task.task_type === "flexible" && "bg-muted text-muted-foreground border border-border",
-                            task.task_type === "scheduled" && "bg-brand-blue/10 text-brand-blue border border-brand-blue/20",
-                            task.task_type === "recurring" && "bg-brand-indigo/10 text-brand-indigo dark:text-brand-blue/90 border border-brand-indigo/20"
+                            task.task_type === "flexible" &&
+                              "bg-muted text-muted-foreground border border-border",
+                            task.task_type === "scheduled" &&
+                              "bg-brand-blue/10 text-brand-blue border border-brand-blue/20",
+                            task.task_type === "recurring" &&
+                              "bg-brand-indigo/10 text-brand-indigo dark:text-brand-blue/90 border border-brand-indigo/20",
                           )}
                         >
                           {task.task_type}
@@ -377,7 +401,7 @@ export function TaskList() {
                               "text-[10px] px-2 py-0.5 rounded font-medium",
                               isOverdue
                                 ? "bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30"
-                                : "bg-muted text-muted-foreground border border-border"
+                                : "bg-muted text-muted-foreground border border-border",
                             )}
                           >
                             Due: {format(task.due_date, "MMM dd, yyyy HH:mm")}
@@ -402,7 +426,8 @@ export function TaskList() {
                             />
                           </div>
                           <span className="text-[10px] font-semibold text-muted-foreground whitespace-nowrap">
-                            {subStats.completed}/{subStats.total} subtasks ({subStats.pct}%)
+                            {subStats.completed}/{subStats.total} subtasks (
+                            {subStats.pct}%)
                           </span>
                         </div>
                       )}
@@ -429,12 +454,20 @@ export function TaskList() {
                     className="text-muted-foreground hover:text-foreground transition-colors"
                   >
                     <svg
-                      className={cn("w-4 h-4 transform transition-transform duration-200", isExpanded && "rotate-180")}
+                      className={cn(
+                        "w-4 h-4 transform transition-transform duration-200",
+                        isExpanded && "rotate-180",
+                      )}
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
                     >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2.5"
+                        d="M19 9l-7 7-7-7"
+                      />
                     </svg>
                   </button>
                 </div>
@@ -447,7 +480,9 @@ export function TaskList() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {task.description && (
                           <div className="space-y-1">
-                            <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-wider">Description</p>
+                            <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-wider">
+                              Description
+                            </p>
                             <p className="text-xs text-foreground leading-relaxed bg-muted/30 p-2.5 rounded border border-border">
                               {task.description}
                             </p>
@@ -455,7 +490,9 @@ export function TaskList() {
                         )}
                         {task.notes && (
                           <div className="space-y-1">
-                            <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-wider">Reference Notes</p>
+                            <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-wider">
+                              Reference Notes
+                            </p>
                             <p className="text-xs text-foreground leading-relaxed bg-muted/30 p-2.5 rounded border border-border">
                               {task.notes}
                             </p>
@@ -466,15 +503,20 @@ export function TaskList() {
 
                     {/* Subtasks Checklist */}
                     <div className="space-y-2.5">
-                      <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-wider">Checklist</p>
-                      
+                      <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-wider">
+                        Checklist
+                      </p>
+
                       {/* Subtask addition inline */}
                       <div className="flex gap-2 max-w-md">
                         <Input
                           placeholder="Add checklist item..."
                           value={newSubtaskTexts[task.id] || ""}
                           onChange={(e) =>
-                            setNewSubtaskTexts({ ...newSubtaskTexts, [task.id]: e.target.value })
+                            setNewSubtaskTexts({
+                              ...newSubtaskTexts,
+                              [task.id]: e.target.value,
+                            })
                           }
                           className="text-xs h-9 rounded-xl border-border/80"
                           onKeyDown={(e) => {
@@ -497,7 +539,10 @@ export function TaskList() {
                       {task.subtasks && task.subtasks.length > 0 ? (
                         <div className="space-y-2 max-w-xl">
                           {task.subtasks
-                            .sort((a: Subtask, b: Subtask) => a.sort_order - b.sort_order)
+                            .sort(
+                              (a: Subtask, b: Subtask) =>
+                                a.sort_order - b.sort_order,
+                            )
                             .map((sub: Subtask) => (
                               <div
                                 key={sub.id}
@@ -507,22 +552,42 @@ export function TaskList() {
                                   <input
                                     type="checkbox"
                                     checked={sub.completed}
-                                    onChange={() => handleToggleSubtask(task.id, sub)}
+                                    onChange={() =>
+                                      handleToggleSubtask(task.id, sub)
+                                    }
                                     className="sr-only"
                                   />
-                                  <div className={cn(
-                                    "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all",
-                                    sub.completed 
-                                      ? "bg-foreground border-foreground text-background" 
-                                      : "border-muted-foreground/60 hover:border-foreground"
-                                  )}>
+                                  <div
+                                    className={cn(
+                                      "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all",
+                                      sub.completed
+                                        ? "bg-foreground border-foreground text-background"
+                                        : "border-muted-foreground/60 hover:border-foreground",
+                                    )}
+                                  >
                                     {sub.completed && (
-                                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3.5">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                      <svg
+                                        className="w-3.5 h-3.5"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                        strokeWidth="3.5"
+                                      >
+                                        <path
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          d="M5 13l4 4L19 7"
+                                        />
                                       </svg>
                                     )}
                                   </div>
-                                  <span className={cn("font-medium select-none text-foreground/90", sub.completed && "line-through text-muted-foreground")}>
+                                  <span
+                                    className={cn(
+                                      "font-medium select-none text-foreground/90",
+                                      sub.completed &&
+                                        "line-through text-muted-foreground",
+                                    )}
+                                  >
                                     {sub.title}
                                   </span>
                                 </label>
@@ -536,21 +601,28 @@ export function TaskList() {
                             ))}
                         </div>
                       ) : (
-                        <p className="text-[11px] text-muted-foreground">No subtasks added yet.</p>
+                        <p className="text-[11px] text-muted-foreground">
+                          No subtasks added yet.
+                        </p>
                       )}
                     </div>
 
                     {/* Memory Cues List */}
                     <div className="space-y-2.5">
-                      <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-wider">Memory Cues</p>
-                      
+                      <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-wider">
+                        Memory Cues
+                      </p>
+
                       {/* Cue addition inline */}
                       <div className="flex gap-2 max-w-md">
                         <Input
                           placeholder="e.g. Put keys in fridge, notes on fridge..."
                           value={newCueTexts[task.id] || ""}
                           onChange={(e) =>
-                            setNewCueTexts({ ...newCueTexts, [task.id]: e.target.value })
+                            setNewCueTexts({
+                              ...newCueTexts,
+                              [task.id]: e.target.value,
+                            })
                           }
                           className="text-xs h-9 rounded-xl border-border/80"
                           onKeyDown={(e) => {
@@ -578,8 +650,12 @@ export function TaskList() {
                               className="flex items-center justify-between bg-muted/30 dark:bg-[#131920] border border-border/80 dark:border-[#222A35]/50 px-4 py-3 rounded-2xl text-xs transition-all hover:bg-muted/40 dark:hover:bg-[#171E27]"
                             >
                               <div className="flex items-center gap-3 text-foreground">
-                                <span className="text-amber-500 dark:text-amber-400 select-none flex-shrink-0 text-sm">💡</span>
-                                <span className="font-medium text-foreground/90">{cue.content}</span>
+                                <span className="text-amber-500 dark:text-amber-400 select-none flex-shrink-0 text-sm">
+                                  💡
+                                </span>
+                                <span className="font-medium text-foreground/90">
+                                  {cue.content}
+                                </span>
                               </div>
                               <button
                                 onClick={() => handleDeleteCue(cue.id)}
@@ -591,18 +667,22 @@ export function TaskList() {
                           ))}
                         </div>
                       ) : (
-                        <p className="text-[11px] text-muted-foreground">No memory cues added yet.</p>
+                        <p className="text-[11px] text-muted-foreground">
+                          No memory cues added yet.
+                        </p>
                       )}
                     </div>
 
                     {/* Metadata & Actions */}
                     <div className="flex flex-wrap items-center justify-between border-t border-border pt-3 text-[11px] text-muted-foreground gap-3">
                       <div>
-                        {task.task_type === "recurring" && task.recurrence_type && (
-                          <span className="text-emerald-600 dark:text-emerald-400 mr-3">
-                            🔄 Repeats: {task.recurrence_type} (Every {task.recurrence_interval || 1} units)
-                          </span>
-                        )}
+                        {task.task_type === "recurring" &&
+                          task.recurrence_type && (
+                            <span className="text-emerald-600 dark:text-emerald-400 mr-3">
+                              🔄 Repeats: {task.recurrence_type} (Every{" "}
+                              {task.recurrence_interval || 1} units)
+                            </span>
+                          )}
                         <span>Created: {format(task.created_at, "PP")}</span>
                         {task.completed_at && (
                           <span className="ml-3 text-green-600 dark:text-green-400">

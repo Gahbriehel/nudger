@@ -21,11 +21,16 @@ export default function ProtectedPage() {
       <div className="w-full">
         <div className="bg-muted p-4 rounded-xl border border-border text-sm text-foreground flex gap-3 items-center">
           <InfoIcon size="16" className="text-muted-foreground" />
-          <span>This is a protected page that is only accessible to authenticated users.</span>
+          <span>
+            This is a protected page that is only accessible to authenticated
+            users.
+          </span>
         </div>
       </div>
       <div className="flex flex-col gap-2 items-start">
-        <h2 className="font-bold text-xl text-foreground mb-2">User Claims / Details</h2>
+        <h2 className="font-bold text-xl text-foreground mb-2">
+          User Claims / Details
+        </h2>
         <pre className="w-full text-xs font-mono p-4 rounded-xl border border-border bg-card text-card-foreground max-h-64 overflow-auto">
           <Suspense fallback={<Spinner size="sm" />}>
             <UserDetails />

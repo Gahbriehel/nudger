@@ -13,7 +13,10 @@ export function QuickStats({ visible = true }: QuickStatsProps) {
   const now = new Date();
 
   const overdueCount = tasks.filter(
-    (t) => t.status !== "completed" && t.due_date && new Date(t.due_date).getTime() < now.getTime()
+    (t) =>
+      t.status !== "completed" &&
+      t.due_date &&
+      new Date(t.due_date).getTime() < now.getTime(),
   ).length;
 
   const pendingCount = tasks.filter((t) => t.status === "pending").length;
@@ -52,7 +55,7 @@ export function QuickStats({ visible = true }: QuickStatsProps) {
           key={idx}
           className={cn(
             "p-5 rounded-xl border backdrop-blur-md transition-all duration-300 hover:scale-[1.02] flex flex-col justify-between shadow-md",
-            stat.bg
+            stat.bg,
           )}
         >
           <div>

@@ -6,7 +6,7 @@ import { Task, Subtask } from "@/types/database.types";
 import { format } from "@/lib/date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
@@ -18,7 +18,7 @@ function TaskDetailContent() {
   const params = useParams();
   const id = params.id as string;
   const router = useRouter();
-  
+
   const [task, setTask] = useState<Task | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +26,7 @@ function TaskDetailContent() {
   // local states for checklist / cues additions
   const [newSubtask, setNewSubtask] = useState("");
   const [newCue, setNewCue] = useState("");
-  
+
   // inline notes editing state
   const [notes, setNotes] = useState("");
   const [isEditingNotes, setIsEditingNotes] = useState(false);
@@ -36,8 +36,9 @@ function TaskDetailContent() {
       const data = await taskService.getTaskById(id);
       setTask(data);
       setNotes(data.notes || "");
-    } catch (err: any) {
-      setError(err.message || "Failed to load task");
+    } catch (err) {
+      const error = err as Error;
+      setError(error.message || "Failed to load task");
     } finally {
       setLoading(false);
     }
@@ -45,22 +46,27 @@ function TaskDetailContent() {
 
   useEffect(() => {
     loadTask();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const handleToggleSubtask = async (sub: Subtask) => {
     if (!task) return;
     const nextVal = !sub.completed;
-    
+
     // optimistic UI update
     setTask({
       ...task,
-      subtasks: task.subtasks?.map((s) => (s.id === sub.id ? { ...s, completed: nextVal } : s)),
+      subtasks: task.subtasks?.map((s) =>
+        s.id === sub.id ? { ...s, completed: nextVal } : s,
+      ),
     });
 
     try {
       await taskService.toggleSubtask(sub.id, nextVal);
-      toast.success(nextVal ? "Subtask completed" : "Subtask marked as pending");
-    } catch (err) {
+      toast.success(
+        nextVal ? "Subtask completed" : "Subtask marked as pending",
+      );
+    } catch {
       toast.error("Failed to update subtask");
       // roll back
       loadTask();
@@ -74,7 +80,7 @@ function TaskDetailContent() {
       setNewSubtask("");
       loadTask();
       toast.success("Subtask added");
-    } catch (err) {
+    } catch {
       toast.error("Failed to add subtask");
     }
   };
@@ -84,7 +90,7 @@ function TaskDetailContent() {
       await taskService.deleteSubtask(subId);
       loadTask();
       toast.success("Subtask deleted");
-    } catch (err) {
+    } catch {
       toast.error("Failed to delete subtask");
     }
   };
@@ -96,7 +102,7 @@ function TaskDetailContent() {
       setNewCue("");
       loadTask();
       toast.success("Memory cue added");
-    } catch (err) {
+    } catch {
       toast.error("Failed to add cue");
     }
   };
@@ -106,7 +112,7 @@ function TaskDetailContent() {
       await taskService.deleteMemoryCue(cueId);
       loadTask();
       toast.success("Memory cue deleted");
-    } catch (err) {
+    } catch {
       toast.error("Failed to delete memory cue");
     }
   };
@@ -117,7 +123,7 @@ function TaskDetailContent() {
       setIsEditingNotes(false);
       loadTask();
       toast.success("Notes saved");
-    } catch (err) {
+    } catch {
       toast.error("Failed to save notes");
     }
   };
@@ -129,7 +135,7 @@ function TaskDetailContent() {
       toast.success("Task completed!");
       router.push("/");
       router.refresh();
-    } catch (err) {
+    } catch {
       toast.error("Failed to complete task");
     }
   };
@@ -145,17 +151,26 @@ function TaskDetailContent() {
   if (error || !task) {
     return (
       <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-6 space-y-4">
-        <div className="text-destructive text-sm">{error || "Task not found."}</div>
-        <Link href="/" className="bg-primary text-primary-foreground font-semibold text-xs px-4 py-2 rounded-lg">
+        <div className="text-destructive text-sm">
+          {error || "Task not found."}
+        </div>
+        <Link
+          href="/"
+          className="bg-primary text-primary-foreground font-semibold text-xs px-4 py-2 rounded-lg"
+        >
           Back to Dashboard
         </Link>
       </div>
     );
   }
 
-  const completedSubtasks = task.subtasks?.filter((s) => s.completed).length || 0;
+  const completedSubtasks =
+    task.subtasks?.filter((s) => s.completed).length || 0;
   const totalSubtasks = task.subtasks?.length || 0;
-  const pct = totalSubtasks > 0 ? Math.round((completedSubtasks / totalSubtasks) * 100) : 0;
+  const pct =
+    totalSubtasks > 0
+      ? Math.round((completedSubtasks / totalSubtasks) * 100)
+      : 0;
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col py-10 px-4">
@@ -166,8 +181,18 @@ function TaskDetailContent() {
             href="/"
             className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" />
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2.5"
+                d="M15 19l-7-7 7-7"
+              />
             </svg>
             Back to Dashboard
           </Link>
@@ -181,9 +206,12 @@ function TaskDetailContent() {
               <span
                 className={cn(
                   "text-[10px] px-2.5 py-0.5 rounded-full font-medium tracking-wide uppercase",
-                  task.task_type === "flexible" && "bg-muted text-muted-foreground border border-border",
-                  task.task_type === "scheduled" && "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20",
-                  task.task_type === "recurring" && "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                  task.task_type === "flexible" &&
+                    "bg-muted text-muted-foreground border border-border",
+                  task.task_type === "scheduled" &&
+                    "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20",
+                  task.task_type === "recurring" &&
+                    "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20",
                 )}
               >
                 {task.task_type}
@@ -193,20 +221,25 @@ function TaskDetailContent() {
                   Due: {format(task.due_date, "MMM dd, yyyy HH:mm")}
                 </span>
               )}
-              <span className={cn(
-                "text-[10px] px-2.5 py-0.5 rounded-full uppercase font-medium border",
-                task.status === "completed"
-                  ? "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20"
-                  : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
-              )}>
+              <span
+                className={cn(
+                  "text-[10px] px-2.5 py-0.5 rounded-full uppercase font-medium border",
+                  task.status === "completed"
+                    ? "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20"
+                    : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
+                )}
+              >
                 {task.status}
               </span>
             </div>
 
-            <h1 className={cn(
-              "text-2xl font-bold tracking-tight text-foreground",
-              task.status === "completed" && "line-through text-muted-foreground"
-            )}>
+            <h1
+              className={cn(
+                "text-2xl font-bold tracking-tight text-foreground",
+                task.status === "completed" &&
+                  "line-through text-muted-foreground",
+              )}
+            >
               {task.title}
             </h1>
 
@@ -220,7 +253,9 @@ function TaskDetailContent() {
           {/* Subtasks checklist */}
           <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Subtask Checklist</h2>
+              <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                Subtask Checklist
+              </h2>
               {totalSubtasks > 0 && (
                 <span className="text-[10px] text-muted-foreground font-semibold">
                   {completedSubtasks}/{totalSubtasks} completed ({pct}%)
@@ -275,19 +310,37 @@ function TaskDetailContent() {
                           onChange={() => handleToggleSubtask(sub)}
                           className="sr-only"
                         />
-                        <div className={cn(
-                          "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all",
-                          sub.completed 
-                            ? "bg-foreground border-foreground text-background" 
-                            : "border-muted-foreground/60 hover:border-foreground"
-                        )}>
+                        <div
+                          className={cn(
+                            "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all",
+                            sub.completed
+                              ? "bg-foreground border-foreground text-background"
+                              : "border-muted-foreground/60 hover:border-foreground",
+                          )}
+                        >
                           {sub.completed && (
-                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3.5">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            <svg
+                              className="w-3.5 h-3.5"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                              strokeWidth="3.5"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M5 13l4 4L19 7"
+                              />
                             </svg>
                           )}
                         </div>
-                        <span className={cn("font-medium select-none text-foreground/90", sub.completed && "line-through text-muted-foreground")}>
+                        <span
+                          className={cn(
+                            "font-medium select-none text-foreground/90",
+                            sub.completed &&
+                              "line-through text-muted-foreground",
+                          )}
+                        >
                           {sub.title}
                         </span>
                       </label>
@@ -301,13 +354,17 @@ function TaskDetailContent() {
                   ))}
               </div>
             ) : (
-              <p className="text-xs text-muted-foreground">No subtasks added yet.</p>
+              <p className="text-xs text-muted-foreground">
+                No subtasks added yet.
+              </p>
             )}
           </div>
 
           {/* Memory Cues */}
           <div className="space-y-3">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Memory Cues</h2>
+            <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              Memory Cues
+            </h2>
 
             <div className="flex gap-2">
               <Input
@@ -339,8 +396,12 @@ function TaskDetailContent() {
                     className="flex items-center justify-between bg-muted/30 dark:bg-[#131920] border border-border/80 dark:border-[#222A35]/50 px-4 py-3 rounded-2xl text-xs transition-all hover:bg-muted/40 dark:hover:bg-[#171E27]"
                   >
                     <div className="flex items-center gap-3 text-foreground">
-                      <span className="text-amber-500 dark:text-amber-400 select-none flex-shrink-0 text-sm">💡</span>
-                      <span className="font-medium text-foreground/90">{cue.content}</span>
+                      <span className="text-amber-500 dark:text-amber-400 select-none flex-shrink-0 text-sm">
+                        💡
+                      </span>
+                      <span className="font-medium text-foreground/90">
+                        {cue.content}
+                      </span>
                     </div>
                     <button
                       onClick={() => handleDeleteCue(cue.id)}
@@ -352,14 +413,18 @@ function TaskDetailContent() {
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-muted-foreground">No memory cues added yet.</p>
+              <p className="text-xs text-muted-foreground">
+                No memory cues added yet.
+              </p>
             )}
           </div>
 
           {/* Reference Notes / Inline Editing */}
           <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Reference Notes</h2>
+              <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                Reference Notes
+              </h2>
               {!isEditingNotes && (
                 <button
                   onClick={() => setIsEditingNotes(true)}
@@ -374,7 +439,9 @@ function TaskDetailContent() {
               <div className="space-y-2">
                 <Textarea
                   value={notes}
-                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNotes(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                    setNotes(e.target.value)
+                  }
                   placeholder="Add reference notes or info to help remember..."
                   className="text-xs"
                   rows={4}
@@ -403,14 +470,18 @@ function TaskDetailContent() {
                 {task.notes}
               </p>
             ) : (
-              <p className="text-xs text-muted-foreground italic">No reference notes added yet.</p>
+              <p className="text-xs text-muted-foreground italic">
+                No reference notes added yet.
+              </p>
             )}
           </div>
 
           {/* Tags list */}
           {task.tags && task.tags.length > 0 && (
             <div className="space-y-2 border-t border-border pt-4">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Associated Tags</h2>
+              <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                Associated Tags
+              </h2>
               <div className="flex flex-wrap gap-1.5">
                 {task.tags.map((t) => (
                   <span
@@ -440,7 +511,6 @@ function TaskDetailContent() {
               )}
             </div>
           </div>
-
         </div>
       </div>
     </div>
@@ -449,11 +519,13 @@ function TaskDetailContent() {
 
 export default function TaskDetailPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
-        <Spinner size="md" label="Loading details..." />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+          <Spinner size="md" label="Loading details..." />
+        </div>
+      }
+    >
       <TaskDetailContent />
     </Suspense>
   );

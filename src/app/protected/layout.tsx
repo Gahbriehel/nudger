@@ -13,8 +13,11 @@ export default function ProtectedLayout({
         <nav className="w-full flex justify-center border-b border-border h-16 bg-background/80 backdrop-blur-md sticky top-0 z-50">
           <div className="w-full max-w-5xl flex justify-between items-center p-3 px-5 text-sm">
             <div className="flex gap-5 items-center font-semibold">
-              <Link href={"/"} className="text-foreground font-bold flex items-center gap-2 select-none">
-              Task Memory
+              <Link
+                href={"/"}
+                className="text-foreground font-bold flex items-center gap-2 select-none"
+              >
+                Task Memory
               </Link>
             </div>
             <div className="flex items-center gap-4">

@@ -1,0 +1,16 @@
+node_modules/
+.pnp
+.pnp.js
+.next/
+out/
+build/  
+
+# Ignore coverage and testing files
+coverage/
+
+# Misc
+.env*
+.DS_Store
+*.pem
+yarn.lock
+package-lock.json

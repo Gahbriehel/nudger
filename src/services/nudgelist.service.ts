@@ -23,8 +23,10 @@ export const nudgelistService = {
 
       const isOverdue =
         task.due_date && new Date(task.due_date).getTime() < now.getTime();
-      
-      const lastUpdatedTime = new Date(task.updated_at || task.created_at).getTime();
+
+      const lastUpdatedTime = new Date(
+        task.updated_at || task.created_at,
+      ).getTime();
       const daysSinceInteraction = (now.getTime() - lastUpdatedTime) / ONE_DAY;
 
       if (isOverdue) {

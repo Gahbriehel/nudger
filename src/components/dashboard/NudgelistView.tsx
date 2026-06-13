@@ -13,7 +13,11 @@ import { Spinner } from "@/components/ui/spinner";
 
 export function NudgelistView() {
   const { fetchTasks } = useTaskStore();
-  const [data, setData] = useState<NudgelistData>({ overdue: [], forgotten: [], stale: [] });
+  const [data, setData] = useState<NudgelistData>({
+    overdue: [],
+    forgotten: [],
+    stale: [],
+  });
   const [loading, setLoading] = useState(false);
 
   const loadNudgelist = async () => {
@@ -46,7 +50,9 @@ export function NudgelistView() {
 
   const handleSnooze = async (task: Task, days: number) => {
     try {
-      const nextDue = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+      const nextDue = new Date(
+        Date.now() + days * 24 * 60 * 60 * 1000,
+      ).toISOString();
       await taskService.updateTask(task.id, {
         due_date: nextDue,
         status: "pending",
@@ -81,7 +87,7 @@ export function NudgelistView() {
     tasks: Task[],
     type: "overdue" | "forgotten" | "stale",
     badgeColor: string,
-    intro: string
+    intro: string,
   ) => {
     if (tasks.length === 0) return null;
 
@@ -89,7 +95,12 @@ export function NudgelistView() {
       <div className="space-y-3">
         <div className="flex items-center gap-2">
           <h3 className="font-bold text-base text-foreground">{title}</h3>
-          <span className={cn("text-xs px-2 py-0.5 rounded-full font-bold", badgeColor)}>
+          <span
+            className={cn(
+              "text-xs px-2 py-0.5 rounded-full font-bold",
+              badgeColor,
+            )}
+          >
             {tasks.length}
           </span>
         </div>
@@ -103,13 +114,17 @@ export function NudgelistView() {
             >
               <div className="space-y-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-bold text-sm text-foreground">{task.title}</span>
+                  <span className="font-bold text-sm text-foreground">
+                    {task.title}
+                  </span>
                   <span className="text-[10px] bg-muted border border-border text-muted-foreground px-2 py-0.5 rounded-full uppercase">
                     {task.task_type}
                   </span>
                 </div>
                 {task.description && (
-                  <p className="text-xs text-muted-foreground line-clamp-1">{task.description}</p>
+                  <p className="text-xs text-muted-foreground line-clamp-1">
+                    {task.description}
+                  </p>
                 )}
                 {task.due_date && (
                   <p className="text-[10px] text-muted-foreground">
@@ -119,7 +134,10 @@ export function NudgelistView() {
                 {task.tags && task.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-1">
                     {task.tags.map((t) => (
-                      <span key={t.id} className="text-[9px] text-muted-foreground">
+                      <span
+                        key={t.id}
+                        className="text-[9px] text-muted-foreground"
+                      >
                         #{t.name}
                       </span>
                     ))}
@@ -171,7 +189,8 @@ export function NudgelistView() {
     );
   };
 
-  const totalNudges = data.overdue.length + data.forgotten.length + data.stale.length;
+  const totalNudges =
+    data.overdue.length + data.forgotten.length + data.stale.length;
 
   return (
     <div className="space-y-6">
@@ -182,9 +201,12 @@ export function NudgelistView() {
       ) : totalNudges === 0 ? (
         <div className="text-center py-12 border border-dashed border-border rounded-2xl bg-muted/20 flex flex-col items-center justify-center p-6 space-y-3">
           <span className="text-3xl">🎉</span>
-          <p className="font-bold text-sm text-foreground">Your mind is clear!</p>
+          <p className="font-bold text-sm text-foreground">
+            Your mind is clear!
+          </p>
           <p className="text-xs text-muted-foreground max-w-xs leading-relaxed">
-            All tasks are up-to-date. No overdue, forgotten, or stale items require nudging.
+            All tasks are up-to-date. No overdue, forgotten, or stale items
+            require nudging.
           </p>
         </div>
       ) : (
@@ -194,7 +216,7 @@ export function NudgelistView() {
             data.overdue,
             "overdue",
             "bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30",
-            "These tasks have deadlines in the past. Snooze them to reset their deadline or complete them to clear them."
+            "These tasks have deadlines in the past. Snooze them to reset their deadline or complete them to clear them.",
           )}
 
           {renderSection(
@@ -202,7 +224,7 @@ export function NudgelistView() {
             data.forgotten,
             "forgotten",
             "bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30",
-            "You haven't interacted with or updated these pending tasks in over a week. Acknowledge them to keep them in your rotation."
+            "You haven't interacted with or updated these pending tasks in over a week. Acknowledge them to keep them in your rotation.",
           )}
 
           {renderSection(
@@ -210,7 +232,7 @@ export function NudgelistView() {
             data.stale,
             "stale",
             "bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/30",
-            "These pending tasks have had no updates in the past 3 to 7 days. Give them a quick check or touch."
+            "These pending tasks have had no updates in the past 3 to 7 days. Give them a quick check or touch.",
           )}
         </div>
       )}

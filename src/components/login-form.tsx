@@ -13,7 +13,6 @@ import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useForm, zodResolver } from "@/lib/react-hook-form";
 import { z, infer as zInfer } from "@/lib/zod";
 import { authService } from "@/services/auth.service";
@@ -31,8 +30,6 @@ export function LoginForm({
   className,
   ...props
 }: React.ComponentPropsWithoutRef<"div">) {
-  const router = useRouter();
-
   const {
     register,
     handleSubmit,
@@ -52,8 +49,11 @@ export function LoginForm({
       // Use full page load to bypass Next.js App Router client-side cache
       // and ensure the middleware processes the fresh session cookie.
       window.location.href = "/";
-    } catch (err: any) {
-      const msg = err.message || "Failed to sign in. Please check your credentials.";
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error
+          ? err.message
+          : "Failed to sign in. Please check your credentials.";
       toast.error(msg);
     }
   };
@@ -62,7 +62,9 @@ export function LoginForm({
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card className="border border-border bg-card backdrop-blur-md shadow-lg text-foreground">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold tracking-tight">Welcome Back</CardTitle>
+          <CardTitle className="text-2xl font-bold tracking-tight">
+            Welcome Back
+          </CardTitle>
           <CardDescription className="text-muted-foreground">
             Sign in to access your Task Memory System dashboard.
           </CardDescription>
@@ -71,23 +73,30 @@ export function LoginForm({
           <form onSubmit={handleSubmit(onSubmit)}>
             <div className="flex flex-col gap-5">
               <div className="grid gap-2">
-                <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+                <Label htmlFor="email" className="text-sm font-medium">
+                  Email
+                </Label>
                 <Input
                   id="email"
                   type="email"
                   placeholder="name@example.com"
                   {...register("email")}
                   className={cn(
-                     errors.email && "border-destructive/50 focus:border-destructive focus:ring-destructive"
+                    errors.email &&
+                      "border-destructive/50 focus:border-destructive focus:ring-destructive",
                   )}
                 />
                 {errors.email && (
-                  <p className="text-xs text-destructive mt-1">{errors.email.message}</p>
+                  <p className="text-xs text-destructive mt-1">
+                    {errors.email.message}
+                  </p>
                 )}
               </div>
               <div className="grid gap-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="password" className="text-sm font-medium">Password</Label>
+                  <Label htmlFor="password" className="text-sm font-medium">
+                    Password
+                  </Label>
                   <Link
                     href="/auth/forgot-password"
                     className="text-xs text-muted-foreground hover:text-foreground transition-colors"
@@ -100,11 +109,14 @@ export function LoginForm({
                   placeholder="••••••••"
                   {...register("password")}
                   className={cn(
-                    errors.password && "border-destructive/50 focus:border-destructive focus:ring-destructive"
+                    errors.password &&
+                      "border-destructive/50 focus:border-destructive focus:ring-destructive",
                   )}
                 />
                 {errors.password && (
-                  <p className="text-xs text-destructive mt-1">{errors.password.message}</p>
+                  <p className="text-xs text-destructive mt-1">
+                    {errors.password.message}
+                  </p>
                 )}
               </div>
               <Button

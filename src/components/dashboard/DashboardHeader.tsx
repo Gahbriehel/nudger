@@ -13,7 +13,10 @@ interface DashboardHeaderProps {
   setActiveTab: (tab: "dashboard" | "tasks" | "nudgelist") => void;
 }
 
-export function DashboardHeader({ activeTab, setActiveTab }: DashboardHeaderProps) {
+export function DashboardHeader({
+  activeTab,
+  setActiveTab,
+}: DashboardHeaderProps) {
   const user = useAuthStore((s) => s.user);
   const router = useRouter();
 
@@ -31,8 +34,11 @@ export function DashboardHeader({ activeTab, setActiveTab }: DashboardHeaderProp
     <nav className="w-full border-b border-border bg-background/80 backdrop-blur-md sticky top-0 z-50">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Brand */}
-        <div className="flex items-center gap-3"> 
-          <Link href="/" className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2 select-none">
+        <div className="flex items-center gap-3">
+          <Link
+            href="/"
+            className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2 select-none"
+          >
             <Image
               width={150}
               height={150}
@@ -60,7 +66,7 @@ export function DashboardHeader({ activeTab, setActiveTab }: DashboardHeaderProp
               "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200",
               activeTab === "dashboard"
                 ? "bg-foreground text-background font-bold"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted",
             )}
           >
             Dashboard
@@ -71,7 +77,7 @@ export function DashboardHeader({ activeTab, setActiveTab }: DashboardHeaderProp
               "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200",
               activeTab === "tasks"
                 ? "bg-foreground text-background font-bold"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted",
             )}
           >
             All Tasks
@@ -82,7 +88,7 @@ export function DashboardHeader({ activeTab, setActiveTab }: DashboardHeaderProp
               "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200",
               activeTab === "nudgelist"
                 ? "bg-foreground text-background font-bold"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted",
             )}
           >
             Nudgelist
@@ -110,7 +116,9 @@ export function DashboardHeader({ activeTab, setActiveTab }: DashboardHeaderProp
           onClick={() => setActiveTab("dashboard")}
           className={cn(
             "text-[10px] font-semibold py-1.5 px-3 rounded-md transition-all",
-            activeTab === "dashboard" ? "bg-foreground text-background font-bold" : "text-muted-foreground"
+            activeTab === "dashboard"
+              ? "bg-foreground text-background font-bold"
+              : "text-muted-foreground",
           )}
         >
           Dashboard
@@ -119,7 +127,9 @@ export function DashboardHeader({ activeTab, setActiveTab }: DashboardHeaderProp
           onClick={() => setActiveTab("tasks")}
           className={cn(
             "text-[10px] font-semibold py-1.5 px-3 rounded-md transition-all",
-            activeTab === "tasks" ? "bg-foreground text-background font-bold" : "text-muted-foreground"
+            activeTab === "tasks"
+              ? "bg-foreground text-background font-bold"
+              : "text-muted-foreground",
           )}
         >
           All Tasks
@@ -128,7 +138,9 @@ export function DashboardHeader({ activeTab, setActiveTab }: DashboardHeaderProp
           onClick={() => setActiveTab("nudgelist")}
           className={cn(
             "text-[10px] font-semibold py-1.5 px-3 rounded-md transition-all",
-            activeTab === "nudgelist" ? "bg-foreground text-background font-bold" : "text-muted-foreground"
+            activeTab === "nudgelist"
+              ? "bg-foreground text-background font-bold"
+              : "text-muted-foreground",
           )}
         >
           Nudgelist

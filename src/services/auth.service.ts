@@ -3,7 +3,12 @@ import { createClient } from "@/lib/supabase/client";
 const supabase = createClient();
 
 export const authService = {
-  async signUp(email: string, password: string, name: string, redirectTo?: string) {
+  async signUp(
+    email: string,
+    password: string,
+    name: string,
+    redirectTo?: string,
+  ) {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -34,7 +39,8 @@ export const authService = {
 
   async resetPasswordForEmail(email: string, redirectTo?: string) {
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: redirectTo || `${window.location.origin}/auth/update-password`,
+      redirectTo:
+        redirectTo || `${window.location.origin}/auth/update-password`,
     });
     if (error) throw error;
     return data;
@@ -49,13 +55,19 @@ export const authService = {
   },
 
   async getSession() {
-    const { data: { session }, error } = await supabase.auth.getSession();
+    const {
+      data: { session },
+      error,
+    } = await supabase.auth.getSession();
     if (error) throw error;
     return session;
   },
 
   async getUser() {
-    const { data: { user }, error } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
     if (error) throw error;
     return user;
   },

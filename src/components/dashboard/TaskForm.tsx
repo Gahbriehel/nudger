@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useEffect } from "react";
@@ -12,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { Loader2 } from "lucide-react";
+
 import { Spinner } from "@/components/ui/spinner";
 
 const taskSchema = z.object({
@@ -71,7 +72,8 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
 
   useEffect(() => {
     // Load existing tags
-    tagService.getTags()
+    tagService
+      .getTags()
       .then(setAvailableTags)
       .catch((err) => console.error("Error fetching tags:", err));
   }, []);
@@ -126,9 +128,15 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
         description: data.description || null,
         task_type: data.task_type as TaskType,
         due_date: data.due_date ? new Date(data.due_date).toISOString() : null,
-        reminder_at: data.reminder_at ? new Date(data.reminder_at).toISOString() : null,
-        recurrence_type: data.task_type === "recurring" ? (data.recurrence_type as RecurrenceType) : null,
-        recurrence_interval: data.task_type === "recurring" ? (interval || 1) : null,
+        reminder_at: data.reminder_at
+          ? new Date(data.reminder_at).toISOString()
+          : null,
+        recurrence_type:
+          data.task_type === "recurring"
+            ? (data.recurrence_type as RecurrenceType)
+            : null,
+        recurrence_interval:
+          data.task_type === "recurring" ? interval || 1 : null,
         notes: data.notes || null,
       };
 
@@ -136,7 +144,7 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
         taskPayload,
         subtasks,
         memoryCues,
-        selectedTags
+        selectedTags,
       );
 
       addTaskState(newTask);
@@ -147,7 +155,10 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 text-foreground pb-4 px-1">
+    <form
+      onSubmit={handleSubmit(onSubmit)}
+      className="space-y-6 text-foreground pb-4 px-1"
+    >
       {error && (
         <div className="bg-destructive/10 border border-destructive/20 text-destructive text-xs rounded-md p-3">
           {error}
@@ -156,7 +167,9 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
 
       {/* Task Title */}
       <div className="grid gap-2">
-        <Label htmlFor="title" className="text-sm font-semibold">Title *</Label>
+        <Label htmlFor="title" className="text-sm font-semibold">
+          Title *
+        </Label>
         <Input
           id="title"
           placeholder="What do you need to remember?"
@@ -170,7 +183,9 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
 
       {/* Description */}
       <div className="grid gap-2">
-        <Label htmlFor="description" className="text-sm font-semibold">Description</Label>
+        <Label htmlFor="description" className="text-sm font-semibold">
+          Description
+        </Label>
         <Textarea
           id="description"
           placeholder="Add details about this task..."
@@ -181,7 +196,9 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
 
       {/* Task Type Select */}
       <div className="grid gap-2">
-        <Label htmlFor="task_type" className="text-sm font-semibold">Task Type</Label>
+        <Label htmlFor="task_type" className="text-sm font-semibold">
+          Task Type
+        </Label>
         <select
           id="task_type"
           {...register("task_type")}
@@ -197,7 +214,9 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
       {taskType === "scheduled" && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border border-border bg-muted/20 p-4 rounded-lg">
           <div className="grid gap-2">
-            <Label htmlFor="due_date" className="text-sm font-semibold">Due Date</Label>
+            <Label htmlFor="due_date" className="text-sm font-semibold">
+              Due Date
+            </Label>
             <Input
               id="due_date"
               type="datetime-local"
@@ -205,7 +224,9 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="reminder_at" className="text-sm font-semibold">Reminder</Label>
+            <Label htmlFor="reminder_at" className="text-sm font-semibold">
+              Reminder
+            </Label>
             <Input
               id="reminder_at"
               type="datetime-local"
@@ -219,7 +240,9 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
         <div className="space-y-4 border border-border bg-muted/20 p-4 rounded-lg">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="due_date" className="text-sm font-semibold">Initial Due Date</Label>
+              <Label htmlFor="due_date" className="text-sm font-semibold">
+                Initial Due Date
+              </Label>
               <Input
                 id="due_date"
                 type="datetime-local"
@@ -227,7 +250,9 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="reminder_at" className="text-sm font-semibold">Reminder</Label>
+              <Label htmlFor="reminder_at" className="text-sm font-semibold">
+                Reminder
+              </Label>
               <Input
                 id="reminder_at"
                 type="datetime-local"
@@ -237,7 +262,12 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="recurrence_type" className="text-sm font-semibold">Recurrence Interval</Label>
+              <Label
+                htmlFor="recurrence_type"
+                className="text-sm font-semibold"
+              >
+                Recurrence Interval
+              </Label>
               <select
                 id="recurrence_type"
                 {...register("recurrence_type")}
@@ -250,7 +280,12 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
               </select>
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="recurrence_interval" className="text-sm font-semibold">Repeat Every</Label>
+              <Label
+                htmlFor="recurrence_interval"
+                className="text-sm font-semibold"
+              >
+                Repeat Every
+              </Label>
               <Input
                 id="recurrence_interval"
                 type="number"
@@ -296,7 +331,9 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
               >
                 <div className="flex items-center gap-3">
                   <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/60 flex-shrink-0" />
-                  <span className="font-semibold text-foreground/90">{sub}</span>
+                  <span className="font-semibold text-foreground/90">
+                    {sub}
+                  </span>
                 </div>
                 <button
                   type="button"
@@ -313,7 +350,9 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
 
       {/* Memory Cues */}
       <div className="space-y-3">
-        <Label className="text-sm font-semibold">Memory Cues (triggers to help you remember)</Label>
+        <Label className="text-sm font-semibold">
+          Memory Cues (triggers to help you remember)
+        </Label>
         <div className="flex gap-2">
           <Input
             value={newCue}
@@ -344,8 +383,12 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
                 className="flex justify-between items-center bg-muted/30 dark:bg-[#131920] border border-border/80 dark:border-[#222A35]/50 px-4 py-3 rounded-2xl text-sm text-foreground shadow-sm transition-all hover:bg-muted/40 dark:hover:bg-[#171E27]"
               >
                 <div className="flex items-center gap-3">
-                  <span className="text-amber-500 dark:text-amber-400 select-none flex-shrink-0 text-base">💡</span>
-                  <span className="font-semibold text-foreground/90">{cue}</span>
+                  <span className="text-amber-500 dark:text-amber-400 select-none flex-shrink-0 text-base">
+                    💡
+                  </span>
+                  <span className="font-semibold text-foreground/90">
+                    {cue}
+                  </span>
                 </div>
                 <button
                   type="button"
@@ -405,7 +448,9 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
         {/* Available Tags list */}
         {availableTags.length > 0 && (
           <div className="space-y-1">
-            <p className="text-[11px] text-muted-foreground">Select from existing tags:</p>
+            <p className="text-[11px] text-muted-foreground">
+              Select from existing tags:
+            </p>
             <div className="flex flex-wrap gap-1.5">
               {availableTags
                 .filter((tag) => !selectedTags.includes(tag.name))
@@ -426,7 +471,9 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
 
       {/* Notes */}
       <div className="grid gap-2">
-        <Label htmlFor="notes" className="text-sm font-semibold">Notes</Label>
+        <Label htmlFor="notes" className="text-sm font-semibold">
+          Notes
+        </Label>
         <Textarea
           id="notes"
           placeholder="Any other mental hooks or reference notes..."
@@ -451,7 +498,10 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
           disabled={isSubmitting}
         >
           {isSubmitting ? (
-            <Spinner size="sm" className="border-t-primary-foreground border-primary-foreground/30" />
+            <Spinner
+              size="sm"
+              className="border-t-primary-foreground border-primary-foreground/30"
+            />
           ) : (
             "Save Task"
           )}

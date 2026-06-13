@@ -28,7 +28,8 @@ function SignUpSuccessContent() {
       </CardHeader>
       <CardContent className="flex flex-col gap-6">
         <p className="text-sm text-muted-foreground leading-relaxed">
-          Thank you for signing up! Please click the confirmation link in the email to activate your account.
+          Thank you for signing up! Please click the confirmation link in the
+          email to activate your account.
         </p>
 
         <div className="border-t border-border pt-4">
@@ -46,11 +47,13 @@ function SignUpSuccessContent() {
 
 export default function Page() {
   return (
-    <Suspense fallback={
-      <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
-        <Spinner size="md" label="Loading success screen..." />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
+          <Spinner size="md" label="Loading success screen..." />
+        </div>
+      }
+    >
       <SignUpSuccessContent />
     </Suspense>
   );

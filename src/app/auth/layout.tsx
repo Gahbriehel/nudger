@@ -37,14 +37,13 @@ export default function AuthLayout({
               />
             </Link>
             <p className="text-xs text-muted-foreground mt-2 max-w-[280px] leading-relaxed">
-              Productivity system for tracking tasks, subtasks, recurrence rules, and cognitive memory cues.
+              Productivity system for tracking tasks, subtasks, recurrence
+              rules, and cognitive memory cues.
             </p>
           </div>
 
           {/* Form Content */}
-          <div className="w-full">
-            {children}
-          </div>
+          <div className="w-full">{children}</div>
         </div>
       </div>
     </div>

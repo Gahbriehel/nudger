@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useCallback } from "react";
 
 export function zodResolver(schema: any) {
@@ -35,7 +36,7 @@ export function useForm<T extends Record<string, any> = any>({
         const val =
           e.target.type === "checkbox" ? e.target.checked : e.target.value;
         setValues((prev) => ({ ...prev, [name]: val }));
-        
+
         // Clear field error on change
         if (errors[name]) {
           setErrors((prev) => {
@@ -65,7 +66,7 @@ export function useForm<T extends Record<string, any> = any>({
       setValues(newValues || { ...defaultValues });
       setErrors({});
     },
-    [defaultValues]
+    [defaultValues],
   );
 
   const handleSubmit = (onSubmit: (data: T) => any) => {

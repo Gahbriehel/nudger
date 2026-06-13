@@ -47,8 +47,10 @@ export function ForgotPasswordForm({
       await authService.resetPasswordForEmail(data.email);
       setSuccess(true);
       toast.success("Reset link sent successfully!");
-    } catch (err: any) {
-      toast.error(err.message || "Failed to send reset link.");
+    } catch (err: unknown) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to send reset link.",
+      );
     }
   };
 
@@ -56,7 +58,9 @@ export function ForgotPasswordForm({
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card className="border border-border bg-card backdrop-blur-md shadow-lg text-foreground">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold tracking-tight">Reset Password</CardTitle>
+          <CardTitle className="text-2xl font-bold tracking-tight">
+            Reset Password
+          </CardTitle>
           <CardDescription className="text-muted-foreground">
             Enter your email to receive a password reset link.
           </CardDescription>
@@ -78,18 +82,20 @@ export function ForgotPasswordForm({
             <form onSubmit={handleSubmit(onSubmit)}>
               <div className="flex flex-col gap-5">
                 <div className="grid gap-2">
-                  <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+                  <Label htmlFor="email" className="text-sm font-medium">
+                    Email
+                  </Label>
                   <Input
                     id="email"
                     type="email"
                     placeholder="name@example.com"
                     {...register("email")}
-                    className={cn(
-                      errors.email && "border-destructive/50"
-                    )}
+                    className={cn(errors.email && "border-destructive/50")}
                   />
                   {errors.email && (
-                    <p className="text-xs text-destructive mt-1">{errors.email.message}</p>
+                    <p className="text-xs text-destructive mt-1">
+                      {errors.email.message}
+                    </p>
                   )}
                 </div>
                 <Button

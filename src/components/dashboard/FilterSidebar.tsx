@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useEffect } from "react";
@@ -49,7 +50,9 @@ export function FilterSidebar({ open, onClose }: FilterSidebarProps) {
       <div
         className={cn(
           "fixed inset-0 z-40 bg-foreground/20 backdrop-blur-sm transition-opacity duration-300",
-          open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+          open
+            ? "opacity-100 pointer-events-auto"
+            : "opacity-0 pointer-events-none",
         )}
         onClick={onClose}
       />
@@ -58,7 +61,7 @@ export function FilterSidebar({ open, onClose }: FilterSidebarProps) {
       <div
         className={cn(
           "fixed top-0 right-0 z-50 h-full w-80 max-w-full bg-card border-l border-border shadow-2xl flex flex-col transition-transform duration-300 ease-in-out",
-          open ? "translate-x-0" : "translate-x-full"
+          open ? "translate-x-0" : "translate-x-full",
         )}
         aria-label="Filter options"
         role="dialog"
@@ -80,7 +83,9 @@ export function FilterSidebar({ open, onClose }: FilterSidebarProps) {
                 d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z"
               />
             </svg>
-            <h2 className="text-sm font-bold text-foreground tracking-tight">Filters</h2>
+            <h2 className="text-sm font-bold text-foreground tracking-tight">
+              Filters
+            </h2>
             {activeFilterCount > 0 && (
               <span className="text-[10px] font-bold bg-primary text-primary-foreground rounded-full w-5 h-5 flex items-center justify-center">
                 {activeFilterCount}
@@ -92,15 +97,24 @@ export function FilterSidebar({ open, onClose }: FilterSidebarProps) {
             className="text-muted-foreground hover:text-foreground transition-colors w-7 h-7 flex items-center justify-center rounded-md hover:bg-muted"
             aria-label="Close filters"
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
 
         {/* Filter Options */}
         <div className="flex-1 overflow-y-auto p-5 space-y-6">
-          
           {/* Task Type */}
           <div className="space-y-3">
             <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
@@ -120,7 +134,7 @@ export function FilterSidebar({ open, onClose }: FilterSidebarProps) {
                     "py-2 px-3 rounded-lg text-xs font-semibold border transition-all duration-150 text-left",
                     filters.type === opt.value
                       ? "bg-foreground text-background border-foreground"
-                      : "bg-muted/40 text-foreground border-border hover:border-foreground/30 hover:bg-muted"
+                      : "bg-muted/40 text-foreground border-border hover:border-foreground/30 hover:bg-muted",
                   )}
                 >
                   {opt.label}
@@ -140,8 +154,16 @@ export function FilterSidebar({ open, onClose }: FilterSidebarProps) {
             <div className="grid grid-cols-1 gap-2">
               {[
                 { value: "all", label: "All", description: "Show all tasks" },
-                { value: "pending", label: "Pending", description: "Not yet completed" },
-                { value: "completed", label: "Completed", description: "Checked off tasks" },
+                {
+                  value: "pending",
+                  label: "Pending",
+                  description: "Not yet completed",
+                },
+                {
+                  value: "completed",
+                  label: "Completed",
+                  description: "Checked off tasks",
+                },
               ].map((opt) => (
                 <button
                   key={opt.value}
@@ -150,14 +172,16 @@ export function FilterSidebar({ open, onClose }: FilterSidebarProps) {
                     "py-2.5 px-3.5 rounded-lg text-xs border transition-all duration-150 flex items-center justify-between",
                     filters.status === opt.value
                       ? "bg-foreground text-background border-foreground"
-                      : "bg-muted/40 text-foreground border-border hover:border-foreground/30 hover:bg-muted"
+                      : "bg-muted/40 text-foreground border-border hover:border-foreground/30 hover:bg-muted",
                   )}
                 >
                   <span className="font-semibold">{opt.label}</span>
                   <span
                     className={cn(
                       "text-[10px]",
-                      filters.status === opt.value ? "text-background/70" : "text-muted-foreground"
+                      filters.status === opt.value
+                        ? "text-background/70"
+                        : "text-muted-foreground",
                     )}
                   >
                     {opt.description}
@@ -177,7 +201,11 @@ export function FilterSidebar({ open, onClose }: FilterSidebarProps) {
             </p>
             <div className="grid grid-cols-1 gap-2">
               {[
-                { value: "recently_updated", label: "Recently Updated", icon: "🕐" },
+                {
+                  value: "recently_updated",
+                  label: "Recently Updated",
+                  icon: "🕐",
+                },
                 { value: "oldest", label: "Oldest Created", icon: "📅" },
                 { value: "due_soon", label: "Due Date (Soonest)", icon: "⏰" },
                 { value: "most_subtasks", label: "Most Subtasks", icon: "📋" },
@@ -189,7 +217,7 @@ export function FilterSidebar({ open, onClose }: FilterSidebarProps) {
                     "py-2.5 px-3.5 rounded-lg text-xs font-semibold border transition-all duration-150 flex items-center gap-2.5",
                     filters.sort === opt.value
                       ? "bg-foreground text-background border-foreground"
-                      : "bg-muted/40 text-foreground border-border hover:border-foreground/30 hover:bg-muted"
+                      : "bg-muted/40 text-foreground border-border hover:border-foreground/30 hover:bg-muted",
                   )}
                 >
                   <span>{opt.icon}</span>
@@ -209,7 +237,7 @@ export function FilterSidebar({ open, onClose }: FilterSidebarProps) {
               "w-full py-2.5 rounded-lg text-xs font-semibold border transition-all duration-150",
               activeFilterCount > 0
                 ? "bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive/20"
-                : "bg-muted/30 text-muted-foreground border-border cursor-not-allowed opacity-50"
+                : "bg-muted/30 text-muted-foreground border-border cursor-not-allowed opacity-50",
             )}
           >
             Reset Filters

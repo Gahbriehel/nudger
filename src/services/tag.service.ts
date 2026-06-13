@@ -5,7 +5,9 @@ const supabase = createClient();
 
 export const tagService = {
   async getTags(): Promise<Tag[]> {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) throw new Error("Unauthenticated");
 
     const { data, error } = await supabase
@@ -19,11 +21,13 @@ export const tagService = {
   },
 
   async createTag(name: string): Promise<Tag> {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) throw new Error("Unauthenticated");
 
     const cleanName = name.trim().toLowerCase();
-    
+
     // Check if tag already exists
     const { data: existingTag } = await supabase
       .from("tags")

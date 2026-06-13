@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export interface ZodIssue {
   path: (string | number)[];
   message: string;
@@ -83,7 +84,10 @@ class ZodString extends ZodType<string> {
     return data;
   }
 
-  min(length: number, message = `String must contain at least ${length} character(s)`) {
+  min(
+    length: number,
+    message = `String must contain at least ${length} character(s)`,
+  ) {
     this.checks.push({
       validate: (val) => val.length >= length,
       message,
@@ -91,7 +95,10 @@ class ZodString extends ZodType<string> {
     return this;
   }
 
-  max(length: number, message = `String must contain at most ${length} character(s)`) {
+  max(
+    length: number,
+    message = `String must contain at most ${length} character(s)`,
+  ) {
     this.checks.push({
       validate: (val) => val.length <= length,
       message,
@@ -127,7 +134,10 @@ class ZodNumber extends ZodType<number> {
     return num;
   }
 
-  min(minVal: number, message = `Number must be greater than or equal to ${minVal}`) {
+  min(
+    minVal: number,
+    message = `Number must be greater than or equal to ${minVal}`,
+  ) {
     this.checks.push({
       validate: (val) => val >= minVal,
       message,
@@ -135,7 +145,10 @@ class ZodNumber extends ZodType<number> {
     return this;
   }
 
-  max(maxVal: number, message = `Number must be less than or equal to ${maxVal}`) {
+  max(
+    maxVal: number,
+    message = `Number must be less than or equal to ${maxVal}`,
+  ) {
     this.checks.push({
       validate: (val) => val <= maxVal,
       message,

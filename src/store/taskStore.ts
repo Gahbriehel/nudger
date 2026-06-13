@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { create } from "@/lib/zustand";
 import { Task } from "@/types/database.types";
 import { taskService } from "@/services/task.service";
@@ -19,7 +20,11 @@ interface TaskState {
   addTaskState: (task: Task) => void;
   updateTaskState: (id: string, updates: Partial<Task>) => void;
   deleteTaskState: (id: string) => void;
-  toggleSubtaskState: (taskId: string, subtaskId: string, completed: boolean) => void;
+  toggleSubtaskState: (
+    taskId: string,
+    subtaskId: string,
+    completed: boolean,
+  ) => void;
 }
 
 export const useTaskStore = create<TaskState>((set) => ({
@@ -43,8 +48,7 @@ export const useTaskStore = create<TaskState>((set) => ({
       set({ error: err.message || "Failed to fetch tasks", loading: false });
     }
   },
-  addTaskState: (task) =>
-    set((state) => ({ tasks: [task, ...state.tasks] })),
+  addTaskState: (task) => set((state) => ({ tasks: [task, ...state.tasks] })),
   updateTaskState: (id, updates) =>
     set((state) => ({
       tasks: state.tasks.map((t) => (t.id === id ? { ...t, ...updates } : t)),
@@ -58,7 +62,7 @@ export const useTaskStore = create<TaskState>((set) => ({
       tasks: state.tasks.map((t) => {
         if (t.id !== taskId) return t;
         const subtasks = t.subtasks?.map((sub) =>
-          sub.id === subtaskId ? { ...sub, completed } : sub
+          sub.id === subtaskId ? { ...sub, completed } : sub,
         );
         return { ...t, subtasks };
       }),

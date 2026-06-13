@@ -1,6 +1,6 @@
 export function format(
   date: Date | string | number | null | undefined,
-  formatStr: string
+  formatStr: string,
 ): string {
   if (!date) return "";
   const d = new Date(date);
@@ -47,7 +47,7 @@ export function format(
   }
   if (formatStr === "yyyy-MM-dd HH:mm") {
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
-      d.getDate()
+      d.getDate(),
     )} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
   if (formatStr === "HH:mm") {
@@ -65,14 +65,14 @@ export function addDays(date: Date | string | number, amount: number): Date {
 
 export function isAfter(
   date: Date | string | number,
-  dateToCompare: Date | string | number
+  dateToCompare: Date | string | number,
 ): boolean {
   return new Date(date).getTime() > new Date(dateToCompare).getTime();
 }
 
 export function differenceInDays(
   dateLeft: Date | string | number,
-  dateRight: Date | string | number
+  dateRight: Date | string | number,
 ): number {
   const d1 = new Date(dateLeft);
   const d2 = new Date(dateRight);

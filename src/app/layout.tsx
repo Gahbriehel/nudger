@@ -11,12 +11,13 @@ const defaultUrl = process.env.VERCEL_URL
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
   title: "Nudger",
-  description: "Productivity system for tracking tasks, subtasks, recurrence rules, and cognitive memory cues.",
+  description:
+    "Productivity system for tracking tasks, subtasks, recurrence rules, and cognitive memory cues.",
   icons: {
     icon: "/images/nudger-app-icon.png",
     shortcut: "/images/nudger-app-icon.png",
     apple: "/images/nudger-app-icon.png",
-  }
+  },
 };
 
 const poppins = Poppins({
@@ -39,7 +40,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${poppins.variable} ${inter.variable} font-sans antialiased`}>
+      <body
+        className={`${poppins.variable} ${inter.variable} font-sans antialiased`}
+      >
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
