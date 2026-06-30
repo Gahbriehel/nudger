@@ -9,8 +9,8 @@ import Image from "next/image";
 import Link from "next/link";
 
 interface DashboardHeaderProps {
-  activeTab: "dashboard" | "tasks" | "nudgelist";
-  setActiveTab: (tab: "dashboard" | "tasks" | "nudgelist") => void;
+  activeTab: "dashboard" | "tasks" | "nudgelist" | "settings";
+  setActiveTab: (tab: "dashboard" | "tasks" | "nudgelist" | "settings") => void;
 }
 
 export function DashboardHeader({
@@ -93,6 +93,17 @@ export function DashboardHeader({
           >
             Nudgelist
           </button>
+          <button
+            onClick={() => setActiveTab("settings")}
+            className={cn(
+              "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200",
+              activeTab === "settings"
+                ? "bg-foreground text-background font-bold"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted",
+            )}
+          >
+            Settings
+          </button>
         </div>
 
         {/* User Info & Actions */}
@@ -144,6 +155,17 @@ export function DashboardHeader({
           )}
         >
           Nudgelist
+        </button>
+        <button
+          onClick={() => setActiveTab("settings")}
+          className={cn(
+            "text-[10px] font-semibold py-1.5 px-3 rounded-md transition-all",
+            activeTab === "settings"
+              ? "bg-foreground text-background font-bold"
+              : "text-muted-foreground",
+          )}
+        >
+          Settings
         </button>
       </div>
     </nav>

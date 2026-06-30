@@ -9,6 +9,9 @@ import { QuickStats } from "./QuickStats";
 import { TaskList } from "./TaskList";
 import { NudgelistView } from "./NudgelistView";
 import { TaskForm } from "./TaskForm";
+import { SettingsView } from "./SettingsView";
+import { PwaInstallBanner } from "./PwaInstallBanner";
+import { useNotificationChecker } from "@/hooks/useNotificationChecker";
 import { format } from "@/lib/date-fns";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -19,8 +22,11 @@ export function DashboardMain() {
   const { setSession, setLoading, loading: authLoading, user } = useAuthStore();
   const { fetchTasks, tasks } = useTaskStore();
 
+  // Run real-time background task reminder scanner
+  useNotificationChecker();
+
   const [activeTab, setActiveTab] = useState<
-    "dashboard" | "tasks" | "nudgelist"
+    "dashboard" | "tasks" | "nudgelist" | "settings"
   >("dashboard");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
@@ -85,6 +91,8 @@ export function DashboardMain() {
       <DashboardHeader activeTab={activeTab} setActiveTab={setActiveTab} />
 
       <main className="max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 flex-1 mt-8 space-y-8">
+        <PwaInstallBanner />
+
         {activeTab === "dashboard" && (
           <div className="space-y-8">
             {/* Welcoming and Digital Clock banner */}
@@ -325,6 +333,21 @@ export function DashboardMain() {
               </p>
             </div>
             <NudgelistView />
+          </div>
+        )}
+
+        {activeTab === "settings" && (
+          <div className="space-y-6">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight text-foreground">
+                Account Settings
+              </h1>
+              <p className="text-xs text-muted-foreground mt-1 leading-normal">
+                Update your display name, configure push notifications, or
+                change your password.
+              </p>
+            </div>
+            <SettingsView />
           </div>
         )}
       </main>

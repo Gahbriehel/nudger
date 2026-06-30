@@ -18,6 +18,7 @@ export interface Task {
   completed_at: string | null;
   created_at: string;
   updated_at: string;
+  reminder_sent?: boolean;
 
   // Joined fields
   subtasks?: Subtask[];

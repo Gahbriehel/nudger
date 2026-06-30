@@ -54,6 +54,14 @@ export const authService = {
     return data;
   },
 
+  async updateProfile(name: string) {
+    const { data, error } = await supabase.auth.updateUser({
+      data: { name },
+    });
+    if (error) throw error;
+    return data;
+  },
+
   async getSession() {
     const {
       data: { session },

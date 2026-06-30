@@ -28,8 +28,7 @@ export class ZodError extends Error {
 }
 
 export type SafeParseResult<T> =
-  | { success: true; data: T }
-  | { success: false; error: ZodError };
+  { success: true; data: T } | { success: false; error: ZodError };
 
 export abstract class ZodType<T = any> {
   _type!: T;

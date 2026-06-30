@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Poppins, Inter } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "sonner";
+import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 import "./globals.css";
 
 const defaultUrl = process.env.VERCEL_URL
@@ -18,6 +19,19 @@ export const metadata: Metadata = {
     shortcut: "/images/nudger-app-icon.png",
     apple: "/images/nudger-app-icon.png",
   },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Nudger",
+  },
+};
+
+export const viewport = {
+  themeColor: "#6366f1",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 const poppins = Poppins({
@@ -51,6 +65,7 @@ export default function RootLayout({
         >
           {children}
           <Toaster richColors closeButton position="top-right" />
+          <ServiceWorkerRegister />
         </ThemeProvider>
       </body>
     </html>
