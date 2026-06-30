@@ -18,10 +18,12 @@ async function ErrorContent({
     return (
       <div className="flex flex-col gap-4">
         <p className="text-sm text-muted-foreground">
-          This usually happens when you click the confirmation link in a different browser, app, or device than the one you used to sign up.
+          This usually happens when you click the confirmation link in a
+          different browser, app, or device than the one you used to sign up.
         </p>
         <p className="text-sm font-medium text-foreground">
-          Good news! Your email has likely already been verified. Please try logging in with the email and password you created.
+          Good news! Your email has likely already been verified. Please try
+          logging in with the email and password you created.
         </p>
         <Button asChild className="w-full mt-2">
           <Link href="/auth/login">Go to Login</Link>
@@ -74,4 +76,3 @@ export default function Page({
     </div>
   );
 }
-
