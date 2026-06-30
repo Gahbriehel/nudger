@@ -84,8 +84,17 @@ export function SignUpForm({
           <form onSubmit={handleSubmit(onSubmit)}>
             <div className="flex flex-col gap-5">
               <div className="grid gap-2">
-                <Label htmlFor="name" className="text-sm font-medium">
+                <Label
+                  htmlFor="name"
+                  className="text-sm font-medium flex items-center gap-1"
+                >
                   Name
+                  <span
+                    className="text-destructive text-xs"
+                    aria-label="required"
+                  >
+                    *
+                  </span>
                 </Label>
                 <Input
                   id="name"
@@ -101,8 +110,17 @@ export function SignUpForm({
                 )}
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="email" className="text-sm font-medium">
+                <Label
+                  htmlFor="email"
+                  className="text-sm font-medium flex items-center gap-1"
+                >
                   Email
+                  <span
+                    className="text-destructive text-xs"
+                    aria-label="required"
+                  >
+                    *
+                  </span>
                 </Label>
                 <Input
                   id="email"
@@ -118,8 +136,17 @@ export function SignUpForm({
                 )}
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="password" className="text-sm font-medium">
+                <Label
+                  htmlFor="password"
+                  className="text-sm font-medium flex items-center gap-1"
+                >
                   Password
+                  <span
+                    className="text-destructive text-xs"
+                    aria-label="required"
+                  >
+                    *
+                  </span>
                 </Label>
                 <PasswordInput
                   id="password"
@@ -136,9 +163,15 @@ export function SignUpForm({
               <div className="grid gap-2">
                 <Label
                   htmlFor="confirmPassword"
-                  className="text-sm font-medium"
+                  className="text-sm font-medium flex items-center gap-1"
                 >
                   Confirm Password
+                  <span
+                    className="text-destructive text-xs"
+                    aria-label="required"
+                  >
+                    *
+                  </span>
                 </Label>
                 <PasswordInput
                   id="confirmPassword"

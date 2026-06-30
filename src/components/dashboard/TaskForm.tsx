@@ -167,8 +167,14 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
 
       {/* Task Title */}
       <div className="grid gap-2">
-        <Label htmlFor="title" className="text-sm font-semibold">
-          Title *
+        <Label
+          htmlFor="title"
+          className="text-sm font-semibold flex items-center gap-1.5"
+        >
+          Title
+          <span className="text-destructive text-xs" aria-label="required">
+            *
+          </span>
         </Label>
         <Input
           id="title"
@@ -183,8 +189,14 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
 
       {/* Description */}
       <div className="grid gap-2">
-        <Label htmlFor="description" className="text-sm font-semibold">
+        <Label
+          htmlFor="description"
+          className="text-sm font-semibold flex items-center gap-1.5"
+        >
           Description
+          <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+            optional
+          </span>
         </Label>
         <Textarea
           id="description"
@@ -196,8 +208,14 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
 
       {/* Task Type Select */}
       <div className="grid gap-2">
-        <Label htmlFor="task_type" className="text-sm font-semibold">
+        <Label
+          htmlFor="task_type"
+          className="text-sm font-semibold flex items-center gap-1.5"
+        >
           Task Type
+          <span className="text-destructive text-xs" aria-label="required">
+            *
+          </span>
         </Label>
         <select
           id="task_type"
@@ -214,8 +232,14 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
       {taskType === "scheduled" && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border border-border bg-muted/20 p-4 rounded-lg">
           <div className="grid gap-2">
-            <Label htmlFor="due_date" className="text-sm font-semibold">
+            <Label
+              htmlFor="due_date"
+              className="text-sm font-semibold flex items-center gap-1.5"
+            >
               Due Date
+              <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                optional
+              </span>
             </Label>
             <Input
               id="due_date"
@@ -224,8 +248,14 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="reminder_at" className="text-sm font-semibold">
+            <Label
+              htmlFor="reminder_at"
+              className="text-sm font-semibold flex items-center gap-1.5"
+            >
               Reminder
+              <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                optional
+              </span>
             </Label>
             <Input
               id="reminder_at"
@@ -240,8 +270,14 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
         <div className="space-y-4 border border-border bg-muted/20 p-4 rounded-lg">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="due_date" className="text-sm font-semibold">
+              <Label
+                htmlFor="due_date"
+                className="text-sm font-semibold flex items-center gap-1.5"
+              >
                 Initial Due Date
+                <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                  optional
+                </span>
               </Label>
               <Input
                 id="due_date"
@@ -250,8 +286,14 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="reminder_at" className="text-sm font-semibold">
+              <Label
+                htmlFor="reminder_at"
+                className="text-sm font-semibold flex items-center gap-1.5"
+              >
                 Reminder
+                <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                  optional
+                </span>
               </Label>
               <Input
                 id="reminder_at"
@@ -299,7 +341,17 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
 
       {/* Subtasks checklist */}
       <div className="space-y-3">
-        <Label className="text-sm font-semibold">Subtasks / Checklist</Label>
+        <div>
+          <Label className="text-sm font-semibold flex items-center gap-1.5">
+            Subtasks / Checklist
+            <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+              optional
+            </span>
+          </Label>
+          <p className="text-[11px] text-muted-foreground mt-0.5">
+            Break this task into smaller steps you can check off.
+          </p>
+        </div>
         <div className="flex gap-2">
           <Input
             value={newSubtask}
@@ -350,9 +402,18 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
 
       {/* Memory Cues */}
       <div className="space-y-3">
-        <Label className="text-sm font-semibold">
-          Memory Cues (triggers to help you remember)
-        </Label>
+        <div>
+          <Label className="text-sm font-semibold flex items-center gap-1.5">
+            Memory Cues
+            <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+              optional
+            </span>
+          </Label>
+          <p className="text-[11px] text-muted-foreground mt-0.5">
+            Environmental triggers to help you remember — e.g. &ldquo;Put keys
+            by the fridge&rdquo;.
+          </p>
+        </div>
         <div className="flex gap-2">
           <Input
             value={newCue}
@@ -405,7 +466,18 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
 
       {/* Tags Selector */}
       <div className="space-y-3">
-        <Label className="text-sm font-semibold">Tags</Label>
+        <div>
+          <Label className="text-sm font-semibold flex items-center gap-1.5">
+            Tags
+            <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+              optional
+            </span>
+          </Label>
+          <p className="text-[11px] text-muted-foreground mt-0.5">
+            Labels to group and filter tasks — e.g. &ldquo;work&rdquo;,
+            &ldquo;health&rdquo;, &ldquo;errands&rdquo;.
+          </p>
+        </div>
         <div className="flex gap-2">
           <Input
             value={newTagInput}
@@ -471,8 +543,14 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
 
       {/* Notes */}
       <div className="grid gap-2">
-        <Label htmlFor="notes" className="text-sm font-semibold">
+        <Label
+          htmlFor="notes"
+          className="text-sm font-semibold flex items-center gap-1.5"
+        >
           Notes
+          <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+            optional
+          </span>
         </Label>
         <Textarea
           id="notes"

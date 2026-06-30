@@ -157,8 +157,17 @@ export function SettingsView() {
           </div>
 
           <div className="grid gap-1.5">
-            <Label htmlFor="displayName" className="text-xs font-semibold">
+            <Label
+              htmlFor="displayName"
+              className="text-xs font-semibold flex items-center gap-1"
+            >
               Display Name
+              <span
+                className="text-destructive text-[10px]"
+                aria-label="required"
+              >
+                *
+              </span>
             </Label>
             <Input
               id="displayName"
@@ -241,8 +250,17 @@ export function SettingsView() {
         </h2>
         <form onSubmit={handleUpdatePassword} className="space-y-4">
           <div className="grid gap-1.5">
-            <Label htmlFor="password" className="text-xs font-semibold">
+            <Label
+              htmlFor="password"
+              className="text-xs font-semibold flex items-center gap-1"
+            >
               New Password
+              <span
+                className="text-destructive text-[10px]"
+                aria-label="required"
+              >
+                *
+              </span>
             </Label>
             <Input
               id="password"
@@ -255,8 +273,17 @@ export function SettingsView() {
           </div>
 
           <div className="grid gap-1.5">
-            <Label htmlFor="confirmPassword" className="text-xs font-semibold">
+            <Label
+              htmlFor="confirmPassword"
+              className="text-xs font-semibold flex items-center gap-1"
+            >
               Confirm New Password
+              <span
+                className="text-destructive text-[10px]"
+                aria-label="required"
+              >
+                *
+              </span>
             </Label>
             <Input
               id="confirmPassword"
