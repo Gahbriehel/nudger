@@ -410,7 +410,8 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
             </span>
           </Label>
           <p className="text-[11px] text-muted-foreground mt-0.5">
-            Environmental triggers to help you remember — e.g. &ldquo;Place server logs spreadsheet on secondary monitor&rdquo;.
+            Environmental triggers to help you remember — e.g. &ldquo;Place
+            server logs spreadsheet on secondary monitor&rdquo;.
           </p>
         </div>
         <div className="flex gap-2">
