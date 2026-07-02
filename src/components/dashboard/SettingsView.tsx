@@ -29,6 +29,7 @@ export function SettingsView() {
   const [isPushSupported, setIsPushSupported] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isTogglingPush, setIsTogglingPush] = useState(false);
+  const [isSendingTest, setIsSendingTest] = useState(false);
   const [permissionState, setPermissionState] = useState<string>("default");
 
   useEffect(() => {
@@ -101,6 +102,42 @@ export function SettingsView() {
     }
   };
 
+  const sendTestNotification = async (
+    inlineSubscription?: PushSubscription,
+  ) => {
+    setIsSendingTest(true);
+    try {
+      const body = inlineSubscription
+        ? JSON.stringify({ subscription: inlineSubscription.toJSON() })
+        : JSON.stringify({});
+
+      const res = await fetch("/api/notifications/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(`Test failed: ${data.error ?? "Unknown error"}`);
+      } else {
+        toast.success(data.message ?? "Test notification sent!", {
+          description:
+            "Check your device — a push notification should arrive shortly.",
+          duration: 8000,
+        });
+      }
+    } catch (err: unknown) {
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "Could not send test notification.",
+      );
+    } finally {
+      setIsSendingTest(false);
+    }
+  };
+
   const handleTogglePush = async () => {
     if (!isPushSupported) return;
 
@@ -112,11 +149,20 @@ export function SettingsView() {
         setIsSubscribed(false);
         toast.success("Unsubscribed from push notifications.");
       } else {
-        // Subscribe
+        // Subscribe — then immediately fire a test push to confirm the pipeline
         const sub = await subscribeUserToPush();
         setIsSubscribed(!!sub);
         setPermissionState(Notification.permission);
-        toast.success("Successfully subscribed to push notifications!");
+        toast.success("Subscribed! Sending a test notification now…", {
+          description:
+            "You should receive a push notification in a few seconds.",
+          duration: 6000,
+        });
+        if (sub) {
+          // Pass the fresh subscription object directly so the test works
+          // even before Supabase has committed the upsert
+          await sendTestNotification(sub);
+        }
       }
     } catch (err: unknown) {
       console.error(err);
@@ -219,17 +265,29 @@ export function SettingsView() {
               </div>
 
               <div className="flex items-center gap-3">
-                {isTogglingPush && <Spinner size="sm" />}
+                {(isTogglingPush || isSendingTest) && <Spinner size="sm" />}
+                {isSubscribed && (
+                  <button
+                    type="button"
+                    onClick={() => sendTestNotification()}
+                    disabled={isSendingTest || isTogglingPush}
+                    title="Send a test push notification to confirm it's working"
+                    className="text-[11px] font-semibold text-primary underline underline-offset-2 hover:text-primary/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {isSendingTest ? "Sending…" : "Send Test"}
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={handleTogglePush}
                   disabled={
                     isTogglingPush ||
+                    isSendingTest ||
                     (permissionState === "denied" && !isSubscribed)
                   }
                   className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
                     isSubscribed ? "bg-primary" : "bg-input"
-                  } ${isTogglingPush || (permissionState === "denied" && !isSubscribed) ? "opacity-50 cursor-not-allowed" : ""}`}
+                  } ${isTogglingPush || isSendingTest || (permissionState === "denied" && !isSubscribed) ? "opacity-50 cursor-not-allowed" : ""}`}
                 >
                   <span
                     className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-background shadow ring-0 transition duration-200 ease-in-out ${
