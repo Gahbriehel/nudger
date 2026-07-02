@@ -410,15 +410,14 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
             </span>
           </Label>
           <p className="text-[11px] text-muted-foreground mt-0.5">
-            Environmental triggers to help you remember — e.g. &ldquo;Put keys
-            by the fridge&rdquo;.
+            Environmental triggers to help you remember — e.g. &ldquo;Place server logs spreadsheet on secondary monitor&rdquo;.
           </p>
         </div>
         <div className="flex gap-2">
           <Input
             value={newCue}
             onChange={(e) => setNewCue(e.target.value)}
-            placeholder="e.g. Put keys by the fridge, post-it on monitor..."
+            placeholder="e.g. Place server logs spreadsheet on secondary monitor, post-it on screen..."
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 e.preventDefault();
@@ -474,8 +473,8 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
             </span>
           </Label>
           <p className="text-[11px] text-muted-foreground mt-0.5">
-            Labels to group and filter tasks — e.g. &ldquo;work&rdquo;,
-            &ldquo;health&rdquo;, &ldquo;errands&rdquo;.
+            Labels to group and filter tasks — e.g. &ldquo;engineering&rdquo;,
+            &ldquo;finance&rdquo;, &ldquo;operations&rdquo;.
           </p>
         </div>
         <div className="flex gap-2">

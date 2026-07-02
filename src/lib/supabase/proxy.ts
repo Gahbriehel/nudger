@@ -48,10 +48,16 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  const pathname = request.nextUrl.pathname;
+
   if (
     !user &&
-    !request.nextUrl.pathname.startsWith("/login") &&
-    !request.nextUrl.pathname.startsWith("/auth")
+    !pathname.startsWith("/login") &&
+    !pathname.startsWith("/auth") &&
+    pathname !== "/sw.js" &&
+    pathname !== "/manifest.webmanifest" &&
+    pathname !== "/manifest.json" &&
+    !pathname.startsWith("/api/notifications/send-nudges")
   ) {
     // no user, potentially respond by redirecting the user to the login page
     const url = request.nextUrl.clone();

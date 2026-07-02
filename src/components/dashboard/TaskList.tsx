@@ -616,7 +616,7 @@ export function TaskList() {
                       {/* Cue addition inline */}
                       <div className="flex gap-2 max-w-md">
                         <Input
-                          placeholder="e.g. Put keys in fridge, notes on fridge..."
+                          placeholder="e.g. Place server logs spreadsheet on secondary monitor, post-it on screen..."
                           value={newCueTexts[task.id] || ""}
                           onChange={(e) =>
                             setNewCueTexts({

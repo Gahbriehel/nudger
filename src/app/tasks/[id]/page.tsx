@@ -368,7 +368,7 @@ function TaskDetailContent() {
 
             <div className="flex gap-2">
               <Input
-                placeholder="e.g. Put keys in fridge, note on screen..."
+                placeholder="e.g. Place server logs spreadsheet on secondary monitor, post-it on screen..."
                 value={newCue}
                 onChange={(e) => setNewCue(e.target.value)}
                 className="text-xs h-9 rounded-xl border-border/80"
