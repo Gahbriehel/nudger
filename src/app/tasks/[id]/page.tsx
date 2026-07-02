@@ -221,6 +221,12 @@ function TaskDetailContent() {
                   Due: {format(task.due_date, "MMM dd, yyyy HH:mm")}
                 </span>
               )}
+              {task.reminder_at && (
+                <span className="text-[10px] bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded font-medium flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                  Reminder: {format(task.reminder_at, "MMM dd, yyyy HH:mm")}
+                </span>
+              )}
               <span
                 className={cn(
                   "text-[10px] px-2.5 py-0.5 rounded-full uppercase font-medium border",
@@ -297,7 +303,11 @@ function TaskDetailContent() {
             {task.subtasks && task.subtasks.length > 0 ? (
               <div className="space-y-2">
                 {task.subtasks
-                  .sort((a, b) => a.sort_order - b.sort_order)
+                  .sort(
+                    (a, b) =>
+                      new Date(b.created_at).getTime() -
+                      new Date(a.created_at).getTime(),
+                  )
                   .map((sub) => (
                     <div
                       key={sub.id}

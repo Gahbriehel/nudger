@@ -159,7 +159,7 @@ export function PwaInstallBanner() {
         <div className="flex-shrink-0 flex items-center pr-2">
           <Button
             onClick={handleInstallClick}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs h-9.5 px-4.5 rounded-xl shadow-md flex items-center gap-2"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs h-10 px-5 rounded-xl shadow-md flex items-center gap-2"
           >
             <Download size="14" />
             Install App

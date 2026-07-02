@@ -51,13 +51,17 @@ export function useNotificationChecker() {
       const now = new Date();
       const currentTasks = tasksRef.current;
 
-      // Find tasks that are pending, have a reminder time, reminder is in the past, and not yet marked sent
+      // 1. Process pending reminders
       const pendingReminders = currentTasks.filter((task) => {
         if (task.status !== "pending") return false;
         if (!task.reminder_at) return false;
 
-        // Grace check: if it was sent or we checked/notified it in this session/localStorage, skip
-        if (task.reminder_sent || checkedTaskIdsRef.current.has(task.id)) {
+        const key = `${task.id}-reminder`;
+        if (
+          task.reminder_sent ||
+          checkedTaskIdsRef.current.has(task.id) ||
+          checkedTaskIdsRef.current.has(key)
+        ) {
           return false;
         }
 
@@ -66,31 +70,59 @@ export function useNotificationChecker() {
       });
 
       for (const task of pendingReminders) {
-        // Prevent double checking/triggering in this session/localStorage
-        saveToLocalStorage(task.id);
+        const key = `${task.id}-reminder`;
+        saveToLocalStorage(key);
+        saveToLocalStorage(task.id); // for backward compatibility
 
-        // Display the Sonner Toast
+        // Display the Sonner Toast for Reminder
         toast.info(`Task Nudge! ⏰`, {
           description: task.title,
           duration: 10000,
-          action: {
-            label: "View Details",
-            onClick: () => {
-              // Can do something here, e.g., open a task view
-            },
-          },
         });
 
-        // Update the task status in the database to prevent duplicate alerts
+        // Update the task status in store and database to prevent duplicate alerts
         try {
-          // Update client state first for instant responsiveness
           updateTaskState(task.id, { reminder_sent: true });
-
-          // Update DB
           await taskService.updateTask(task.id, { reminder_sent: true });
         } catch (error) {
           console.error(
             `Failed to update reminder_sent for task ${task.id}:`,
+            error,
+          );
+        }
+      }
+
+      // 2. Process pending due dates
+      const pendingDues = currentTasks.filter((task) => {
+        if (task.status !== "pending") return false;
+        if (!task.due_date) return false;
+
+        const key = `${task.id}-due`;
+        if (task.due_sent || checkedTaskIdsRef.current.has(key)) {
+          return false;
+        }
+
+        const dueTime = new Date(task.due_date);
+        return dueTime <= now;
+      });
+
+      for (const task of pendingDues) {
+        const key = `${task.id}-due`;
+        saveToLocalStorage(key);
+
+        // Display the Sonner Toast for Due Date
+        toast.warning(`Task Due! 🚨`, {
+          description: task.title,
+          duration: 10000,
+        });
+
+        // Update the task status in store and database to prevent duplicate alerts
+        try {
+          updateTaskState(task.id, { due_sent: true });
+          await taskService.updateTask(task.id, { due_sent: true });
+        } catch (error) {
+          console.error(
+            `Failed to update due_sent for task ${task.id}:`,
             error,
           );
         }

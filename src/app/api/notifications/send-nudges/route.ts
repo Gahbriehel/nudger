@@ -25,23 +25,40 @@ async function processNudges() {
 
   // 1. Fetch tasks where reminder_at <= NOW(), status is 'pending', and reminder_sent is false
   const now = new Date().toISOString();
-  const { data: tasks, error: tasksError } = await supabase
+  const { data: reminderTasks, error: reminderError } = await supabase
     .from("tasks")
     .select("*")
     .eq("status", "pending")
     .eq("reminder_sent", false)
     .lte("reminder_at", now);
 
-  if (tasksError) {
-    throw new Error(`Failed to fetch tasks: ${tasksError.message}`);
+  if (reminderError) {
+    throw new Error(`Failed to fetch reminder tasks: ${reminderError.message}`);
   }
 
-  if (!tasks || tasks.length === 0) {
-    return { sentCount: 0, message: "No pending reminders at this time." };
+  // 1b. Fetch tasks where due_date <= NOW(), status is 'pending', and due_sent is false
+  const { data: dueTasks, error: dueError } = await supabase
+    .from("tasks")
+    .select("*")
+    .eq("status", "pending")
+    .eq("due_sent", false)
+    .lte("due_date", now);
+
+  if (dueError) {
+    throw new Error(`Failed to fetch due tasks: ${dueError.message}`);
   }
 
-  // 2. Fetch push subscriptions for users with pending reminders
-  const userIds = Array.from(new Set(tasks.map((t) => t.user_id)));
+  const allTasks = [...(reminderTasks || []), ...(dueTasks || [])];
+
+  if (allTasks.length === 0) {
+    return {
+      sentCount: 0,
+      message: "No pending reminders or due dates at this time.",
+    };
+  }
+
+  // 2. Fetch push subscriptions for users with pending reminders or due dates
+  const userIds = Array.from(new Set(allTasks.map((t) => t.user_id)));
   const { data: subscriptions, error: subsError } = await supabase
     .from("push_subscriptions")
     .select("*")
@@ -62,8 +79,8 @@ async function processNudges() {
 
   let sentCount = 0;
 
-  // 3. Dispatch push notifications
-  for (const task of tasks) {
+  // 3. Dispatch push notifications for reminders
+  for (const task of reminderTasks || []) {
     const userSubs = subsByUser[task.user_id] || [];
     if (userSubs.length === 0) {
       // Mark as sent anyway so we don't keep polling a user with no devices subscribed
@@ -84,11 +101,13 @@ async function processNudges() {
 
     for (const sub of userSubs) {
       try {
-        // cast subscription structure to webpush.PushSubscription format
         await webpush.sendNotification(sub.subscription, payload);
         sentCount++;
       } catch (err: unknown) {
-        console.error(`Failed to send push to subscription ID ${sub.id}:`, err);
+        console.error(
+          `Failed to send push reminder to subscription ID ${sub.id}:`,
+          err,
+        );
         // If subscription is expired or revoked (410 Gone / 404 Not Found), delete it
         const statusCode = (err as { statusCode?: number })?.statusCode;
         if (statusCode === 410 || statusCode === 404) {
@@ -97,11 +116,49 @@ async function processNudges() {
       }
     }
 
-    // 4. Mark task reminder as sent
+    // Mark task reminder as sent
     await supabase
       .from("tasks")
       .update({ reminder_sent: true })
       .eq("id", task.id);
+  }
+
+  // 3b. Dispatch push notifications for due dates
+  for (const task of dueTasks || []) {
+    const userSubs = subsByUser[task.user_id] || [];
+    if (userSubs.length === 0) {
+      // Mark as sent anyway so we don't keep polling a user with no devices subscribed
+      await supabase.from("tasks").update({ due_sent: true }).eq("id", task.id);
+      continue;
+    }
+
+    const payload = JSON.stringify({
+      title: "Task Due! 🚨",
+      body: `Due now: ${task.title}`,
+      data: {
+        url: `/`, // open main dashboard
+      },
+    });
+
+    for (const sub of userSubs) {
+      try {
+        await webpush.sendNotification(sub.subscription, payload);
+        sentCount++;
+      } catch (err: unknown) {
+        console.error(
+          `Failed to send push due alert to subscription ID ${sub.id}:`,
+          err,
+        );
+        // If subscription is expired or revoked (410 Gone / 404 Not Found), delete it
+        const statusCode = (err as { statusCode?: number })?.statusCode;
+        if (statusCode === 410 || statusCode === 404) {
+          await supabase.from("push_subscriptions").delete().eq("id", sub.id);
+        }
+      }
+    }
+
+    // Mark task due notification as sent
+    await supabase.from("tasks").update({ due_sent: true }).eq("id", task.id);
   }
 
   return {

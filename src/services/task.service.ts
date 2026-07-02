@@ -210,7 +210,18 @@ export const taskService = {
   },
 
   async updateTask(id: string, updates: Partial<Task>): Promise<void> {
-    const { error } = await supabase.from("tasks").update(updates).eq("id", id);
+    const payload = { ...updates };
+    if (updates.due_date !== undefined) {
+      payload.due_sent = false;
+    }
+    if (updates.reminder_at !== undefined) {
+      payload.reminder_sent = false;
+    }
+    if (updates.status === "pending") {
+      payload.due_sent = false;
+      payload.reminder_sent = false;
+    }
+    const { error } = await supabase.from("tasks").update(payload).eq("id", id);
     if (error) throw error;
   },
 
@@ -285,12 +296,24 @@ export const taskService = {
         task.recurrence_interval || 1,
       );
 
+      // Calculate next reminder date
+      const nextReminder = task.reminder_at
+        ? calculateNextDueDate(
+            task.reminder_at,
+            task.recurrence_type,
+            task.recurrence_interval || 1,
+          )
+        : null;
+
       // 2. Roll over task: reset subtasks, update last_completed_at, update due date, keep status pending
       const { error: taskError } = await supabase
         .from("tasks")
         .update({
           last_completed_at: nowStr,
           due_date: nextDue,
+          reminder_at: nextReminder,
+          reminder_sent: false,
+          due_sent: false,
           status: "pending",
         })
         .eq("id", task.id);
