@@ -266,7 +266,7 @@ export function SettingsView() {
 
               <div className="flex items-center gap-3">
                 {(isTogglingPush || isSendingTest) && <Spinner size="sm" />}
-                {isSubscribed && (
+                {/* {isSubscribed && (
                   <button
                     type="button"
                     onClick={() => sendTestNotification()}
@@ -276,7 +276,7 @@ export function SettingsView() {
                   >
                     {isSendingTest ? "Sending…" : "Send Test"}
                   </button>
-                )}
+                )} */}
                 <button
                   type="button"
                   onClick={handleTogglePush}

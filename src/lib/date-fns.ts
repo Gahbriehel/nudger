@@ -50,6 +50,15 @@ export function format(
       d.getDate(),
     )} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
+  if (formatStr === "MMM dd, yyyy HH:mm") {
+    return `${months[d.getMonth()]} ${pad(d.getDate())}, ${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+  if (formatStr === "MMM dd, yyyy hh:mm a") {
+    const hours = d.getHours();
+    const ampm = hours >= 12 ? "PM" : "AM";
+    const h = hours % 12 || 12;
+    return `${months[d.getMonth()]} ${pad(d.getDate())}, ${d.getFullYear()} ${pad(h)}:${pad(d.getMinutes())} ${ampm}`;
+  }
   if (formatStr === "HH:mm") {
     return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }

@@ -468,7 +468,7 @@ export function TaskList() {
                                 : "bg-muted text-muted-foreground border border-border",
                             )}
                           >
-                            Due: {format(task.due_date, "MMM dd, yyyy HH:mm")}
+                            Due: {format(task.due_date, "MMM dd, yyyy hh:mm a")}
                           </span>
                         )}
 
@@ -477,7 +477,7 @@ export function TaskList() {
                           <span className="text-[10px] bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded font-medium flex items-center gap-1">
                             <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
                             Reminder:{" "}
-                            {format(task.reminder_at, "MMM dd, yyyy HH:mm")}
+                            {format(task.reminder_at, "MMM dd, yyyy hh:mm a")}
                           </span>
                         )}
                       </div>
