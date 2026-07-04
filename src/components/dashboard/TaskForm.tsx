@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
 import { Spinner } from "@/components/ui/spinner";
+import { Lightbulb } from "lucide-react";
 
 const taskSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -444,9 +445,7 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
                 className="flex justify-between items-center bg-muted/30 dark:bg-[#131920] border border-border/80 dark:border-[#222A35]/50 px-4 py-3 rounded-2xl text-sm text-foreground shadow-sm transition-all hover:bg-muted/40 dark:hover:bg-[#171E27]"
               >
                 <div className="flex items-center gap-3">
-                  <span className="text-amber-500 dark:text-amber-400 select-none flex-shrink-0 text-base">
-                    💡
-                  </span>
+                  <Lightbulb className="w-4 h-4 text-amber-500 dark:text-amber-400 select-none flex-shrink-0" />
                   <span className="font-semibold text-foreground/90">
                     {cue}
                   </span>

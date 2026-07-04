@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTaskStore } from "@/store/taskStore";
 import { taskService } from "@/services/task.service";
 import { Task, Subtask, MemoryCue, Tag } from "@/types/database.types";
@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { FilterSidebar } from "./FilterSidebar";
 import { Spinner } from "@/components/ui/spinner";
+import { Lightbulb, Repeat, PartyPopper } from "lucide-react";
 
 export function TaskList() {
   const [filterSidebarOpen, setFilterSidebarOpen] = useState(false);
@@ -33,6 +34,23 @@ export function TaskList() {
   const [newCueTexts, setNewCueTexts] = useState<{ [taskId: string]: string }>(
     {},
   );
+
+  // smart completion prompt state
+  const [promptTask, setPromptTask] = useState<Task | null>(null);
+  const [isCompletingTask, setIsCompletingTask] = useState(false);
+  const promptShownRefs = useRef<{ [taskId: string]: boolean }>({});
+
+  useEffect(() => {
+    tasks.forEach((task) => {
+      if (task.subtasks) {
+        const allComplete =
+          task.subtasks.length > 0 && task.subtasks.every((s) => s.completed);
+        if (!allComplete) {
+          promptShownRefs.current[task.id] = false;
+        }
+      }
+    });
+  }, [tasks]);
 
   // Fetch tasks on load
   useEffect(() => {
@@ -97,16 +115,62 @@ export function TaskList() {
 
   const handleToggleSubtask = async (taskId: string, subtask: Subtask) => {
     const nextVal = !subtask.completed;
+
+    // Find task in local store
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task) return;
+
+    // construct updated subtasks array to check completion state
+    const updatedSubtasks = task.subtasks?.map((s) =>
+      s.id === subtask.id ? { ...s, completed: nextVal } : s,
+    );
+
+    const allComplete =
+      !!updatedSubtasks &&
+      updatedSubtasks.length > 0 &&
+      updatedSubtasks.every((s) => s.completed);
+
     toggleSubtaskState(taskId, subtask.id, nextVal);
+
+    if (
+      allComplete &&
+      !promptShownRefs.current[taskId] &&
+      task.status !== "completed"
+    ) {
+      promptShownRefs.current[taskId] = true;
+      setTimeout(() => setPromptTask(task), 350);
+    }
+
     try {
       await taskService.toggleSubtask(subtask.id, nextVal);
-      toast.success(
-        nextVal ? "Subtask completed" : "Subtask marked as pending",
-      );
+      if (!allComplete) {
+        toast.success(
+          nextVal ? "Subtask completed" : "Subtask marked as pending",
+        );
+      }
     } catch (err) {
       console.error(err);
       toast.error("Failed to update subtask");
       toggleSubtaskState(taskId, subtask.id, subtask.completed); // rollback
+    }
+  };
+
+  const handleCompleteTask = async (taskToComplete: Task) => {
+    setIsCompletingTask(true);
+    try {
+      await taskService.completeTask(taskToComplete);
+      await fetchTasks();
+      toast.success(
+        taskToComplete.task_type === "recurring"
+          ? "Recurring task completed! Next occurrence scheduled."
+          : "Task completed!",
+      );
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to complete task");
+    } finally {
+      setIsCompletingTask(false);
+      setPromptTask(null);
     }
   };
 
@@ -660,9 +724,7 @@ export function TaskList() {
                               className="flex items-center justify-between bg-muted/30 dark:bg-[#131920] border border-border/80 dark:border-[#222A35]/50 px-4 py-3 rounded-2xl text-xs transition-all hover:bg-muted/40 dark:hover:bg-[#171E27]"
                             >
                               <div className="flex items-center gap-3 text-foreground">
-                                <span className="text-amber-500 dark:text-amber-400 select-none flex-shrink-0 text-sm">
-                                  💡
-                                </span>
+                                <Lightbulb className="w-4 h-4 text-amber-500 dark:text-amber-400 select-none flex-shrink-0" />
                                 <span className="font-medium text-foreground/90">
                                   {cue.content}
                                 </span>
@@ -688,8 +750,9 @@ export function TaskList() {
                       <div>
                         {task.task_type === "recurring" &&
                           task.recurrence_type && (
-                            <span className="text-emerald-600 dark:text-emerald-400 mr-3">
-                              🔄 Repeats: {task.recurrence_type} (Every{" "}
+                            <span className="text-emerald-600 dark:text-emerald-400 mr-3 inline-flex items-center gap-1">
+                              <Repeat className="w-3 h-3" />
+                              Repeats: {task.recurrence_type} (Every{" "}
                               {task.recurrence_interval || 1} units)
                             </span>
                           )}
@@ -715,6 +778,97 @@ export function TaskList() {
               </div>
             );
           })}
+        </div>
+      )}
+      {/* Smart Completion Prompt Modal */}
+      {promptTask && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+          style={{ animation: "fadeInOverlay 0.2s ease" }}
+        >
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-background/70 backdrop-blur-sm"
+            onClick={() => setPromptTask(null)}
+          />
+
+          {/* Dialog */}
+          <div
+            className="relative z-10 w-full max-w-sm bg-card border border-border rounded-2xl shadow-2xl p-6 space-y-5"
+            style={{
+              animation: "slideUpPrompt 0.3s cubic-bezier(0.34,1.56,0.64,1)",
+            }}
+          >
+            {/* Confetti icon */}
+            <div className="flex justify-center">
+              <div className="w-14 h-14 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center">
+                <PartyPopper className="w-6 h-6 text-green-600 dark:text-green-400" />
+              </div>
+            </div>
+
+            <div className="text-center space-y-1.5">
+              <h2 className="text-base font-bold text-foreground">All done!</h2>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                You&apos;ve completed every checklist item.{" "}
+                <br className="hidden sm:block" />
+                Ready to mark{" "}
+                <span className="font-semibold text-foreground">
+                  &ldquo;{promptTask.title}&rdquo;
+                </span>{" "}
+                as complete?
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <Button
+                onClick={() => handleCompleteTask(promptTask)}
+                disabled={isCompletingTask}
+                className="w-full h-10 rounded-xl bg-green-600 hover:bg-green-700 text-white font-semibold text-sm flex items-center justify-center gap-2 transition-all"
+              >
+                {isCompletingTask ? (
+                  <>
+                    <Spinner size="sm" />
+                    Completing...
+                  </>
+                ) : (
+                  <>
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                    Yes, mark as complete
+                  </>
+                )}
+              </Button>
+              <Button
+                onClick={() => setPromptTask(null)}
+                variant="outline"
+                className="w-full h-9 rounded-xl text-sm font-medium"
+              >
+                Not yet
+              </Button>
+            </div>
+          </div>
+
+          <style>{`
+            @keyframes fadeInOverlay {
+              from { opacity: 0; }
+              to   { opacity: 1; }
+            }
+            @keyframes slideUpPrompt {
+              from { opacity: 0; transform: translateY(24px) scale(0.96); }
+              to   { opacity: 1; transform: translateY(0) scale(1); }
+            }
+          `}</style>
         </div>
       )}
     </div>

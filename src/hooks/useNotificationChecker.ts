@@ -75,7 +75,7 @@ export function useNotificationChecker() {
         saveToLocalStorage(task.id); // for backward compatibility
 
         // Display the Sonner Toast for Reminder
-        toast.info(`Task Nudge! ⏰`, {
+        toast.info(`Task Nudge!`, {
           description: task.title,
           duration: 10000,
         });
@@ -111,7 +111,7 @@ export function useNotificationChecker() {
         saveToLocalStorage(key);
 
         // Display the Sonner Toast for Due Date
-        toast.warning(`Task Due! 🚨`, {
+        toast.warning(`Task Due!`, {
           description: task.title,
           duration: 10000,
         });

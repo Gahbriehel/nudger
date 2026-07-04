@@ -4,6 +4,7 @@
 import { useEffect } from "react";
 import { useTaskStore } from "@/store/taskStore";
 import { cn } from "@/lib/utils";
+import { Clock, Calendar, AlarmClock, ClipboardList } from "lucide-react";
 
 interface FilterSidebarProps {
   open: boolean;
@@ -204,11 +205,19 @@ export function FilterSidebar({ open, onClose }: FilterSidebarProps) {
                 {
                   value: "recently_updated",
                   label: "Recently Updated",
-                  icon: "🕐",
+                  icon: Clock,
                 },
-                { value: "oldest", label: "Oldest Created", icon: "📅" },
-                { value: "due_soon", label: "Due Date (Soonest)", icon: "⏰" },
-                { value: "most_subtasks", label: "Most Subtasks", icon: "📋" },
+                { value: "oldest", label: "Oldest Created", icon: Calendar },
+                {
+                  value: "due_soon",
+                  label: "Due Date (Soonest)",
+                  icon: AlarmClock,
+                },
+                {
+                  value: "most_subtasks",
+                  label: "Most Subtasks",
+                  icon: ClipboardList,
+                },
               ].map((opt) => (
                 <button
                   key={opt.value}
@@ -220,7 +229,14 @@ export function FilterSidebar({ open, onClose }: FilterSidebarProps) {
                       : "bg-muted/40 text-foreground border-border hover:border-foreground/30 hover:bg-muted",
                   )}
                 >
-                  <span>{opt.icon}</span>
+                  <opt.icon
+                    className={cn(
+                      "w-3.5 h-3.5",
+                      filters.sort === opt.value
+                        ? "text-background"
+                        : "text-muted-foreground",
+                    )}
+                  />
                   <span>{opt.label}</span>
                 </button>
               ))}

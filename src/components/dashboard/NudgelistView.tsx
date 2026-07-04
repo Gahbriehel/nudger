@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
+import { Sparkles } from "lucide-react";
 
 export function NudgelistView() {
   const { fetchTasks } = useTaskStore();
@@ -200,7 +201,7 @@ export function NudgelistView() {
         </div>
       ) : totalNudges === 0 ? (
         <div className="text-center py-12 border border-dashed border-border rounded-2xl bg-muted/20 flex flex-col items-center justify-center p-6 space-y-3">
-          <span className="text-3xl">🎉</span>
+          <Sparkles className="w-8 h-8 text-amber-500 animate-pulse" />
           <p className="font-bold text-sm text-foreground">
             Your mind is clear!
           </p>

@@ -93,7 +93,7 @@ async function processNudges() {
     }
 
     const payload = JSON.stringify({
-      title: "Task Nudge! ⏰",
+      title: "Task Nudge!",
       body: `Don't forget: ${task.title}`,
       data: {
         url: `/`, // open main dashboard
@@ -134,7 +134,7 @@ async function processNudges() {
     }
 
     const payload = JSON.stringify({
-      title: "Task Due! 🚨",
+      title: "Task Due!",
       body: `Due now: ${task.title}`,
       data: {
         url: `/`, // open main dashboard

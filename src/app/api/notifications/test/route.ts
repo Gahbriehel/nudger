@@ -71,7 +71,7 @@ export async function POST(request: Request) {
     }
 
     const payload = JSON.stringify({
-      title: "🎉 Nudger Notifications Active!",
+      title: "Nudger Notifications Active!",
       body: "Push notifications are working. You will be nudged when tasks are due.",
       data: { url: "/" },
     });
