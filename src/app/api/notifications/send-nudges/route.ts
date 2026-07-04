@@ -1,5 +1,5 @@
-import { createClient } from "@/lib/supabase/server";
-import { NextResponse } from "next/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { NextRequest, NextResponse } from "next/server";
 import webpush from "web-push";
 
 interface PushSubscriptionRecord {
@@ -21,7 +21,8 @@ if (vapidPublicKey && vapidPrivateKey) {
 }
 
 async function processNudges() {
-  const supabase = await createClient();
+  // Use service role client so RLS doesn't block cron job reads
+  const supabase = createAdminClient();
 
   // 1. Fetch tasks where reminder_at <= NOW(), status is 'pending', and reminder_sent is false
   const now = new Date().toISOString();
@@ -167,7 +168,7 @@ async function processNudges() {
   };
 }
 
-// Support GET for manual triggering/testing
+// Support GET for manual triggering/testing (no auth check — used from browser while logged in)
 export async function GET() {
   try {
     const result = await processNudges();
@@ -179,8 +180,16 @@ export async function GET() {
   }
 }
 
-// Support POST for cron job triggers
-export async function POST() {
+// Support POST for cron job triggers — protected by CRON_SECRET
+export async function POST(request: NextRequest) {
+  const cronSecret = process.env.CRON_SECRET;
+  if (cronSecret) {
+    const authHeader = request.headers.get("authorization");
+    if (authHeader !== `Bearer ${cronSecret}`) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+  }
+
   try {
     const result = await processNudges();
     return NextResponse.json(result);
