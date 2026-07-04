@@ -59,6 +59,12 @@ export function format(
     const h = hours % 12 || 12;
     return `${months[d.getMonth()]} ${pad(d.getDate())}, ${d.getFullYear()} ${pad(h)}:${pad(d.getMinutes())} ${ampm}`;
   }
+  if (formatStr === "MMM d, h:mm a") {
+    const hours = d.getHours();
+    const ampm = hours >= 12 ? "PM" : "AM";
+    const h = hours % 12 || 12;
+    return `${months[d.getMonth()]} ${d.getDate()}, ${h}:${pad(d.getMinutes())} ${ampm}`;
+  }
   if (formatStr === "HH:mm") {
     return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
