@@ -7,11 +7,12 @@ import { Task, Subtask, MemoryCue, Tag } from "@/types/database.types";
 import { format } from "@/lib/date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Modal } from "@/components/ui/modal";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { FilterSidebar } from "./FilterSidebar";
 import { Spinner } from "@/components/ui/spinner";
-import { Lightbulb, Repeat, PartyPopper, CheckSquare } from "lucide-react";
+import { Lightbulb, Repeat } from "lucide-react";
 
 export function TaskList() {
   const [filterSidebarOpen, setFilterSidebarOpen] = useState(false);
@@ -44,6 +45,12 @@ export function TaskList() {
   const [subtaskPromptTask, setSubtaskPromptTask] = useState<Task | null>(null);
   const [isCompletingWithSubtasks, setIsCompletingWithSubtasks] =
     useState(false);
+
+  // task deletion confirmation modal state
+  const [deleteConfirmTaskId, setDeleteConfirmTaskId] = useState<string | null>(
+    null,
+  );
+  const [isDeletingTask, setIsDeletingTask] = useState(false);
 
   useEffect(() => {
     tasks.forEach((task) => {
@@ -271,8 +278,14 @@ export function TaskList() {
     }
   };
 
-  const handleDeleteTask = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this task?")) return;
+  const handleDeleteTask = (id: string) => {
+    setDeleteConfirmTaskId(id);
+  };
+
+  const handleConfirmDeleteTask = async () => {
+    if (!deleteConfirmTaskId) return;
+    const id = deleteConfirmTaskId;
+    setIsDeletingTask(true);
     deleteTaskState(id);
     try {
       await taskService.deleteTask(id);
@@ -281,6 +294,9 @@ export function TaskList() {
       console.error(err);
       toast.error("Failed to delete task");
       await fetchTasks(); // rollback
+    } finally {
+      setIsDeletingTask(false);
+      setDeleteConfirmTaskId(null);
     }
   };
 
@@ -852,202 +868,112 @@ export function TaskList() {
           })}
         </div>
       )}
+      {/* Delete Task Confirmation Modal */}
+      <Modal
+        isOpen={!!deleteConfirmTaskId}
+        onClose={() => setDeleteConfirmTaskId(null)}
+        title="Delete Task"
+        description="Are you sure you want to delete this task? This action cannot be undone."
+        variant="destructive"
+        confirmText="Yes, delete task"
+        cancelText="Cancel"
+        onConfirm={handleConfirmDeleteTask}
+        isLoading={isDeletingTask}
+      />
+
       {/* Smart Completion Prompt Modal */}
-      {promptTask && (
-        <div
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
-          style={{ animation: "fadeInOverlay 0.2s ease" }}
-        >
-          {/* Backdrop */}
-          <div
-            className="absolute inset-0 bg-background/70 backdrop-blur-sm"
-            onClick={() => setPromptTask(null)}
-          />
-
-          {/* Dialog */}
-          <div
-            className="relative z-10 w-full max-w-sm bg-card border border-border rounded-2xl shadow-2xl p-6 space-y-5"
-            style={{
-              animation: "slideUpPrompt 0.3s cubic-bezier(0.34,1.56,0.64,1)",
-            }}
-          >
-            {/* Confetti icon */}
-            <div className="flex justify-center">
-              <div className="w-14 h-14 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center">
-                <PartyPopper className="w-6 h-6 text-green-600 dark:text-green-400" />
-              </div>
-            </div>
-
-            <div className="text-center space-y-1.5">
-              <h2 className="text-base font-bold text-foreground">All done!</h2>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                You&apos;ve completed every checklist item.{" "}
-                <br className="hidden sm:block" />
-                Ready to mark{" "}
-                <span className="font-semibold text-foreground">
-                  &ldquo;{promptTask.title}&rdquo;
-                </span>{" "}
-                as complete?
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <Button
-                onClick={() => handleCompleteTask(promptTask)}
-                disabled={isCompletingTask}
-                className="w-full h-10 rounded-xl bg-green-600 hover:bg-green-700 text-white font-semibold text-sm flex items-center justify-center gap-2 transition-all"
-              >
-                {isCompletingTask ? (
-                  <>
-                    <Spinner size="sm" />
-                    Completing...
-                  </>
-                ) : (
-                  <>
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                    Yes, mark as complete
-                  </>
-                )}
-              </Button>
-              <Button
-                onClick={() => setPromptTask(null)}
-                variant="outline"
-                className="w-full h-9 rounded-xl text-sm font-medium"
-              >
-                Not yet
-              </Button>
-            </div>
-          </div>
-
-          <style>{`
-            @keyframes fadeInOverlay {
-              from { opacity: 0; }
-              to   { opacity: 1; }
-            }
-            @keyframes slideUpPrompt {
-              from { opacity: 0; transform: translateY(24px) scale(0.96); }
-              to   { opacity: 1; transform: translateY(0) scale(1); }
-            }
-          `}</style>
-        </div>
-      )}
+      <Modal
+        isOpen={!!promptTask}
+        onClose={() => setPromptTask(null)}
+        title="All done!"
+        description={
+          promptTask ? (
+            <>
+              You&apos;ve completed every checklist item.
+              <br />
+              Ready to mark{" "}
+              <span className="font-semibold text-foreground">
+                &ldquo;{promptTask.title}&rdquo;
+              </span>{" "}
+              as complete?
+            </>
+          ) : undefined
+        }
+        variant="success"
+        confirmText="Yes, mark as complete"
+        cancelText="Not yet"
+        onConfirm={() => {
+          if (promptTask) handleCompleteTask(promptTask);
+        }}
+        isLoading={isCompletingTask}
+      />
 
       {/* Pending Subtasks Completion Prompt */}
-      {subtaskPromptTask && (
-        <div
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
-          style={{ animation: "fadeInOverlay 0.2s ease" }}
-        >
-          {/* Backdrop */}
-          <div
-            className="absolute inset-0 bg-background/70 backdrop-blur-sm"
-            onClick={() => setSubtaskPromptTask(null)}
-          />
-
-          {/* Dialog */}
-          <div
-            className="relative z-10 w-full max-w-sm bg-card border border-border rounded-2xl shadow-2xl p-6 space-y-5"
-            style={{
-              animation: "slideUpPrompt 0.3s cubic-bezier(0.34,1.56,0.64,1)",
-            }}
-          >
-            {/* Icon */}
-            <div className="flex justify-center">
-              <div className="w-14 h-14 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
-                <CheckSquare className="w-6 h-6 text-amber-600 dark:text-amber-400" />
-              </div>
-            </div>
-
-            <div className="text-center space-y-1.5">
-              <h2 className="text-base font-bold text-foreground">
-                Unfinished subtasks
-              </h2>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                <span className="font-semibold text-foreground">
-                  &ldquo;{subtaskPromptTask.title}&rdquo;
-                </span>{" "}
-                still has{" "}
-                <span className="font-semibold text-foreground">
-                  {
-                    subtaskPromptTask.subtasks?.filter((s) => !s.completed)
-                      .length
-                  }
-                </span>{" "}
-                pending subtask
-                {(subtaskPromptTask.subtasks?.filter((s) => !s.completed)
-                  .length ?? 0) > 1
-                  ? "s"
-                  : ""}
-                .
-                <br className="hidden sm:block" />
-                Mark them all complete too?
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <Button
-                onClick={() =>
-                  handleCompleteWithSubtasks(subtaskPromptTask, true)
-                }
-                disabled={isCompletingWithSubtasks}
-                className="w-full h-10 rounded-xl bg-green-600 hover:bg-green-700 text-white font-semibold text-sm flex items-center justify-center gap-2 transition-all"
-              >
-                {isCompletingWithSubtasks ? (
-                  <>
-                    <Spinner size="sm" />
-                    Completing...
-                  </>
-                ) : (
-                  <>
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                    Mark all &amp; complete
-                  </>
-                )}
-              </Button>
-              <Button
-                onClick={() =>
-                  handleCompleteWithSubtasks(subtaskPromptTask, false)
-                }
-                disabled={isCompletingWithSubtasks}
-                variant="outline"
-                className="w-full h-9 rounded-xl text-sm font-medium"
-              >
-                Just complete the task
-              </Button>
-              <button
-                onClick={() => setSubtaskPromptTask(null)}
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors mt-1"
-              >
-                Cancel
-              </button>
-            </div>
+      <Modal
+        isOpen={!!subtaskPromptTask}
+        onClose={() => setSubtaskPromptTask(null)}
+        title="Unfinished subtasks"
+        description={
+          subtaskPromptTask ? (
+            <>
+              <span className="font-semibold text-foreground">
+                &ldquo;{subtaskPromptTask.title}&rdquo;
+              </span>{" "}
+              still has{" "}
+              <span className="font-semibold text-foreground">
+                {subtaskPromptTask.subtasks?.filter((s) => !s.completed).length}
+              </span>{" "}
+              pending subtask
+              {(subtaskPromptTask.subtasks?.filter((s) => !s.completed)
+                .length ?? 0) > 1
+                ? "s"
+                : ""}
+              .
+              <br />
+              Mark them all complete too?
+            </>
+          ) : undefined
+        }
+        variant="warning"
+        footer={
+          <div className="flex flex-col gap-2 w-full mt-1">
+            <Button
+              onClick={() =>
+                subtaskPromptTask &&
+                handleCompleteWithSubtasks(subtaskPromptTask, true)
+              }
+              disabled={isCompletingWithSubtasks}
+              className="w-full h-10 rounded-xl bg-green-600 hover:bg-green-700 text-white font-semibold text-sm flex items-center justify-center gap-2 transition-all"
+            >
+              {isCompletingWithSubtasks ? (
+                <>
+                  <Spinner size="sm" />
+                  Completing...
+                </>
+              ) : (
+                "Mark all & complete"
+              )}
+            </Button>
+            <Button
+              onClick={() =>
+                subtaskPromptTask &&
+                handleCompleteWithSubtasks(subtaskPromptTask, false)
+              }
+              disabled={isCompletingWithSubtasks}
+              variant="outline"
+              className="w-full h-9 rounded-xl text-sm font-medium"
+            >
+              Just complete the task
+            </Button>
+            <button
+              onClick={() => setSubtaskPromptTask(null)}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors mt-1"
+            >
+              Cancel
+            </button>
           </div>
-        </div>
-      )}
+        }
+      />
     </div>
   );
 }
