@@ -42,7 +42,8 @@ export function TaskList() {
 
   // subtask completion prompt state (triggered when completing a task with pending subtasks)
   const [subtaskPromptTask, setSubtaskPromptTask] = useState<Task | null>(null);
-  const [isCompletingWithSubtasks, setIsCompletingWithSubtasks] = useState(false);
+  const [isCompletingWithSubtasks, setIsCompletingWithSubtasks] =
+    useState(false);
 
   useEffect(() => {
     tasks.forEach((task) => {
@@ -979,13 +980,17 @@ export function TaskList() {
                 </span>{" "}
                 still has{" "}
                 <span className="font-semibold text-foreground">
-                  {subtaskPromptTask.subtasks?.filter((s) => !s.completed).length}
+                  {
+                    subtaskPromptTask.subtasks?.filter((s) => !s.completed)
+                      .length
+                  }
                 </span>{" "}
                 pending subtask
                 {(subtaskPromptTask.subtasks?.filter((s) => !s.completed)
                   .length ?? 0) > 1
                   ? "s"
-                  : ""}.
+                  : ""}
+                .
                 <br className="hidden sm:block" />
                 Mark them all complete too?
               </p>
