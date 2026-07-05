@@ -1,9 +1,7 @@
 "use client";
 
 import { useAuthStore } from "@/store/authStore";
-import { authService } from "@/services/auth.service";
 import { ThemeSwitcher } from "@/components/theme-switcher";
-import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import Link from "next/link";
@@ -18,17 +16,6 @@ export function DashboardHeader({
   setActiveTab,
 }: DashboardHeaderProps) {
   const user = useAuthStore((s) => s.user);
-  const router = useRouter();
-
-  const handleSignOut = async () => {
-    try {
-      await authService.signOut();
-      router.push("/auth/login");
-      router.refresh();
-    } catch (err) {
-      console.error("Sign out error:", err);
-    }
-  };
 
   return (
     <nav className="w-full border-b border-border bg-background/80 backdrop-blur-md sticky top-0 z-50">
@@ -107,17 +94,23 @@ export function DashboardHeader({
         </div>
 
         {/* User Info & Actions */}
-        <div className="flex items-center gap-3">
-          <span className="hidden sm:inline text-xs text-muted-foreground select-none">
-            {user?.user_metadata?.name || user?.email}
-          </span>
+        <div className="flex items-center gap-4">
           <ThemeSwitcher />
-          <button
-            onClick={handleSignOut}
-            className="bg-muted hover:bg-destructive/10 hover:text-destructive border border-border hover:border-destructive/30 text-muted-foreground text-xs py-1.5 px-3 rounded-lg font-semibold transition-all duration-200"
-          >
-            Sign Out
-          </button>
+          <div className="hidden sm:flex items-center gap-3">
+            <div className="flex flex-col items-end justify-center select-none">
+              <span className="text-sm font-semibold text-foreground leading-tight">
+                {user?.user_metadata?.name || "User"}
+              </span>
+              <span className="text-[11px] text-muted-foreground leading-tight">
+                Signed In
+              </span>
+            </div>
+            <div className="w-9 h-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-bold text-sm select-none">
+              {user?.user_metadata?.name?.charAt(0)?.toUpperCase() ||
+                user?.email?.charAt(0)?.toUpperCase() ||
+                "U"}
+            </div>
+          </div>
         </div>
       </div>
 

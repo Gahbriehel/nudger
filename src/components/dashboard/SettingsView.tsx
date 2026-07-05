@@ -13,9 +13,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 export function SettingsView() {
   const { user, setUser } = useAuthStore();
+  const router = useRouter();
   const [displayName, setDisplayName] = useState(
     user?.user_metadata?.name || "",
   );
@@ -175,6 +177,16 @@ export function SettingsView() {
       setPermissionState(Notification.permission);
     } finally {
       setIsTogglingPush(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await authService.signOut();
+      router.push("/auth/login");
+      router.refresh();
+    } catch (err) {
+      console.error("Sign out error:", err);
     }
   };
 
@@ -361,6 +373,22 @@ export function SettingsView() {
             {isUpdatingPassword ? <Spinner size="sm" /> : "Update Password"}
           </Button>
         </form>
+      </div>
+
+      {/* Account Actions Card */}
+      <div className="border border-border bg-card/85 backdrop-blur-md p-6 rounded-2xl shadow-lg relative overflow-hidden before:absolute before:top-0 before:left-0 before:right-0 before:h-[3px] before:bg-gradient-to-r before:from-brand-indigo before:to-brand-blue">
+        <h2 className="text-lg font-bold tracking-tight text-foreground mb-4">
+          Account Actions
+        </h2>
+        <div className="space-y-4">
+          <Button
+            onClick={handleSignOut}
+            variant="destructive"
+            className="w-full sm:w-auto h-9 px-4 rounded-lg font-semibold text-xs"
+          >
+            Sign Out
+          </Button>
+        </div>
       </div>
     </div>
   );
