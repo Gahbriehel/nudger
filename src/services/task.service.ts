@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createClient } from "@/lib/supabase/client";
 import { Task, Subtask, Tag, MemoryCue } from "@/types/database.types";
+import { getRandomReminderTime } from "@/lib/utils";
 
 const supabase = createClient();
 
@@ -124,7 +125,11 @@ export const taskService = {
         recurrence_type: taskData.recurrence_type,
         recurrence_interval: taskData.recurrence_interval,
         due_date: taskData.due_date,
-        reminder_at: taskData.reminder_at,
+        reminder_at:
+          taskData.reminder_at ||
+          (taskData.task_type === "flexible"
+            ? getRandomReminderTime().toISOString()
+            : null),
         notes: taskData.notes,
         status: "pending",
       })
@@ -211,6 +216,22 @@ export const taskService = {
 
   async updateTask(id: string, updates: Partial<Task>): Promise<void> {
     const payload = { ...updates };
+
+    // Fetch current task type to handle flexible task checks
+    let currentTask: Task | null = null;
+    const needsTaskCheck =
+      updates.status === "pending" || updates.task_type !== undefined;
+
+    if (needsTaskCheck) {
+      try {
+        currentTask = await taskService.getTaskById(id);
+      } catch (err) {
+        console.error("Failed to fetch task for update checks:", err);
+      }
+    }
+
+    const taskType = updates.task_type || currentTask?.task_type;
+
     if (updates.due_date !== undefined) {
       payload.due_sent = false;
     }
@@ -220,7 +241,23 @@ export const taskService = {
     if (updates.status === "pending") {
       payload.due_sent = false;
       payload.reminder_sent = false;
+
+      // If task type is flexible, reschedule a random reminder upon resetting to pending
+      if (taskType === "flexible") {
+        payload.reminder_at = getRandomReminderTime().toISOString();
+      }
     }
+
+    // If task type is changed to flexible and no reminder is set, schedule one
+    if (
+      updates.task_type === "flexible" &&
+      !updates.reminder_at &&
+      !currentTask?.reminder_at
+    ) {
+      payload.reminder_at = getRandomReminderTime().toISOString();
+      payload.reminder_sent = false;
+    }
+
     const { error } = await supabase.from("tasks").update(payload).eq("id", id);
     if (error) throw error;
   },

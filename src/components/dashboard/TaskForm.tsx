@@ -223,7 +223,9 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
           {...register("task_type")}
           className="bg-background border border-input text-foreground rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         >
-          <option value="flexible">Flexible (No set deadline)</option>
+          <option value="flexible">
+            Flexible (No set deadline — random nudges enabled)
+          </option>
           <option value="scheduled">Scheduled (Specific deadline)</option>
           <option value="recurring">Recurring (Repeats on interval)</option>
         </select>

@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { useTaskStore } from "@/store/taskStore";
 import { taskService } from "@/services/task.service";
 import { toast } from "sonner";
+import { getRandomReminderTime } from "@/lib/utils";
 
 export function useNotificationChecker() {
   const { tasks, updateTaskState } = useTaskStore();
@@ -75,15 +76,32 @@ export function useNotificationChecker() {
         saveToLocalStorage(task.id); // for backward compatibility
 
         // Display the Sonner Toast for Reminder
-        toast.info(`Task Nudge!`, {
-          description: task.title,
-          duration: 10000,
-        });
+        toast.info(
+          task.task_type === "flexible"
+            ? `Task Nudge (Flexible)`
+            : `Task Nudge!`,
+          {
+            description: task.title,
+            duration: 10000,
+          },
+        );
 
         // Update the task status in store and database to prevent duplicate alerts
         try {
-          updateTaskState(task.id, { reminder_sent: true });
-          await taskService.updateTask(task.id, { reminder_sent: true });
+          if (task.task_type === "flexible") {
+            const nextReminder = getRandomReminderTime().toISOString();
+            updateTaskState(task.id, {
+              reminder_at: nextReminder,
+              reminder_sent: false,
+            });
+            await taskService.updateTask(task.id, {
+              reminder_at: nextReminder,
+              reminder_sent: false,
+            });
+          } else {
+            updateTaskState(task.id, { reminder_sent: true });
+            await taskService.updateTask(task.id, { reminder_sent: true });
+          }
         } catch (error) {
           console.error(
             `Failed to update reminder_sent for task ${task.id}:`,

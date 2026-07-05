@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { NextRequest, NextResponse } from "next/server";
 import webpush from "web-push";
+import { getRandomReminderTime } from "@/lib/utils";
 
 interface PushSubscriptionRecord {
   id: string;
@@ -117,11 +118,22 @@ async function processNudges() {
       }
     }
 
-    // Mark task reminder as sent
-    await supabase
-      .from("tasks")
-      .update({ reminder_sent: true })
-      .eq("id", task.id);
+    // Mark task reminder as sent (or reschedule if flexible)
+    if (task.task_type === "flexible") {
+      const nextReminder = getRandomReminderTime().toISOString();
+      await supabase
+        .from("tasks")
+        .update({
+          reminder_at: nextReminder,
+          reminder_sent: false,
+        })
+        .eq("id", task.id);
+    } else {
+      await supabase
+        .from("tasks")
+        .update({ reminder_sent: true })
+        .eq("id", task.id);
+    }
   }
 
   // 3b. Dispatch push notifications for due dates

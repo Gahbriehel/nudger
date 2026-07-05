@@ -262,6 +262,14 @@ export function TaskList() {
       return matchesSearch && matchesType && matchesStatus;
     })
     .sort((a: Task, b: Task) => {
+      // Primary sort: pending first, completed last
+      const aCompleted = a.status === "completed";
+      const bCompleted = b.status === "completed";
+      if (aCompleted !== bCompleted) {
+        return aCompleted ? 1 : -1;
+      }
+
+      // Secondary sort: user-selected sort option
       if (filters.sort === "recently_updated") {
         return (
           new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
@@ -474,9 +482,25 @@ export function TaskList() {
 
                         {/* Reminder Indicator */}
                         {task.reminder_at && (
-                          <span className="text-[10px] bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded font-medium flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-                            Reminder:{" "}
+                          <span
+                            className={cn(
+                              "text-[10px] px-2 py-0.5 rounded font-medium flex items-center gap-1",
+                              task.task_type === "flexible"
+                                ? "bg-purple-500/10 border border-purple-500/20 text-purple-600 dark:text-purple-400"
+                                : "bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400",
+                            )}
+                          >
+                            <span
+                              className={cn(
+                                "w-1.5 h-1.5 rounded-full animate-pulse",
+                                task.task_type === "flexible"
+                                  ? "bg-purple-500"
+                                  : "bg-amber-500",
+                              )}
+                            />
+                            {task.task_type === "flexible"
+                              ? "Random Nudge: "
+                              : "Reminder: "}
                             {format(task.reminder_at, "MMM d, h:mm a")}
                           </span>
                         )}
@@ -612,11 +636,17 @@ export function TaskList() {
                       {task.subtasks && task.subtasks.length > 0 ? (
                         <div className="space-y-2 max-w-xl">
                           {task.subtasks
-                            .sort(
-                              (a: Subtask, b: Subtask) =>
+                            .sort((a: Subtask, b: Subtask) => {
+                              // Primary: incomplete first, completed last
+                              if (a.completed !== b.completed) {
+                                return a.completed ? 1 : -1;
+                              }
+                              // Secondary: created_at descending
+                              return (
                                 new Date(b.created_at).getTime() -
-                                new Date(a.created_at).getTime(),
-                            )
+                                new Date(a.created_at).getTime()
+                              );
+                            })
                             .map((sub: Subtask) => (
                               <div
                                 key={sub.id}
