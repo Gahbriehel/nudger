@@ -346,27 +346,10 @@ function TaskDetailContent() {
                   Due: {format(task.due_date, "MMM dd, yyyy HH:mm")}
                 </span>
               )}
-              {task.reminder_at && (
-                <span
-                  className={cn(
-                    "text-[10px] border px-2 py-0.5 rounded font-medium flex items-center gap-1",
-                    task.task_type === "flexible"
-                      ? "bg-purple-500/10 border-purple-500/20 text-purple-600 dark:text-purple-400"
-                      : "bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400",
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "w-1.5 h-1.5 rounded-full animate-pulse",
-                      task.task_type === "flexible"
-                        ? "bg-purple-500"
-                        : "bg-amber-500",
-                    )}
-                  />
-                  {task.task_type === "flexible"
-                    ? "Random Nudge: "
-                    : "Reminder: "}
-                  {format(task.reminder_at, "MMM dd, yyyy HH:mm")}
+              {task.reminder_at && task.task_type !== "flexible" && (
+                <span className="text-[10px] bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded font-medium flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                  Reminder: {format(task.reminder_at, "MMM dd, yyyy HH:mm")}
                 </span>
               )}
               <span

@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { FilterSidebar } from "./FilterSidebar";
 import { Spinner } from "@/components/ui/spinner";
-import { Lightbulb, Repeat, PartyPopper } from "lucide-react";
+import { Lightbulb, Repeat, PartyPopper, CheckSquare } from "lucide-react";
 
 export function TaskList() {
   const [filterSidebarOpen, setFilterSidebarOpen] = useState(false);
@@ -35,10 +35,14 @@ export function TaskList() {
     {},
   );
 
-  // smart completion prompt state
+  // smart completion prompt state (triggered when all subtasks are ticked)
   const [promptTask, setPromptTask] = useState<Task | null>(null);
   const [isCompletingTask, setIsCompletingTask] = useState(false);
   const promptShownRefs = useRef<{ [taskId: string]: boolean }>({});
+
+  // subtask completion prompt state (triggered when completing a task with pending subtasks)
+  const [subtaskPromptTask, setSubtaskPromptTask] = useState<Task | null>(null);
+  const [isCompletingWithSubtasks, setIsCompletingWithSubtasks] = useState(false);
 
   useEffect(() => {
     tasks.forEach((task) => {
@@ -62,6 +66,16 @@ export function TaskList() {
   };
 
   const handleToggleTaskCompletion = async (task: Task) => {
+    // If marking complete and there are still pending subtasks, prompt first
+    if (
+      task.status !== "completed" &&
+      task.subtasks &&
+      task.subtasks.some((s) => !s.completed)
+    ) {
+      setSubtaskPromptTask(task);
+      return;
+    }
+
     try {
       const originalStatus = task.status;
 
@@ -171,6 +185,36 @@ export function TaskList() {
     } finally {
       setIsCompletingTask(false);
       setPromptTask(null);
+    }
+  };
+
+  // Complete a task and optionally bulk-mark all its subtasks as done first
+  const handleCompleteWithSubtasks = async (
+    task: Task,
+    markSubtasks: boolean,
+  ) => {
+    setIsCompletingWithSubtasks(true);
+    try {
+      if (markSubtasks && task.subtasks && task.subtasks.length > 0) {
+        // Bulk-complete all pending subtasks in parallel
+        const pending = task.subtasks.filter((s) => !s.completed);
+        await Promise.all(
+          pending.map((s) => taskService.toggleSubtask(s.id, true)),
+        );
+      }
+      await taskService.completeTask(task);
+      await fetchTasks();
+      toast.success(
+        task.task_type === "recurring"
+          ? "Recurring task completed! Next occurrence scheduled."
+          : "Task completed!",
+      );
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to complete task");
+    } finally {
+      setIsCompletingWithSubtasks(false);
+      setSubtaskPromptTask(null);
     }
   };
 
@@ -480,27 +524,11 @@ export function TaskList() {
                           </span>
                         )}
 
-                        {/* Reminder Indicator */}
-                        {task.reminder_at && (
-                          <span
-                            className={cn(
-                              "text-[10px] px-2 py-0.5 rounded font-medium flex items-center gap-1",
-                              task.task_type === "flexible"
-                                ? "bg-purple-500/10 border border-purple-500/20 text-purple-600 dark:text-purple-400"
-                                : "bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400",
-                            )}
-                          >
-                            <span
-                              className={cn(
-                                "w-1.5 h-1.5 rounded-full animate-pulse",
-                                task.task_type === "flexible"
-                                  ? "bg-purple-500"
-                                  : "bg-amber-500",
-                              )}
-                            />
-                            {task.task_type === "flexible"
-                              ? "Random Nudge: "
-                              : "Reminder: "}
+                        {/* Reminder Indicator — only shown for non-flexible tasks */}
+                        {task.reminder_at && task.task_type !== "flexible" && (
+                          <span className="text-[10px] bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded font-medium flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                            Reminder:{" "}
                             {format(task.reminder_at, "MMM d, h:mm a")}
                           </span>
                         )}
@@ -796,6 +824,19 @@ export function TaskList() {
 
                       <div className="flex gap-2">
                         <Button
+                          onClick={() => handleToggleTaskCompletion(task)}
+                          className={cn(
+                            "text-xs border py-1 h-7 rounded px-3 font-semibold transition-all",
+                            task.status === "completed"
+                              ? "bg-muted hover:bg-muted/80 text-muted-foreground border-border"
+                              : "bg-brand-green/10 hover:bg-brand-green/20 text-brand-green border-brand-green/30",
+                          )}
+                        >
+                          {task.status === "completed"
+                            ? "Mark Pending"
+                            : "Mark Complete"}
+                        </Button>
+                        <Button
                           onClick={() => handleDeleteTask(task.id)}
                           className="bg-destructive/10 hover:bg-destructive/20 text-destructive text-xs border border-destructive/20 py-1 h-7 rounded px-3"
                         >
@@ -899,6 +940,107 @@ export function TaskList() {
               to   { opacity: 1; transform: translateY(0) scale(1); }
             }
           `}</style>
+        </div>
+      )}
+
+      {/* Pending Subtasks Completion Prompt */}
+      {subtaskPromptTask && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+          style={{ animation: "fadeInOverlay 0.2s ease" }}
+        >
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-background/70 backdrop-blur-sm"
+            onClick={() => setSubtaskPromptTask(null)}
+          />
+
+          {/* Dialog */}
+          <div
+            className="relative z-10 w-full max-w-sm bg-card border border-border rounded-2xl shadow-2xl p-6 space-y-5"
+            style={{
+              animation: "slideUpPrompt 0.3s cubic-bezier(0.34,1.56,0.64,1)",
+            }}
+          >
+            {/* Icon */}
+            <div className="flex justify-center">
+              <div className="w-14 h-14 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+                <CheckSquare className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+              </div>
+            </div>
+
+            <div className="text-center space-y-1.5">
+              <h2 className="text-base font-bold text-foreground">
+                Unfinished subtasks
+              </h2>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                <span className="font-semibold text-foreground">
+                  &ldquo;{subtaskPromptTask.title}&rdquo;
+                </span>{" "}
+                still has{" "}
+                <span className="font-semibold text-foreground">
+                  {subtaskPromptTask.subtasks?.filter((s) => !s.completed).length}
+                </span>{" "}
+                pending subtask
+                {(subtaskPromptTask.subtasks?.filter((s) => !s.completed)
+                  .length ?? 0) > 1
+                  ? "s"
+                  : ""}.
+                <br className="hidden sm:block" />
+                Mark them all complete too?
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <Button
+                onClick={() =>
+                  handleCompleteWithSubtasks(subtaskPromptTask, true)
+                }
+                disabled={isCompletingWithSubtasks}
+                className="w-full h-10 rounded-xl bg-green-600 hover:bg-green-700 text-white font-semibold text-sm flex items-center justify-center gap-2 transition-all"
+              >
+                {isCompletingWithSubtasks ? (
+                  <>
+                    <Spinner size="sm" />
+                    Completing...
+                  </>
+                ) : (
+                  <>
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                    Mark all &amp; complete
+                  </>
+                )}
+              </Button>
+              <Button
+                onClick={() =>
+                  handleCompleteWithSubtasks(subtaskPromptTask, false)
+                }
+                disabled={isCompletingWithSubtasks}
+                variant="outline"
+                className="w-full h-9 rounded-xl text-sm font-medium"
+              >
+                Just complete the task
+              </Button>
+              <button
+                onClick={() => setSubtaskPromptTask(null)}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors mt-1"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
