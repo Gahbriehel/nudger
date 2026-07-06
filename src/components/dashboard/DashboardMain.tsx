@@ -11,6 +11,7 @@ import { NudgelistView } from "./NudgelistView";
 import { TaskForm } from "./TaskForm";
 import { SettingsView } from "./SettingsView";
 import { PwaInstallBanner } from "./PwaInstallBanner";
+import { NotificationPromptModal } from "./NotificationPromptModal";
 import { useNotificationChecker } from "@/hooks/useNotificationChecker";
 import { format } from "@/lib/date-fns";
 import { Button } from "@/components/ui/button";
@@ -92,6 +93,7 @@ export function DashboardMain() {
 
       <main className="max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 flex-1 mt-8 space-y-8">
         <PwaInstallBanner />
+        <NotificationPromptModal />
 
         {activeTab === "dashboard" && (
           <div className="space-y-8">
