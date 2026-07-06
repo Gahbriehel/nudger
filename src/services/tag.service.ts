@@ -17,7 +17,18 @@ export const tagService = {
       .order("name", { ascending: true });
 
     if (error) throw error;
-    return data || [];
+
+    if (!data || data.length === 0) {
+      try {
+        const defaultTag = await tagService.createTag("todo");
+        return [defaultTag];
+      } catch (err) {
+        console.error("Failed to create default todo tag", err);
+        return [];
+      }
+    }
+
+    return data;
   },
 
   async createTag(name: string): Promise<Tag> {
