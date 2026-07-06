@@ -24,9 +24,46 @@ if (vapidPublicKey && vapidPrivateKey) {
 async function processNudges() {
   // Use service role client so RLS doesn't block cron job reads
   const supabase = createAdminClient();
+  const now = new Date().toISOString();
+
+  // 0. Find and reset recurring completed tasks whose next due date has arrived
+  const { data: overdueRecurring, error: recurringError } = await supabase
+    .from("tasks")
+    .select("id")
+    .eq("task_type", "recurring")
+    .eq("status", "completed")
+    .lte("due_date", now);
+
+  if (recurringError) {
+    console.error("Failed to query completed recurring tasks:", recurringError);
+  } else if (overdueRecurring && overdueRecurring.length > 0) {
+    const ids = overdueRecurring.map((t) => t.id);
+
+    // Reset tasks status to pending
+    const { error: resetError } = await supabase
+      .from("tasks")
+      .update({ status: "pending" })
+      .in("id", ids);
+
+    if (resetError) {
+      console.error("Failed to reset recurring task status:", resetError);
+    } else {
+      // Reset subtasks for these tasks
+      const { error: subtasksError } = await supabase
+        .from("subtasks")
+        .update({ completed: false })
+        .in("task_id", ids);
+
+      if (subtasksError) {
+        console.error(
+          "Failed to reset recurring task subtasks:",
+          subtasksError,
+        );
+      }
+    }
+  }
 
   // 1. Fetch tasks where reminder_at <= NOW(), status is 'pending', and reminder_sent is false
-  const now = new Date().toISOString();
   const { data: reminderTasks, error: reminderError } = await supabase
     .from("tasks")
     .select("*")

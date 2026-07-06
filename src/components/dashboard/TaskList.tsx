@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { FilterSidebar } from "./FilterSidebar";
 import { Spinner } from "@/components/ui/spinner";
+import { SnoozeModal } from "./SnoozeModal";
 import { Lightbulb, Repeat } from "lucide-react";
 
 export function TaskList() {
@@ -51,6 +52,9 @@ export function TaskList() {
     null,
   );
   const [isDeletingTask, setIsDeletingTask] = useState(false);
+
+  // task snooze modal state
+  const [snoozeTask, setSnoozeTask] = useState<Task | null>(null);
 
   useEffect(() => {
     tasks.forEach((task) => {
@@ -853,6 +857,16 @@ export function TaskList() {
                             ? "Mark Pending"
                             : "Mark Complete"}
                         </Button>
+                        {task.status !== "completed" &&
+                          task.task_type !== "flexible" && (
+                            <Button
+                              onClick={() => setSnoozeTask(task)}
+                              variant="outline"
+                              className="text-xs border border-border py-1 h-7 rounded px-3 font-semibold transition-all"
+                            >
+                              Snooze
+                            </Button>
+                          )}
                         <Button
                           onClick={() => handleDeleteTask(task.id)}
                           className="bg-destructive/10 hover:bg-destructive/20 text-destructive text-xs border border-destructive/20 py-1 h-7 rounded px-3"
@@ -973,6 +987,14 @@ export function TaskList() {
             </button>
           </div>
         }
+      />
+
+      {/* Snooze Task Modal */}
+      <SnoozeModal
+        isOpen={!!snoozeTask}
+        onClose={() => setSnoozeTask(null)}
+        task={snoozeTask}
+        onSuccess={fetchTasks}
       />
     </div>
   );

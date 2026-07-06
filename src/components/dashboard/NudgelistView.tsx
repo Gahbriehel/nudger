@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
 import { Sparkles } from "lucide-react";
+import { SnoozeModal } from "./SnoozeModal";
 
 export function NudgelistView() {
   const { fetchTasks } = useTaskStore();
@@ -49,23 +50,11 @@ export function NudgelistView() {
     }
   };
 
-  const handleSnooze = async (task: Task, days: number) => {
-    try {
-      const nextDue = new Date(
-        Date.now() + days * 24 * 60 * 60 * 1000,
-      ).toISOString();
-      await taskService.updateTask(task.id, {
-        due_date: nextDue,
-        status: "pending",
-        task_type: "scheduled", // Convert to scheduled if it was flexible so it has a due date
-      });
-      await fetchTasks();
-      await loadNudgelist();
-      toast.success(`Task snoozed for ${days} day${days > 1 ? "s" : ""}`);
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to snooze task");
-    }
+  const [snoozeTask, setSnoozeTask] = useState<Task | null>(null);
+
+  const handleSnoozeSuccess = async () => {
+    await fetchTasks();
+    await loadNudgelist();
   };
 
   const handleAcknowledge = async (task: Task) => {
@@ -158,18 +147,11 @@ export function NudgelistView() {
                 {type === "overdue" ? (
                   <>
                     <Button
-                      onClick={() => handleSnooze(task, 1)}
+                      onClick={() => setSnoozeTask(task)}
                       variant="outline"
                       className="text-xs py-1 h-8 rounded px-3"
                     >
-                      Snooze 1d
-                    </Button>
-                    <Button
-                      onClick={() => handleSnooze(task, 7)}
-                      variant="outline"
-                      className="text-xs py-1 h-8 rounded px-3"
-                    >
-                      Snooze 1w
+                      Snooze
                     </Button>
                   </>
                 ) : (
@@ -237,6 +219,13 @@ export function NudgelistView() {
           )}
         </div>
       )}
+
+      <SnoozeModal
+        isOpen={!!snoozeTask}
+        onClose={() => setSnoozeTask(null)}
+        task={snoozeTask}
+        onSuccess={handleSnoozeSuccess}
+      />
     </div>
   );
 }

@@ -57,11 +57,32 @@ export const taskService = {
       const tags = (task.task_tags || [])
         .map((tt: any) => tt.tag)
         .filter(Boolean);
-      return {
+      const mappedTask = {
         ...task,
         tags,
         memory_cues: task.task_memory_cues || [],
       } as Task;
+
+      // Silent reset for overdue recurring tasks that are marked completed
+      if (
+        mappedTask.task_type === "recurring" &&
+        mappedTask.status === "completed" &&
+        mappedTask.due_date &&
+        new Date(mappedTask.due_date) <= new Date()
+      ) {
+        mappedTask.status = "pending";
+        if (mappedTask.subtasks) {
+          mappedTask.subtasks = mappedTask.subtasks.map((st: any) => ({
+            ...st,
+            completed: false,
+          }));
+        }
+        taskService.resetRecurringTask(mappedTask.id).catch((err) => {
+          console.error("Failed to silently reset recurring task:", err);
+        });
+      }
+
+      return mappedTask;
     });
   },
 
@@ -87,11 +108,31 @@ export const taskService = {
       .map((tt: any) => tt.tag)
       .filter(Boolean);
 
-    return {
+    const mappedTask = {
       ...data,
       tags,
       memory_cues: data.task_memory_cues || [],
     } as Task;
+
+    if (
+      mappedTask.task_type === "recurring" &&
+      mappedTask.status === "completed" &&
+      mappedTask.due_date &&
+      new Date(mappedTask.due_date) <= new Date()
+    ) {
+      mappedTask.status = "pending";
+      if (mappedTask.subtasks) {
+        mappedTask.subtasks = mappedTask.subtasks.map((st: any) => ({
+          ...st,
+          completed: false,
+        }));
+      }
+      taskService.resetRecurringTask(mappedTask.id).catch((err) => {
+        console.error("Failed to silently reset recurring task:", err);
+      });
+    }
+
+    return mappedTask;
   },
 
   async createTask(
@@ -342,7 +383,7 @@ export const taskService = {
           )
         : null;
 
-      // 2. Roll over task: reset subtasks, update last_completed_at, update due date, keep status pending
+      // 2. Roll over task: update last_completed_at, update due date, set status to completed
       const { error: taskError } = await supabase
         .from("tasks")
         .update({
@@ -351,21 +392,13 @@ export const taskService = {
           reminder_at: nextReminder,
           reminder_sent: false,
           due_sent: false,
-          status: "pending",
+          status: "completed",
         })
         .eq("id", task.id);
 
       if (taskError) throw taskError;
 
-      // Reset subtasks
-      const { error: subtasksError } = await supabase
-        .from("subtasks")
-        .update({ completed: false })
-        .eq("task_id", task.id);
-
-      if (subtasksError) throw subtasksError;
-
-      return { status: "pending", due_date: nextDue };
+      return { status: "completed", due_date: nextDue };
     } else {
       // Non-recurring task: complete normally
       const { error } = await supabase
@@ -379,5 +412,25 @@ export const taskService = {
       if (error) throw error;
       return { status: "completed", due_date: null };
     }
+  },
+
+  async resetRecurringTask(taskId: string): Promise<void> {
+    // 1. Update task status to pending
+    const { error: taskError } = await supabase
+      .from("tasks")
+      .update({
+        status: "pending",
+      })
+      .eq("id", taskId);
+
+    if (taskError) throw taskError;
+
+    // 2. Reset all subtasks for this task to completed = false
+    const { error: subtasksError } = await supabase
+      .from("subtasks")
+      .update({ completed: false })
+      .eq("task_id", taskId);
+
+    if (subtasksError) throw subtasksError;
   },
 };
