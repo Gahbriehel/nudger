@@ -15,7 +15,11 @@ import { Spinner } from "@/components/ui/spinner";
 import { SnoozeModal } from "./SnoozeModal";
 import { Lightbulb, Repeat } from "lucide-react";
 
-export function TaskList() {
+interface TaskListProps {
+  initialExpandedTaskId?: string | null;
+}
+
+export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
   const [filterSidebarOpen, setFilterSidebarOpen] = useState(false);
   const {
     tasks,
@@ -27,7 +31,9 @@ export function TaskList() {
     deleteTaskState,
   } = useTaskStore();
 
-  const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
+  const [expandedTaskId, setExpandedTaskId] = useState<string | null>(
+    initialExpandedTaskId ?? null,
+  );
 
   // Local inputs for adding items in expanded view
   const [newSubtaskTexts, setNewSubtaskTexts] = useState<{
@@ -72,6 +78,17 @@ export function TaskList() {
   useEffect(() => {
     fetchTasks();
   }, [fetchTasks]);
+
+  // Scroll to the initially-expanded task once tasks are loaded
+  useEffect(() => {
+    if (!initialExpandedTaskId || !tasks.length) return;
+    const el = document.getElementById(`task-card-${initialExpandedTaskId}`);
+    if (el) {
+      setTimeout(() => {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 100);
+    }
+  }, [initialExpandedTaskId, tasks.length]);
 
   const handleToggleExpand = (id: string) => {
     setExpandedTaskId(expandedTaskId === id ? null : id);
@@ -464,6 +481,7 @@ export function TaskList() {
             return (
               <div
                 key={task.id}
+                id={`task-card-${task.id}`}
                 className={cn(
                   "border border-border bg-card backdrop-blur-md rounded-xl transition-all duration-200 overflow-hidden shadow-md hover:border-brand-indigo/20 dark:hover:border-brand-blue/20",
                   task.status === "completed" && "opacity-60 border-border/50",

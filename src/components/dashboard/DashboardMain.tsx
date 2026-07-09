@@ -30,6 +30,7 @@ export function DashboardMain() {
     "dashboard" | "tasks" | "nudgelist" | "settings"
   >("dashboard");
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
   // Stats are shown by default on md+ screens; hidden on mobile
   const [showStats, setShowStats] = useState(false);
@@ -225,6 +226,7 @@ export function DashboardMain() {
                       <div
                         key={t.id}
                         onClick={() => {
+                          setSelectedTaskId(t.id);
                           setActiveTab("tasks");
                         }}
                         className="bg-muted/40 border border-border hover:border-foreground/20 p-3.5 rounded-xl flex items-center justify-between gap-3 cursor-pointer transition-all duration-200"
@@ -271,7 +273,10 @@ export function DashboardMain() {
                     {recentTasks.map((t: Task) => (
                       <div
                         key={t.id}
-                        onClick={() => setActiveTab("tasks")}
+                        onClick={() => {
+                          setSelectedTaskId(t.id);
+                          setActiveTab("tasks");
+                        }}
                         className="bg-muted/40 border border-border hover:border-foreground/20 p-3.5 rounded-xl flex items-center justify-between gap-3 cursor-pointer transition-all duration-200"
                       >
                         <div className="space-y-0.5 truncate">
@@ -319,7 +324,10 @@ export function DashboardMain() {
                 + Add Task
               </Button>
             </div>
-            <TaskList />
+            <TaskList
+              key={selectedTaskId ?? "default"}
+              initialExpandedTaskId={selectedTaskId}
+            />
           </div>
         )}
 
