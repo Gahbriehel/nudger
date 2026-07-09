@@ -32,8 +32,8 @@ export default function HomePage() {
   }, []);
 
   // Get top 3 urgent tasks for summary
-  const nowTime = new Date().getTime();
-  const urgentTasks = tasks
+  const nowTime = currentTime ? currentTime.getTime() : null;
+  const urgentTasks = nowTime === null ? [] : tasks
     .filter((t: Task) => t.status !== "completed")
     .filter((t: Task) => {
       const isOverdue = t.due_date && new Date(t.due_date).getTime() < nowTime;

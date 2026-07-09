@@ -517,7 +517,13 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
     return { completed, total: subs.length, pct };
   };
 
-  const nowTime = new Date().getTime();
+  const [nowTime, setNowTime] = useState<number | null>(null);
+  const [today, setToday] = useState<Date | null>(null);
+
+  useEffect(() => {
+    setNowTime(new Date().getTime());
+    setToday(new Date());
+  }, []);
 
   // Count active non-default filters (excludes search)
   const activeFilterCount = [
@@ -526,7 +532,6 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
     filters.sort !== "recently_updated" ? 1 : 0,
   ].reduce((a, b) => a + b, 0);
 
-  const today = new Date();
   const totalPending = tasks.filter((t) => t.status !== "completed").length;
 
   return (
@@ -536,14 +541,14 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
         <div>
           <div className="flex items-end gap-2 leading-none">
             <span className="text-4xl font-black text-foreground">
-              {format(today, "d")}
+              {today ? format(today, "d") : "--"}
             </span>
             <span className="text-2xl font-bold text-foreground mb-0.5">
-              {format(today, "MMMM")}
+              {today ? format(today, "MMMM") : "Loading"}
             </span>
           </div>
           <p className="text-xs font-semibold tracking-widest text-muted-foreground mt-1 uppercase">
-            {format(today, "EEEE")}
+            {today ? format(today, "EEEE") : "..."}
           </p>
         </div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -645,6 +650,7 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
             const isExpanded = expandedTaskId === task.id;
             const subStats = getSubtaskCompletionStats(task);
             const isOverdue =
+              nowTime !== null &&
               task.status !== "completed" &&
               task.due_date &&
               new Date(task.due_date).getTime() < nowTime;
