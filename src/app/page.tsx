@@ -33,16 +33,22 @@ export default function HomePage() {
 
   // Get top 3 urgent tasks for summary
   const nowTime = currentTime ? currentTime.getTime() : null;
-  const urgentTasks = nowTime === null ? [] : tasks
-    .filter((t: Task) => t.status !== "completed")
-    .filter((t: Task) => {
-      const isOverdue = t.due_date && new Date(t.due_date).getTime() < nowTime;
-      const lastUpdatedTime = new Date(t.updated_at || t.created_at).getTime();
-      const daysSinceInteraction =
-        (nowTime - lastUpdatedTime) / (24 * 60 * 60 * 1000);
-      return isOverdue || daysSinceInteraction >= 3;
-    })
-    .slice(0, 3);
+  const urgentTasks =
+    nowTime === null
+      ? []
+      : tasks
+          .filter((t: Task) => t.status !== "completed")
+          .filter((t: Task) => {
+            const isOverdue =
+              t.due_date && new Date(t.due_date).getTime() < nowTime;
+            const lastUpdatedTime = new Date(
+              t.updated_at || t.created_at,
+            ).getTime();
+            const daysSinceInteraction =
+              (nowTime - lastUpdatedTime) / (24 * 60 * 60 * 1000);
+            return isOverdue || daysSinceInteraction >= 3;
+          })
+          .slice(0, 3);
 
   // Get 3 recently updated tasks
   const recentTasks = [...tasks]
