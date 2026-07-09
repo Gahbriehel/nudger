@@ -1328,7 +1328,7 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
                               </svg>
                               Edit
                             </Button>
-                            
+
                             <Button
                               onClick={() => handleToggleTaskCompletion(task)}
                               className={cn(
