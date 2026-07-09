@@ -20,7 +20,7 @@ import { toast } from "sonner";
 import { FilterSidebar } from "./FilterSidebar";
 import { Spinner } from "@/components/ui/spinner";
 import { SnoozeModal } from "./SnoozeModal";
-import { Lightbulb, Repeat } from "lucide-react";
+import { Lightbulb, Repeat, Moon } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { tagService } from "@/services/tag.service";
@@ -797,9 +797,10 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
                               e.stopPropagation();
                               setSnoozeTask(task);
                             }}
-                            className="ml-1 w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-xs font-bold flex items-center justify-center hover:bg-blue-200 dark:hover:bg-blue-500/30 transition-colors"
+                            title="Snooze task"
+                            className="ml-1 w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center hover:bg-blue-200 dark:hover:bg-blue-500/30 transition-colors"
                           >
-                            --
+                            <Moon className="w-3.5 h-3.5" />
                           </button>
                         )}
                     </div>
