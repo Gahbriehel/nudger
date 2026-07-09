@@ -5,17 +5,30 @@ import { ThemeSwitcher } from "@/components/theme-switcher";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 interface DashboardHeaderProps {
-  activeTab: "dashboard" | "tasks" | "nudgelist" | "settings";
-  setActiveTab: (tab: "dashboard" | "tasks" | "nudgelist" | "settings") => void;
+  activeTab?: "dashboard" | "tasks" | "nudgelist" | "settings";
+  setActiveTab?: (
+    tab: "dashboard" | "tasks" | "nudgelist" | "settings",
+  ) => void;
 }
 
-export function DashboardHeader({
-  activeTab,
-  setActiveTab,
-}: DashboardHeaderProps) {
+export function DashboardHeader({ activeTab }: DashboardHeaderProps) {
   const user = useAuthStore((s) => s.user);
+  const pathname = usePathname();
+
+  const computedActiveTab =
+    activeTab ||
+    (pathname === "/"
+      ? "dashboard"
+      : pathname.startsWith("/tasks")
+        ? "tasks"
+        : pathname.startsWith("/nudgelist")
+          ? "nudgelist"
+          : pathname.startsWith("/settings")
+            ? "settings"
+            : "dashboard");
 
   return (
     <nav className="w-full border-b border-border bg-background/80 backdrop-blur-md sticky top-0 z-50">
@@ -47,50 +60,50 @@ export function DashboardHeader({
 
         {/* Tab Links */}
         <div className="hidden md:flex items-center gap-1">
-          <button
-            onClick={() => setActiveTab("dashboard")}
+          <Link
+            href="/"
             className={cn(
               "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200",
-              activeTab === "dashboard"
+              computedActiveTab === "dashboard"
                 ? "bg-foreground text-background font-bold"
                 : "text-muted-foreground hover:text-foreground hover:bg-muted",
             )}
           >
             Dashboard
-          </button>
-          <button
-            onClick={() => setActiveTab("tasks")}
+          </Link>
+          <Link
+            href="/tasks"
             className={cn(
               "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200",
-              activeTab === "tasks"
+              computedActiveTab === "tasks"
                 ? "bg-foreground text-background font-bold"
                 : "text-muted-foreground hover:text-foreground hover:bg-muted",
             )}
           >
             All Tasks
-          </button>
-          <button
-            onClick={() => setActiveTab("nudgelist")}
+          </Link>
+          <Link
+            href="/nudgelist"
             className={cn(
               "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200",
-              activeTab === "nudgelist"
+              computedActiveTab === "nudgelist"
                 ? "bg-foreground text-background font-bold"
                 : "text-muted-foreground hover:text-foreground hover:bg-muted",
             )}
           >
             Nudgelist
-          </button>
-          <button
-            onClick={() => setActiveTab("settings")}
+          </Link>
+          <Link
+            href="/settings"
             className={cn(
               "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200",
-              activeTab === "settings"
+              computedActiveTab === "settings"
                 ? "bg-foreground text-background font-bold"
                 : "text-muted-foreground hover:text-foreground hover:bg-muted",
             )}
           >
             Settings
-          </button>
+          </Link>
         </div>
 
         {/* User Info & Actions */}
@@ -116,50 +129,50 @@ export function DashboardHeader({
 
       {/* Mobile Tab bar */}
       <div className="md:hidden border-t border-border bg-muted/30 flex justify-around py-2">
-        <button
-          onClick={() => setActiveTab("dashboard")}
+        <Link
+          href="/"
           className={cn(
             "text-[10px] font-semibold py-1.5 px-3 rounded-md transition-all",
-            activeTab === "dashboard"
+            computedActiveTab === "dashboard"
               ? "bg-foreground text-background font-bold"
               : "text-muted-foreground",
           )}
         >
           Dashboard
-        </button>
-        <button
-          onClick={() => setActiveTab("tasks")}
+        </Link>
+        <Link
+          href="/tasks"
           className={cn(
             "text-[10px] font-semibold py-1.5 px-3 rounded-md transition-all",
-            activeTab === "tasks"
+            computedActiveTab === "tasks"
               ? "bg-foreground text-background font-bold"
               : "text-muted-foreground",
           )}
         >
           All Tasks
-        </button>
-        <button
-          onClick={() => setActiveTab("nudgelist")}
+        </Link>
+        <Link
+          href="/nudgelist"
           className={cn(
             "text-[10px] font-semibold py-1.5 px-3 rounded-md transition-all",
-            activeTab === "nudgelist"
+            computedActiveTab === "nudgelist"
               ? "bg-foreground text-background font-bold"
               : "text-muted-foreground",
           )}
         >
           Nudgelist
-        </button>
-        <button
-          onClick={() => setActiveTab("settings")}
+        </Link>
+        <Link
+          href="/settings"
           className={cn(
             "text-[10px] font-semibold py-1.5 px-3 rounded-md transition-all",
-            activeTab === "settings"
+            computedActiveTab === "settings"
               ? "bg-foreground text-background font-bold"
               : "text-muted-foreground",
           )}
         >
           Settings
-        </button>
+        </Link>
       </div>
     </nav>
   );

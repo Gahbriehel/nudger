@@ -675,15 +675,55 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
                 >
                   {/* Title row + badges */}
                   <div className="flex items-start justify-between gap-3 mb-2">
-                    <h3
-                      className={cn(
-                        "font-bold text-base text-foreground leading-snug",
-                        task.status === "completed" &&
-                          "line-through text-muted-foreground",
-                      )}
-                    >
-                      {task.title}
-                    </h3>
+                    <div className="flex items-start gap-2.5 min-w-0">
+                      {/* Checkbox to quickly mark complete */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleTaskCompletion(task);
+                        }}
+                        className="mt-0.5 flex-shrink-0 focus:outline-none"
+                        aria-label={
+                          task.status === "completed"
+                            ? "Mark task pending"
+                            : "Mark task complete"
+                        }
+                      >
+                        <div
+                          className={cn(
+                            "w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all duration-200",
+                            task.status === "completed"
+                              ? "bg-foreground border-foreground text-background"
+                              : "border-muted-foreground/60 hover:border-foreground/80",
+                          )}
+                        >
+                          {task.status === "completed" && (
+                            <svg
+                              className="w-3.5 h-3.5"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                              strokeWidth="3.5"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M5 13l4 4L19 7"
+                              />
+                            </svg>
+                          )}
+                        </div>
+                      </button>
+                      <h3
+                        className={cn(
+                          "font-bold text-base text-foreground leading-snug",
+                          task.status === "completed" &&
+                            "line-through text-muted-foreground",
+                        )}
+                      >
+                        {task.title}
+                      </h3>
+                    </div>
                     <div className="flex items-center gap-1.5 flex-shrink-0 mt-0.5">
                       {/* Priority / type badge */}
                       <span
