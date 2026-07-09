@@ -303,6 +303,54 @@ export const taskService = {
     if (error) throw error;
   },
 
+  async updateTaskTags(taskId: string, tagNames: string[]): Promise<void> {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) throw new Error("Unauthenticated");
+
+    // 1. Delete all old task_tags records for this task
+    const { error: deleteError } = await supabase
+      .from("task_tags")
+      .delete()
+      .eq("task_id", taskId);
+
+    if (deleteError) throw deleteError;
+
+    // 2. Resolve/create each tag and link it
+    if (tagNames && tagNames.length > 0) {
+      for (const name of tagNames) {
+        const cleanName = name.trim().toLowerCase();
+        if (!cleanName) continue;
+
+        let { data: existingTag } = await supabase
+          .from("tags")
+          .select()
+          .eq("user_id", user.id)
+          .eq("name", cleanName)
+          .maybeSingle();
+
+        if (!existingTag) {
+          const { data: newTag, error: newTagError } = await supabase
+            .from("tags")
+            .insert({ user_id: user.id, name: cleanName })
+            .select()
+            .single();
+
+          if (newTagError) throw newTagError;
+          existingTag = newTag;
+        }
+
+        if (existingTag) {
+          const { error: linkError } = await supabase
+            .from("task_tags")
+            .insert({ task_id: taskId, tag_id: existingTag.id });
+          if (linkError) throw linkError;
+        }
+      }
+    }
+  },
+
   async deleteTask(id: string): Promise<void> {
     const { error } = await supabase.from("tasks").delete().eq("id", id);
     if (error) throw error;

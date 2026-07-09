@@ -2,11 +2,18 @@
 
 import { useState, useEffect, useRef, Suspense } from "react";
 import { taskService } from "@/services/task.service";
-import { Task, Subtask } from "@/types/database.types";
+import { tagService } from "@/services/tag.service";
+import {
+  Task,
+  Subtask,
+  Tag,
+  TaskType,
+  RecurrenceType,
+} from "@/types/database.types";
 import { format } from "@/lib/date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
@@ -28,9 +35,22 @@ function TaskDetailContent() {
   const [newSubtask, setNewSubtask] = useState("");
   const [newCue, setNewCue] = useState("");
 
-  // inline notes editing state
-  const [notes, setNotes] = useState("");
-  const [isEditingNotes, setIsEditingNotes] = useState(false);
+  // Edit mode states
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editNotes, setEditNotes] = useState("");
+  const [editTaskType, setEditTaskType] = useState<TaskType>("flexible");
+  const [editDueDate, setEditDueDate] = useState("");
+  const [editReminderAt, setEditReminderAt] = useState("");
+  const [editRecurrenceType, setEditRecurrenceType] =
+    useState<RecurrenceType>("daily");
+  const [editRecurrenceInterval, setEditRecurrenceInterval] =
+    useState<string>("1");
+  const [editTags, setEditTags] = useState<string[]>([]);
+  const [newTagInput, setNewTagInput] = useState("");
+  const [availableTags, setAvailableTags] = useState<Tag[]>([]);
 
   // smart completion prompt state
   const [showCompletePrompt, setShowCompletePrompt] = useState(false);
@@ -43,7 +63,6 @@ function TaskDetailContent() {
     try {
       const data = await taskService.getTaskById(id);
       setTask(data);
-      setNotes(data.notes || "");
     } catch (err) {
       const error = err as Error;
       setError(error.message || "Failed to load task");
@@ -56,6 +75,111 @@ function TaskDetailContent() {
     loadTask();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  useEffect(() => {
+    const fetchAvailableTags = async () => {
+      try {
+        const tags = await tagService.getTags();
+        setAvailableTags(tags);
+      } catch (err) {
+        console.error("Failed to load available tags:", err);
+      }
+    };
+    fetchAvailableTags();
+  }, []);
+
+  const startEditing = () => {
+    if (!task) return;
+    setEditTitle(task.title || "");
+    setEditDescription(task.description || "");
+    setEditNotes(task.notes || "");
+    setEditTaskType(task.task_type || "flexible");
+    setEditDueDate(
+      task.due_date ? format(task.due_date, "yyyy-MM-dd'T'HH:mm") : "",
+    );
+    setEditReminderAt(
+      task.reminder_at ? format(task.reminder_at, "yyyy-MM-dd'T'HH:mm") : "",
+    );
+    setEditRecurrenceType(task.recurrence_type || "daily");
+    setEditRecurrenceInterval(String(task.recurrence_interval || 1));
+    setEditTags(task.tags ? task.tags.map((t) => t.name) : []);
+    setNewTagInput("");
+    setIsEditing(true);
+  };
+
+  const handleAddEditTag = () => {
+    const cleanTag = newTagInput.trim().toLowerCase();
+    if (!cleanTag) return;
+    if (!editTags.includes(cleanTag)) {
+      setEditTags([...editTags, cleanTag]);
+    }
+    setNewTagInput("");
+  };
+
+  const handleToggleEditAvailableTag = (tagName: string) => {
+    const cleanTag = tagName.toLowerCase();
+    if (editTags.includes(cleanTag)) {
+      setEditTags(editTags.filter((t) => t !== cleanTag));
+    } else {
+      setEditTags([...editTags, cleanTag]);
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!task) return;
+    if (!editTitle.trim()) {
+      toast.error("Task title is required");
+      return;
+    }
+
+    setIsSavingEdit(true);
+    try {
+      const type = editTaskType;
+      const updates: Partial<Task> = {
+        title: editTitle.trim(),
+        description: editDescription.trim() || null,
+        notes: editNotes.trim() || null,
+        task_type: type,
+      };
+
+      if (type === "flexible") {
+        updates.due_date = null;
+        updates.reminder_at = null;
+        updates.recurrence_type = null;
+        updates.recurrence_interval = null;
+      } else if (type === "scheduled") {
+        updates.due_date = editDueDate
+          ? new Date(editDueDate).toISOString()
+          : null;
+        updates.reminder_at = editReminderAt
+          ? new Date(editReminderAt).toISOString()
+          : null;
+        updates.recurrence_type = null;
+        updates.recurrence_interval = null;
+      } else if (type === "recurring") {
+        updates.due_date = editDueDate
+          ? new Date(editDueDate).toISOString()
+          : null;
+        updates.reminder_at = editReminderAt
+          ? new Date(editReminderAt).toISOString()
+          : null;
+        updates.recurrence_type = editRecurrenceType;
+        updates.recurrence_interval = parseInt(editRecurrenceInterval) || 1;
+      }
+
+      await taskService.updateTask(task.id, updates);
+      await taskService.updateTaskTags(task.id, editTags);
+
+      toast.success("Task updated successfully");
+      setIsEditing(false);
+      loadTask();
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to save changes");
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
 
   useEffect(() => {
     if (task?.subtasks) {
@@ -143,17 +267,6 @@ function TaskDetailContent() {
       toast.success("Memory cue deleted");
     } catch {
       toast.error("Failed to delete memory cue");
-    }
-  };
-
-  const handleSaveNotes = async () => {
-    try {
-      await taskService.updateTask(id, { notes: notes.trim() || null });
-      setIsEditingNotes(false);
-      loadTask();
-      toast.success("Notes saved");
-    } catch {
-      toast.error("Failed to save notes");
     }
   };
 
@@ -326,60 +439,221 @@ function TaskDetailContent() {
         {/* Task Details Card */}
         <div className="border border-border bg-card backdrop-blur-md rounded-2xl p-6 shadow-lg space-y-6">
           {/* Header */}
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <span
-                className={cn(
-                  "text-[10px] px-2.5 py-0.5 rounded-full font-medium tracking-wide uppercase",
-                  task.task_type === "flexible" &&
-                    "bg-muted text-muted-foreground border border-border",
-                  task.task_type === "scheduled" &&
-                    "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20",
-                  task.task_type === "recurring" &&
-                    "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20",
+          {isEditing ? (
+            // Edit Mode Form
+            <div className="space-y-4 text-xs">
+              {/* Title input */}
+              <div className="grid gap-1">
+                <Label
+                  htmlFor="edit-title"
+                  className="font-semibold text-muted-foreground text-[11px]"
+                >
+                  Title
+                </Label>
+                <Input
+                  id="edit-title"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="text-xs h-9 rounded-xl border-border/80 bg-background"
+                  placeholder="Task title"
+                />
+              </div>
+
+              {/* Description & Notes */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid gap-1">
+                  <Label
+                    htmlFor="edit-desc"
+                    className="font-semibold text-muted-foreground text-[11px]"
+                  >
+                    Description
+                  </Label>
+                  <Textarea
+                    id="edit-desc"
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    className="text-xs rounded-xl min-h-[70px] border-border/80 bg-background"
+                    placeholder="Task description"
+                  />
+                </div>
+                <div className="grid gap-1">
+                  <Label
+                    htmlFor="edit-notes"
+                    className="font-semibold text-muted-foreground text-[11px]"
+                  >
+                    Reference Notes
+                  </Label>
+                  <Textarea
+                    id="edit-notes"
+                    value={editNotes}
+                    onChange={(e) => setEditNotes(e.target.value)}
+                    className="text-xs rounded-xl min-h-[70px] border-border/80 bg-background"
+                    placeholder="Reference notes"
+                  />
+                </div>
+              </div>
+
+              {/* Task Type Select */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid gap-1">
+                  <Label
+                    htmlFor="edit-type"
+                    className="font-semibold text-muted-foreground text-[11px]"
+                  >
+                    Task Type
+                  </Label>
+                  <select
+                    id="edit-type"
+                    value={editTaskType}
+                    onChange={(e) =>
+                      setEditTaskType(e.target.value as TaskType)
+                    }
+                    className="bg-background border border-border/80 text-foreground rounded-xl p-2 text-xs h-9 focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    <option value="flexible">Flexible</option>
+                    <option value="scheduled">Scheduled</option>
+                    <option value="recurring">Recurring</option>
+                  </select>
+                </div>
+
+                {editTaskType !== "flexible" && (
+                  <>
+                    <div className="grid gap-1">
+                      <Label
+                        htmlFor="edit-due"
+                        className="font-semibold text-muted-foreground text-[11px]"
+                      >
+                        Due Date
+                      </Label>
+                      <Input
+                        id="edit-due"
+                        type="datetime-local"
+                        value={editDueDate}
+                        onChange={(e) => setEditDueDate(e.target.value)}
+                        className="text-xs h-9 rounded-xl border-border/80 bg-background"
+                      />
+                    </div>
+                    <div className="grid gap-1">
+                      <Label
+                        htmlFor="edit-reminder"
+                        className="font-semibold text-muted-foreground text-[11px]"
+                      >
+                        Reminder
+                      </Label>
+                      <Input
+                        id="edit-reminder"
+                        type="datetime-local"
+                        value={editReminderAt}
+                        onChange={(e) => setEditReminderAt(e.target.value)}
+                        className="text-xs h-9 rounded-xl border-border/80 bg-background"
+                      />
+                    </div>
+                  </>
                 )}
-              >
-                {task.task_type}
-              </span>
-              {task.due_date && (
-                <span className="text-[10px] bg-muted border border-border text-muted-foreground px-2 py-0.5 rounded font-medium">
-                  Due: {format(task.due_date, "MMM dd, yyyy HH:mm")}
-                </span>
+              </div>
+
+              {/* Recurrence Details */}
+              {editTaskType === "recurring" && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-muted/40 p-3 rounded-xl border border-border">
+                  <div className="grid gap-1">
+                    <Label
+                      htmlFor="edit-recurrence-type"
+                      className="font-semibold text-muted-foreground text-[11px]"
+                    >
+                      Recurrence Interval
+                    </Label>
+                    <select
+                      id="edit-recurrence-type"
+                      value={editRecurrenceType}
+                      onChange={(e) =>
+                        setEditRecurrenceType(e.target.value as RecurrenceType)
+                      }
+                      className="bg-background border border-border/80 text-foreground rounded-xl p-2 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
+                    >
+                      <option value="daily">Daily</option>
+                      <option value="weekly">Weekly</option>
+                      <option value="monthly">Monthly</option>
+                      <option value="yearly">Yearly</option>
+                    </select>
+                  </div>
+                  <div className="grid gap-1">
+                    <Label
+                      htmlFor="edit-recurrence-interval"
+                      className="font-semibold text-muted-foreground text-[11px]"
+                    >
+                      Repeat Every
+                    </Label>
+                    <Input
+                      id="edit-recurrence-interval"
+                      type="number"
+                      min="1"
+                      value={editRecurrenceInterval}
+                      onChange={(e) =>
+                        setEditRecurrenceInterval(e.target.value)
+                      }
+                      className="text-xs h-9 rounded-xl border-border/80 bg-background"
+                    />
+                  </div>
+                </div>
               )}
-              {task.reminder_at && task.task_type !== "flexible" && (
-                <span className="text-[10px] bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded font-medium flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-                  Reminder: {format(task.reminder_at, "MMM dd, yyyy HH:mm")}
-                </span>
-              )}
-              <span
-                className={cn(
-                  "text-[10px] px-2.5 py-0.5 rounded-full uppercase font-medium border",
-                  task.status === "completed"
-                    ? "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20"
-                    : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
-                )}
-              >
-                {task.status}
-              </span>
             </div>
+          ) : (
+            // View Mode Header
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <span
+                  className={cn(
+                    "text-[10px] px-2.5 py-0.5 rounded-full font-medium tracking-wide uppercase",
+                    task.task_type === "flexible" &&
+                      "bg-muted text-muted-foreground border border-border",
+                    task.task_type === "scheduled" &&
+                      "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20",
+                    task.task_type === "recurring" &&
+                      "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20",
+                  )}
+                >
+                  {task.task_type}
+                </span>
+                {task.due_date && (
+                  <span className="text-[10px] bg-muted border border-border text-muted-foreground px-2 py-0.5 rounded font-medium">
+                    Due: {format(task.due_date, "MMM dd, yyyy HH:mm")}
+                  </span>
+                )}
+                {task.reminder_at && task.task_type !== "flexible" && (
+                  <span className="text-[10px] bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded font-medium flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                    Reminder: {format(task.reminder_at, "MMM dd, yyyy HH:mm")}
+                  </span>
+                )}
+                <span
+                  className={cn(
+                    "text-[10px] px-2.5 py-0.5 rounded-full uppercase font-medium border",
+                    task.status === "completed"
+                      ? "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20"
+                      : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
+                  )}
+                >
+                  {task.status}
+                </span>
+              </div>
 
-            <h1
-              className={cn(
-                "text-2xl font-bold tracking-tight text-foreground",
-                task.status === "completed" &&
-                  "line-through text-muted-foreground",
+              <h1
+                className={cn(
+                  "text-2xl font-bold tracking-tight text-foreground",
+                  task.status === "completed" &&
+                    "line-through text-muted-foreground",
+                )}
+              >
+                {task.title}
+              </h1>
+
+              {task.description && (
+                <p className="text-sm text-foreground leading-relaxed bg-muted/30 p-3.5 rounded-xl border border-border">
+                  {task.description}
+                </p>
               )}
-            >
-              {task.title}
-            </h1>
-
-            {task.description && (
-              <p className="text-sm text-foreground leading-relaxed bg-muted/30 p-3.5 rounded-xl border border-border">
-                {task.description}
-              </p>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Subtasks checklist */}
           <div className="space-y-3">
@@ -408,7 +682,7 @@ function TaskDetailContent() {
                 placeholder="Add subtask item..."
                 value={newSubtask}
                 onChange={(e) => setNewSubtask(e.target.value)}
-                className="text-xs h-9 rounded-xl border-border/80"
+                className="text-xs h-9 rounded-xl border-border/80 bg-background"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
@@ -419,7 +693,7 @@ function TaskDetailContent() {
               <Button
                 onClick={handleAddSubtask}
                 variant="outline"
-                className="text-xs h-9 px-4 rounded-xl font-semibold"
+                className="text-xs h-9 px-4 rounded-xl font-semibold border-border/80"
               >
                 Add
               </Button>
@@ -485,12 +759,14 @@ function TaskDetailContent() {
                           {sub.title}
                         </span>
                       </label>
-                      <button
-                        onClick={() => handleDeleteSubtask(sub.id)}
-                        className="text-destructive/70 hover:text-destructive text-[10px] font-semibold transition-colors px-1.5 py-0.5"
-                      >
-                        Delete
-                      </button>
+                      {isEditing && (
+                        <button
+                          onClick={() => handleDeleteSubtask(sub.id)}
+                          className="text-destructive/70 hover:text-destructive text-[10px] font-semibold transition-colors px-1.5 py-0.5"
+                        >
+                          Delete
+                        </button>
+                      )}
                     </div>
                   ))}
               </div>
@@ -507,27 +783,29 @@ function TaskDetailContent() {
               Memory Cues
             </h2>
 
-            <div className="flex gap-2">
-              <Input
-                placeholder="e.g. Place server logs spreadsheet on secondary monitor, post-it on screen..."
-                value={newCue}
-                onChange={(e) => setNewCue(e.target.value)}
-                className="text-xs h-9 rounded-xl border-border/80"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleAddCue();
-                  }
-                }}
-              />
-              <Button
-                onClick={handleAddCue}
-                variant="outline"
-                className="text-xs h-9 px-4 rounded-xl font-semibold"
-              >
-                Add
-              </Button>
-            </div>
+            {isEditing && (
+              <div className="flex gap-2">
+                <Input
+                  placeholder="e.g. Place server logs spreadsheet on secondary monitor, post-it on screen..."
+                  value={newCue}
+                  onChange={(e) => setNewCue(e.target.value)}
+                  className="text-xs h-9 rounded-xl border-border/80 bg-background"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleAddCue();
+                    }
+                  }}
+                />
+                <Button
+                  onClick={handleAddCue}
+                  variant="outline"
+                  className="text-xs h-9 px-4 rounded-xl font-semibold border-border/80"
+                >
+                  Add
+                </Button>
+              </div>
+            )}
 
             {task.memory_cues && task.memory_cues.length > 0 ? (
               <div className="space-y-2">
@@ -542,12 +820,14 @@ function TaskDetailContent() {
                         {cue.content}
                       </span>
                     </div>
-                    <button
-                      onClick={() => handleDeleteCue(cue.id)}
-                      className="text-destructive/70 hover:text-destructive text-[10px] font-semibold transition-colors px-1.5 py-0.5"
-                    >
-                      Delete
-                    </button>
+                    {isEditing && (
+                      <button
+                        onClick={() => handleDeleteCue(cue.id)}
+                        className="text-destructive/70 hover:text-destructive text-[10px] font-semibold transition-colors px-1.5 py-0.5"
+                      >
+                        Delete
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -558,80 +838,103 @@ function TaskDetailContent() {
             )}
           </div>
 
-          {/* Reference Notes / Inline Editing */}
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
+          {/* Reference Notes View Mode (hides if empty and not editing) */}
+          {!isEditing && task.notes && (
+            <div className="space-y-3">
               <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                 Reference Notes
               </h2>
-              {!isEditingNotes && (
-                <button
-                  onClick={() => setIsEditingNotes(true)}
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Edit Notes
-                </button>
-              )}
-            </div>
-
-            {isEditingNotes ? (
-              <div className="space-y-2">
-                <Textarea
-                  value={notes}
-                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                    setNotes(e.target.value)
-                  }
-                  placeholder="Add reference notes or info to help remember..."
-                  className="text-xs"
-                  rows={4}
-                />
-                <div className="flex gap-2">
-                  <Button
-                    onClick={handleSaveNotes}
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold py-1 h-8 rounded px-3"
-                  >
-                    Save
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      setIsEditingNotes(false);
-                      setNotes(task.notes || "");
-                    }}
-                    variant="outline"
-                    className="text-xs py-1 h-8 rounded px-3"
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </div>
-            ) : task.notes ? (
               <p className="text-xs text-foreground leading-relaxed bg-muted/30 p-3.5 rounded-xl border border-border whitespace-pre-wrap">
                 {task.notes}
               </p>
-            ) : (
-              <p className="text-xs text-muted-foreground italic">
-                No reference notes added yet.
-              </p>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Tags list */}
-          {task.tags && task.tags.length > 0 && (
+          {isEditing ? (
             <div className="space-y-2 border-t border-border pt-4">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                Associated Tags
-              </h2>
-              <div className="flex flex-wrap gap-1.5">
-                {task.tags.map((t) => (
-                  <span
-                    key={t.id}
-                    className="bg-muted text-xs text-muted-foreground border border-border px-2.5 py-1 rounded-full"
-                  >
-                    #{t.name}
-                  </span>
-                ))}
+              <Label className="font-semibold text-muted-foreground text-[11px]">
+                Tags
+              </Label>
+              <div className="flex gap-2">
+                <Input
+                  value={newTagInput}
+                  onChange={(e) => setNewTagInput(e.target.value)}
+                  placeholder="New tag name..."
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleAddEditTag();
+                    }
+                  }}
+                  className="text-xs h-9 rounded-xl border-border/80 bg-background"
+                />
+                <Button
+                  type="button"
+                  onClick={handleAddEditTag}
+                  variant="outline"
+                  className="text-xs h-9 rounded-xl font-semibold border-border/80"
+                >
+                  Add Tag
+                </Button>
               </div>
+
+              {editTags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-1">
+                  {editTags.map((t) => (
+                    <span
+                      key={t}
+                      className="bg-primary/20 text-foreground border border-primary/30 text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1 cursor-pointer hover:bg-primary/30 transition-colors"
+                      onClick={() => handleToggleEditAvailableTag(t)}
+                    >
+                      #{t}
+                      <span className="text-[9px] opacity-60">×</span>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {availableTags.length > 0 && (
+                <div className="space-y-1">
+                  <p className="text-[10px] text-muted-foreground">
+                    Select from existing tags:
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {availableTags
+                      .filter((tag) => !editTags.includes(tag.name))
+                      .map((tag) => (
+                        <button
+                          key={tag.id}
+                          type="button"
+                          onClick={() => handleToggleEditAvailableTag(tag.name)}
+                          className="bg-muted hover:bg-muted/80 border border-border text-[10px] text-foreground px-2 py-0.5 rounded-full transition-all"
+                        >
+                          #{tag.name}
+                        </button>
+                      ))}
+                  </div>
+                </div>
+              )}
             </div>
+          ) : (
+            task.tags &&
+            task.tags.length > 0 && (
+              <div className="space-y-2 border-t border-border pt-4">
+                <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Associated Tags
+                </h2>
+                <div className="flex flex-wrap gap-1.5">
+                  {task.tags.map((t) => (
+                    <span
+                      key={t.id}
+                      className="text-xs bg-brand-indigo/5 text-brand-indigo dark:text-brand-blue border border-brand-indigo/10 px-2.5 py-1 rounded-full font-medium"
+                    >
+                      #{t.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )
           )}
 
           {/* Actions footer */}
@@ -640,13 +943,42 @@ function TaskDetailContent() {
               Created: {format(task.created_at, "PP")}
             </span>
             <div className="flex gap-2">
-              {task.status !== "completed" && (
-                <Button
-                  onClick={handleCompleteTask}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold py-1.5 h-8 rounded px-4"
-                >
-                  Mark Complete
-                </Button>
+              {isEditing ? (
+                <>
+                  <Button
+                    onClick={handleSaveEdit}
+                    disabled={isSavingEdit}
+                    className="bg-brand-indigo hover:bg-brand-indigo/90 text-white text-xs font-semibold py-1.5 h-8 rounded px-4 transition-all"
+                  >
+                    {isSavingEdit ? <Spinner size="sm" /> : "Save Changes"}
+                  </Button>
+                  <Button
+                    onClick={() => setIsEditing(false)}
+                    disabled={isSavingEdit}
+                    variant="outline"
+                    className="text-xs border border-border py-1.5 h-8 rounded px-4 font-semibold transition-all"
+                  >
+                    Cancel
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    onClick={startEditing}
+                    variant="outline"
+                    className="text-xs border border-border py-1.5 h-8 rounded px-4 font-semibold transition-all hover:bg-muted"
+                  >
+                    Edit Task
+                  </Button>
+                  {task.status !== "completed" && (
+                    <Button
+                      onClick={handleCompleteTask}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-emerald-500 dark:hover:bg-emerald-600 dark:text-background text-xs font-semibold py-1.5 h-8 rounded px-4 transition-all"
+                    >
+                      Mark Complete
+                    </Button>
+                  )}
+                </>
               )}
             </div>
           </div>

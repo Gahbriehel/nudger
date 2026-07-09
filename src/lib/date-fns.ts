@@ -68,6 +68,30 @@ export function format(
   if (formatStr === "HH:mm") {
     return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
+  if (formatStr === "d") {
+    return `${d.getDate()}`;
+  }
+  if (formatStr === "MMMM") {
+    return fullMonths[d.getMonth()];
+  }
+  if (formatStr === "EEEE") {
+    const days = [
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+    ];
+    return days[d.getDay()];
+  }
+  if (formatStr === "MMM d, yyyy") {
+    return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+  }
+  if (formatStr === "yyyy-MM-dd'T'HH:mm") {
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
 
   return d.toLocaleDateString();
 }

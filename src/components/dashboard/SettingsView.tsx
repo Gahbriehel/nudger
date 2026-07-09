@@ -24,6 +24,9 @@ export function SettingsView() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [isEditingPassword, setIsEditingPassword] = useState(false);
+
   const [isUpdatingName, setIsUpdatingName] = useState(false);
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
@@ -69,6 +72,7 @@ export function SettingsView() {
       );
       setUser(updatedUser);
       toast.success("Profile updated successfully!");
+      setIsEditingName(false);
     } catch (err: unknown) {
       toast.error(
         err instanceof Error ? err.message : "Failed to update profile",
@@ -95,6 +99,7 @@ export function SettingsView() {
       setPassword("");
       setConfirmPassword("");
       toast.success("Password updated successfully!");
+      setIsEditingPassword(false);
     } catch (err: unknown) {
       toast.error(
         err instanceof Error ? err.message : "Failed to update password",
@@ -197,54 +202,94 @@ export function SettingsView() {
         <h2 className="text-lg font-bold tracking-tight text-foreground mb-4">
           Profile Settings
         </h2>
-        <form onSubmit={handleUpdateName} className="space-y-4">
-          <div className="grid gap-1.5">
-            <Label
-              htmlFor="email"
-              className="text-xs font-semibold text-muted-foreground"
-            >
-              Email Address (Read-only)
-            </Label>
-            <Input
-              id="email"
-              type="email"
-              value={user?.email || ""}
-              disabled
-              className="bg-muted border-border cursor-not-allowed opacity-70 text-sm h-10 rounded-xl"
-            />
-          </div>
-
-          <div className="grid gap-1.5">
-            <Label
-              htmlFor="displayName"
-              className="text-xs font-semibold flex items-center gap-1"
-            >
-              Display Name
-              <span
-                className="text-destructive text-[10px]"
-                aria-label="required"
-              >
-                *
+        {isEditingName ? (
+          <form onSubmit={handleUpdateName} className="space-y-4">
+            <div className="grid gap-1.5">
+              <span className="text-xs font-semibold text-muted-foreground">
+                Email Address (Read-only)
               </span>
-            </Label>
-            <Input
-              id="displayName"
-              type="text"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="Your name"
-              className="bg-background border-border text-sm h-10 rounded-xl"
-            />
-          </div>
+              <div className="text-sm text-foreground bg-muted/40 px-3.5 py-2 rounded-xl border border-border/80 cursor-not-allowed opacity-70">
+                {user?.email || "N/A"}
+              </div>
+            </div>
 
-          <Button
-            type="submit"
-            className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs h-9 px-4 rounded-lg"
-            disabled={isUpdatingName}
-          >
-            {isUpdatingName ? <Spinner size="sm" /> : "Save Changes"}
-          </Button>
-        </form>
+            <div className="grid gap-1.5">
+              <Label
+                htmlFor="displayName"
+                className="text-xs font-semibold flex items-center gap-1"
+              >
+                Display Name
+                <span
+                  className="text-destructive text-[10px]"
+                  aria-label="required"
+                >
+                  *
+                </span>
+              </Label>
+              <Input
+                id="displayName"
+                type="text"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="Your name"
+                className="bg-background border-border text-sm h-10 rounded-xl"
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                type="submit"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs h-9 px-4 rounded-lg"
+                disabled={isUpdatingName}
+              >
+                {isUpdatingName ? <Spinner size="sm" /> : "Save Changes"}
+              </Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  setDisplayName(user?.user_metadata?.name || "");
+                  setIsEditingName(false);
+                }}
+                variant="outline"
+                className="text-xs h-9 px-4 rounded-lg font-semibold"
+                disabled={isUpdatingName}
+              >
+                Cancel
+              </Button>
+            </div>
+          </form>
+        ) : (
+          <div className="space-y-4">
+            <div className="grid gap-1.5">
+              <span className="text-xs font-semibold text-muted-foreground">
+                Email Address
+              </span>
+              <div className="text-sm text-foreground bg-muted/40 px-3.5 py-2 rounded-xl border border-border/80">
+                {user?.email || "N/A"}
+              </div>
+            </div>
+
+            <div className="grid gap-1.5">
+              <span className="text-xs font-semibold text-muted-foreground">
+                Display Name
+              </span>
+              <div className="text-sm text-foreground bg-muted/40 px-3.5 py-2 rounded-xl border border-border/80">
+                {user?.user_metadata?.name || "N/A"}
+              </div>
+            </div>
+
+            <Button
+              type="button"
+              onClick={() => {
+                setDisplayName(user?.user_metadata?.name || "");
+                setIsEditingName(true);
+              }}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs h-9 px-4 rounded-lg"
+            >
+              Edit Profile
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Push Notifications Settings Card */}
@@ -318,61 +363,97 @@ export function SettingsView() {
         <h2 className="text-lg font-bold tracking-tight text-foreground mb-4">
           Change Password
         </h2>
-        <form onSubmit={handleUpdatePassword} className="space-y-4">
-          <div className="grid gap-1.5">
-            <Label
-              htmlFor="password"
-              className="text-xs font-semibold flex items-center gap-1"
-            >
-              New Password
-              <span
-                className="text-destructive text-[10px]"
-                aria-label="required"
+        {isEditingPassword ? (
+          <form onSubmit={handleUpdatePassword} className="space-y-4">
+            <div className="grid gap-1.5">
+              <Label
+                htmlFor="password"
+                className="text-xs font-semibold flex items-center gap-1"
               >
-                *
-              </span>
-            </Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Minimum 6 characters"
-              className="bg-background border-border text-sm h-10 rounded-xl"
-            />
-          </div>
+                New Password
+                <span
+                  className="text-destructive text-[10px]"
+                  aria-label="required"
+                >
+                  *
+                </span>
+              </Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Minimum 6 characters"
+                className="bg-background border-border text-sm h-10 rounded-xl"
+              />
+            </div>
 
-          <div className="grid gap-1.5">
-            <Label
-              htmlFor="confirmPassword"
-              className="text-xs font-semibold flex items-center gap-1"
-            >
-              Confirm New Password
-              <span
-                className="text-destructive text-[10px]"
-                aria-label="required"
+            <div className="grid gap-1.5">
+              <Label
+                htmlFor="confirmPassword"
+                className="text-xs font-semibold flex items-center gap-1"
               >
-                *
-              </span>
-            </Label>
-            <Input
-              id="confirmPassword"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Repeat your password"
-              className="bg-background border-border text-sm h-10 rounded-xl"
-            />
-          </div>
+                Confirm New Password
+                <span
+                  className="text-destructive text-[10px]"
+                  aria-label="required"
+                >
+                  *
+                </span>
+              </Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Repeat your password"
+                className="bg-background border-border text-sm h-10 rounded-xl"
+              />
+            </div>
 
-          <Button
-            type="submit"
-            className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs h-9 px-4 rounded-lg"
-            disabled={isUpdatingPassword}
-          >
-            {isUpdatingPassword ? <Spinner size="sm" /> : "Update Password"}
-          </Button>
-        </form>
+            <div className="flex gap-2">
+              <Button
+                type="submit"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs h-9 px-4 rounded-lg"
+                disabled={isUpdatingPassword}
+              >
+                {isUpdatingPassword ? <Spinner size="sm" /> : "Update Password"}
+              </Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  setPassword("");
+                  setConfirmPassword("");
+                  setIsEditingPassword(false);
+                }}
+                variant="outline"
+                className="text-xs h-9 px-4 rounded-lg font-semibold"
+                disabled={isUpdatingPassword}
+              >
+                Cancel
+              </Button>
+            </div>
+          </form>
+        ) : (
+          <div className="space-y-4">
+            <div className="grid gap-1.5">
+              <span className="text-xs font-semibold text-muted-foreground">
+                Password
+              </span>
+              <div className="text-sm text-foreground bg-muted/40 px-3.5 py-2 rounded-xl border border-border/80">
+                ••••••••
+              </div>
+            </div>
+
+            <Button
+              type="button"
+              onClick={() => setIsEditingPassword(true)}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs h-9 px-4 rounded-lg"
+            >
+              Change Password
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Account Actions Card */}
