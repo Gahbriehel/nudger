@@ -15,12 +15,19 @@ import { format } from "@/lib/date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { FilterSidebar } from "./FilterSidebar";
 import { Spinner } from "@/components/ui/spinner";
 import { SnoozeModal } from "./SnoozeModal";
-import { Lightbulb, Repeat, Moon } from "lucide-react";
+import { Lightbulb, Repeat, Moon, MoreVertical } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { tagService } from "@/services/tag.service";
@@ -88,12 +95,26 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
   const [newTagInput, setNewTagInput] = useState("");
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
+  const [minDateTime, setMinDateTime] = useState("");
 
   useEffect(() => {
     tagService
       .getTags()
       .then(setAvailableTags)
       .catch((err) => console.error("Error fetching tags:", err));
+  }, []);
+
+  useEffect(() => {
+    const pad = (num: number) => String(num).padStart(2, "0");
+    const updateMin = () => {
+      const now = new Date();
+      setMinDateTime(
+        `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`,
+      );
+    };
+    updateMin();
+    const interval = setInterval(updateMin, 60000);
+    return () => clearInterval(interval);
   }, []);
 
   const startEditing = (task: Task) => {
@@ -139,6 +160,45 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
   const handleSaveEdit = async (taskId: string) => {
     if (!editTitle.trim()) {
       toast.error("Title is required");
+      return;
+    }
+
+    // Validate un-added list items to prevent accidental data loss
+    if (newSubtaskTexts[taskId]?.trim()) {
+      toast.error(
+        "Please click the 'Add' button to add your checklist item, or clear the text before saving.",
+      );
+      return;
+    }
+    if (newCueTexts[taskId]?.trim()) {
+      toast.error(
+        "Please click the 'Add' button to add your memory cue, or clear the text before saving.",
+      );
+      return;
+    }
+    if (newTagInput.trim()) {
+      toast.error(
+        "Please click the 'Add Tag' button to add your tag, or clear the text before saving.",
+      );
+      return;
+    }
+
+    // Validate past dates (with 60 seconds buffer)
+    const nowBuffer = new Date(Date.now() - 60000);
+    if (
+      editTaskType !== "flexible" &&
+      editDueDate &&
+      new Date(editDueDate) < nowBuffer
+    ) {
+      toast.error("Due date cannot be in the past.");
+      return;
+    }
+    if (
+      editTaskType !== "flexible" &&
+      editReminderAt &&
+      new Date(editReminderAt) < nowBuffer
+    ) {
+      toast.error("Reminder date/time cannot be in the past.");
       return;
     }
 
@@ -581,7 +641,7 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
         {/* Search Input */}
         <div className="relative flex-1">
           <svg
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none"
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -614,7 +674,7 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
           )}
         >
           <svg
-            className="w-3.5 h-3.5"
+            className="w-4 h-4"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -760,6 +820,80 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
                       >
                         {task.status === "completed" ? "DONE" : "PENDING"}
                       </span>
+
+                      {/* Dropdown Options Button */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            id={`task-options-trigger-${task.id}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                            }}
+                            onPointerDown={(e) => {
+                              e.stopPropagation();
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.stopPropagation();
+                              }
+                            }}
+                            className="p-1 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors focus:outline-none flex items-center justify-center"
+                            aria-label="Task options"
+                          >
+                            <MoreVertical className="w-4 h-4" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-36">
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              // Expand task first
+                              setExpandedTaskId(task.id);
+                              // Start editing
+                              startEditing(task);
+                            }}
+                            className="flex items-center gap-2 cursor-pointer font-medium"
+                          >
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                              />
+                            </svg>
+                            Edit Task
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteConfirmTaskId(task.id);
+                            }}
+                            className="flex items-center gap-2 text-destructive focus:text-destructive cursor-pointer font-medium"
+                          >
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                              />
+                            </svg>
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
 
@@ -934,6 +1068,7 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
                                 <Input
                                   id={`edit-due-${task.id}`}
                                   type="datetime-local"
+                                  min={minDateTime}
                                   value={editDueDate}
                                   onChange={(e) =>
                                     setEditDueDate(e.target.value)
@@ -951,6 +1086,7 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
                                 <Input
                                   id={`edit-reminder-${task.id}`}
                                   type="datetime-local"
+                                  min={minDateTime}
                                   value={editReminderAt}
                                   onChange={(e) =>
                                     setEditReminderAt(e.target.value)

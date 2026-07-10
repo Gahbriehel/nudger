@@ -231,7 +231,7 @@ export function FilterSidebar({ open, onClose }: FilterSidebarProps) {
                 >
                   <opt.icon
                     className={cn(
-                      "w-3.5 h-3.5",
+                      "w-4 h-4",
                       filters.sort === opt.value
                         ? "text-background"
                         : "text-muted-foreground",

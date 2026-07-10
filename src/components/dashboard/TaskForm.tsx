@@ -50,6 +50,22 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [newTagInput, setNewTagInput] = useState("");
 
+  // Min date-time constraint for datetime-local picker
+  const [minDateTime, setMinDateTime] = useState("");
+
+  useEffect(() => {
+    const pad = (num: number) => String(num).padStart(2, "0");
+    const updateMin = () => {
+      const now = new Date();
+      setMinDateTime(
+        `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`,
+      );
+    };
+    updateMin();
+    const interval = setInterval(updateMin, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
   const {
     register,
     handleSubmit,
@@ -119,6 +135,38 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
 
   const onSubmit = async (data: TaskFormInput) => {
     setError(null);
+
+    // Validate un-added list items to prevent accidental data loss
+    if (newSubtask.trim()) {
+      setError(
+        "Please click the 'Add' button to add your checklist item, or clear the text before saving.",
+      );
+      return;
+    }
+    if (newCue.trim()) {
+      setError(
+        "Please click the 'Add' button to add your memory cue, or clear the text before saving.",
+      );
+      return;
+    }
+    if (newTagInput.trim()) {
+      setError(
+        "Please click the 'Add Tag' button to add your tag, or clear the text before saving.",
+      );
+      return;
+    }
+
+    // Validate past dates (with 60 seconds buffer)
+    const nowBuffer = new Date(Date.now() - 60000);
+    if (data.due_date && new Date(data.due_date) < nowBuffer) {
+      setError("Due date cannot be in the past.");
+      return;
+    }
+    if (data.reminder_at && new Date(data.reminder_at) < nowBuffer) {
+      setError("Reminder date/time cannot be in the past.");
+      return;
+    }
+
     try {
       const interval = data.recurrence_interval
         ? parseInt(data.recurrence_interval, 10)
@@ -247,6 +295,7 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
             <Input
               id="due_date"
               type="datetime-local"
+              min={minDateTime}
               {...register("due_date")}
             />
           </div>
@@ -263,6 +312,7 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
             <Input
               id="reminder_at"
               type="datetime-local"
+              min={minDateTime}
               {...register("reminder_at")}
             />
           </div>
@@ -285,6 +335,7 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
               <Input
                 id="due_date"
                 type="datetime-local"
+                min={minDateTime}
                 {...register("due_date")}
               />
             </div>
@@ -301,6 +352,7 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
               <Input
                 id="reminder_at"
                 type="datetime-local"
+                min={minDateTime}
                 {...register("reminder_at")}
               />
             </div>
@@ -567,7 +619,7 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
           type="button"
           onClick={onCancel}
           variant="outline"
-          className="rounded-xl font-semibold"
+          className="h-10 min-w-[100px] rounded-xl font-semibold"
         >
           Cancel
         </Button>
