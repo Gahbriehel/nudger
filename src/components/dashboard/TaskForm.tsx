@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Toaster } from "@/components/ui/toaster";
+import { useToast } from "@/hooks/useToast";
 import { cn } from "@/lib/utils";
 
 import { Spinner } from "@/components/ui/spinner";
@@ -38,6 +40,7 @@ interface TaskFormProps {
 export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
   const addTaskState = useTaskStore((s) => s.addTaskState);
   const [error, setError] = useState<string | null>(null);
+  const { toasts, toast, dismiss } = useToast();
 
   // Subtasks & Memory Cues local state
   const [subtasks, setSubtasks] = useState<string[]>([]);
@@ -136,23 +139,30 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
   const onSubmit = async (data: TaskFormInput) => {
     setError(null);
 
-    // Validate un-added list items to prevent accidental data loss
+    // Validate un-added list items to prevent accidental data loss.
+    // Use toasts so the message is visible regardless of scroll position.
     if (newSubtask.trim()) {
-      setError(
-        "Please click the 'Add' button to add your checklist item, or clear the text before saving.",
-      );
+      toast({
+        message:
+          "You have an unsaved checklist item. Click 'Add' to include it, or clear the field before saving.",
+        variant: "destructive",
+      });
       return;
     }
     if (newCue.trim()) {
-      setError(
-        "Please click the 'Add' button to add your memory cue, or clear the text before saving.",
-      );
+      toast({
+        message:
+          "You have an unsaved memory cue. Click 'Add' to include it, or clear the field before saving.",
+        variant: "destructive",
+      });
       return;
     }
     if (newTagInput.trim()) {
-      setError(
-        "Please click the 'Add Tag' button to add your tag, or clear the text before saving.",
-      );
+      toast({
+        message:
+          "You have an unsaved tag. Click 'Add Tag' to include it, or clear the field before saving.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -204,130 +214,90 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
   };
 
   return (
-    <form
-      onSubmit={handleSubmit(onSubmit)}
-      className="space-y-6 text-foreground pb-4 px-1"
-    >
-      {error && (
-        <div className="bg-destructive/10 border border-destructive/20 text-destructive text-xs rounded-md p-3">
-          {error}
-        </div>
-      )}
-
-      {/* Task Title */}
-      <div className="grid gap-2">
-        <Label
-          htmlFor="title"
-          className="text-sm font-semibold flex items-center gap-1.5"
-        >
-          Title
-          <span className="text-destructive text-xs" aria-label="required">
-            *
-          </span>
-        </Label>
-        <Input
-          id="title"
-          placeholder="What do you need to remember?"
-          {...register("title")}
-          className={cn(errors.title && "border-destructive/50")}
-        />
-        {errors.title && (
-          <p className="text-xs text-destructive">{errors.title.message}</p>
+    <>
+      <Toaster toasts={toasts} dismiss={dismiss} />
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        className="space-y-6 text-foreground pb-4 px-1"
+      >
+        {error && (
+          <div className="bg-destructive/10 border border-destructive/20 text-destructive text-xs rounded-md p-3">
+            {error}
+          </div>
         )}
-      </div>
 
-      {/* Description */}
-      <div className="grid gap-2">
-        <Label
-          htmlFor="description"
-          className="text-sm font-semibold flex items-center gap-1.5"
-        >
-          Description
-          <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-            optional
-          </span>
-        </Label>
-        <Textarea
-          id="description"
-          placeholder="Add details about this task..."
-          {...register("description")}
-          className="min-h-[80px]"
-        />
-      </div>
-
-      {/* Task Type Select */}
-      <div className="grid gap-2">
-        <Label
-          htmlFor="task_type"
-          className="text-sm font-semibold flex items-center gap-1.5"
-        >
-          Task Type
-          <span className="text-destructive text-xs" aria-label="required">
-            *
-          </span>
-        </Label>
-        <select
-          id="task_type"
-          {...register("task_type")}
-          className="bg-background border border-input text-foreground rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-        >
-          <option value="flexible">
-            Flexible (No set deadline — random nudges enabled)
-          </option>
-          <option value="scheduled">Scheduled (Specific deadline)</option>
-          <option value="recurring">Recurring (Repeats on interval)</option>
-        </select>
-      </div>
-
-      {/* Conditional Fields based on Task Type */}
-      {taskType === "scheduled" && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border border-border bg-muted/20 p-4 rounded-lg">
-          <div className="grid gap-2">
-            <Label
-              htmlFor="due_date"
-              className="text-sm font-semibold flex items-center gap-1.5"
-            >
-              Due Date
-              <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                optional
-              </span>
-            </Label>
-            <Input
-              id="due_date"
-              type="datetime-local"
-              min={minDateTime}
-              {...register("due_date")}
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label
-              htmlFor="reminder_at"
-              className="text-sm font-semibold flex items-center gap-1.5"
-            >
-              Reminder
-              <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                optional
-              </span>
-            </Label>
-            <Input
-              id="reminder_at"
-              type="datetime-local"
-              min={minDateTime}
-              {...register("reminder_at")}
-            />
-          </div>
+        {/* Task Title */}
+        <div className="grid gap-2">
+          <Label
+            htmlFor="title"
+            className="text-sm font-semibold flex items-center gap-1.5"
+          >
+            Title
+            <span className="text-destructive text-xs" aria-label="required">
+              *
+            </span>
+          </Label>
+          <Input
+            id="title"
+            placeholder="What do you need to remember?"
+            {...register("title")}
+            className={cn(errors.title && "border-destructive/50")}
+          />
+          {errors.title && (
+            <p className="text-xs text-destructive">{errors.title.message}</p>
+          )}
         </div>
-      )}
 
-      {taskType === "recurring" && (
-        <div className="space-y-4 border border-border bg-muted/20 p-4 rounded-lg">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Description */}
+        <div className="grid gap-2">
+          <Label
+            htmlFor="description"
+            className="text-sm font-semibold flex items-center gap-1.5"
+          >
+            Description
+            <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+              optional
+            </span>
+          </Label>
+          <Textarea
+            id="description"
+            placeholder="Add details about this task..."
+            {...register("description")}
+            className="min-h-[80px]"
+          />
+        </div>
+
+        {/* Task Type Select */}
+        <div className="grid gap-2">
+          <Label
+            htmlFor="task_type"
+            className="text-sm font-semibold flex items-center gap-1.5"
+          >
+            Task Type
+            <span className="text-destructive text-xs" aria-label="required">
+              *
+            </span>
+          </Label>
+          <select
+            id="task_type"
+            {...register("task_type")}
+            className="bg-background border border-input text-foreground rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <option value="flexible">Flexible (No deadline)</option>
+            <option value="scheduled">Scheduled (Specific deadline)</option>
+            <option value="recurring">Recurring (Repeats on interval)</option>
+          </select>
+        </div>
+
+        {/* Conditional Fields based on Task Type */}
+        {taskType === "scheduled" && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border border-border bg-muted/20 p-4 rounded-lg">
             <div className="grid gap-2">
               <Label
                 htmlFor="due_date"
                 className="text-sm font-semibold flex items-center gap-1.5"
               >
-                Initial Due Date
+                Due Date
                 <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
                   optional
                 </span>
@@ -357,287 +327,328 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
               />
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <Label
-                htmlFor="recurrence_type"
-                className="text-sm font-semibold"
-              >
-                Recurrence Interval
-              </Label>
-              <select
-                id="recurrence_type"
-                {...register("recurrence_type")}
-                className="bg-background border border-input text-foreground rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              >
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-                <option value="monthly">Monthly</option>
-                <option value="yearly">Yearly</option>
-              </select>
+        )}
+
+        {taskType === "recurring" && (
+          <div className="space-y-4 border border-border bg-muted/20 p-4 rounded-lg">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label
+                  htmlFor="due_date"
+                  className="text-sm font-semibold flex items-center gap-1.5"
+                >
+                  Initial Due Date
+                  <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                    optional
+                  </span>
+                </Label>
+                <Input
+                  id="due_date"
+                  type="datetime-local"
+                  min={minDateTime}
+                  {...register("due_date")}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label
+                  htmlFor="reminder_at"
+                  className="text-sm font-semibold flex items-center gap-1.5"
+                >
+                  Reminder
+                  <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                    optional
+                  </span>
+                </Label>
+                <Input
+                  id="reminder_at"
+                  type="datetime-local"
+                  min={minDateTime}
+                  {...register("reminder_at")}
+                />
+              </div>
             </div>
-            <div className="grid gap-2">
-              <Label
-                htmlFor="recurrence_interval"
-                className="text-sm font-semibold"
-              >
-                Repeat Every
-              </Label>
-              <Input
-                id="recurrence_interval"
-                type="number"
-                min="1"
-                {...register("recurrence_interval")}
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label
+                  htmlFor="recurrence_type"
+                  className="text-sm font-semibold"
+                >
+                  Recurrence Interval
+                </Label>
+                <select
+                  id="recurrence_type"
+                  {...register("recurrence_type")}
+                  className="bg-background border border-input text-foreground rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                  <option value="yearly">Yearly</option>
+                </select>
+              </div>
+              <div className="grid gap-2">
+                <Label
+                  htmlFor="recurrence_interval"
+                  className="text-sm font-semibold"
+                >
+                  Repeat Every
+                </Label>
+                <Input
+                  id="recurrence_interval"
+                  type="number"
+                  min="1"
+                  {...register("recurrence_interval")}
+                />
+              </div>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Subtasks checklist */}
-      <div className="space-y-3">
-        <div>
-          <Label className="text-sm font-semibold flex items-center gap-1.5">
-            Subtasks / Checklist
-            <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-              optional
-            </span>
-          </Label>
-          <p className="text-[11px] text-muted-foreground mt-0.5">
-            Break this task into smaller steps you can check off.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Input
-            value={newSubtask}
-            onChange={(e) => setNewSubtask(e.target.value)}
-            placeholder="Add subtask details..."
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                handleAddSubtask();
-              }
-            }}
-            className="rounded-xl h-10 text-sm"
-          />
-          <Button
-            type="button"
-            onClick={handleAddSubtask}
-            variant="outline"
-            className="px-4 h-10 rounded-xl font-semibold"
-          >
-            Add
-          </Button>
-        </div>
-        {subtasks.length > 0 && (
-          <ul className="space-y-2 mt-2">
-            {subtasks.map((sub, idx) => (
-              <li
-                key={idx}
-                className="flex justify-between items-center bg-muted/30 dark:bg-[#131920] border border-border/80 dark:border-[#222A35]/50 px-4 py-3 rounded-2xl text-sm text-foreground shadow-sm transition-all hover:bg-muted/40 dark:hover:bg-[#171E27]"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/60 flex-shrink-0" />
-                  <span className="font-semibold text-foreground/90">
-                    {sub}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleRemoveSubtask(idx)}
-                  className="text-destructive/80 hover:text-destructive text-xs font-semibold transition-colors px-1.5 py-0.5"
-                >
-                  Remove
-                </button>
-              </li>
-            ))}
-          </ul>
         )}
-      </div>
 
-      {/* Memory Cues */}
-      <div className="space-y-3">
-        <div>
-          <Label className="text-sm font-semibold flex items-center gap-1.5">
-            Memory Cues
-            <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-              optional
-            </span>
-          </Label>
-          <p className="text-[11px] text-muted-foreground mt-0.5">
-            Environmental triggers to help you remember — e.g. &ldquo;Place
-            server logs spreadsheet on secondary monitor&rdquo;.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Input
-            value={newCue}
-            onChange={(e) => setNewCue(e.target.value)}
-            placeholder="e.g. Place server logs spreadsheet on secondary monitor, post-it on screen..."
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                handleAddCue();
-              }
-            }}
-            className="rounded-xl h-10 text-sm"
-          />
-          <Button
-            type="button"
-            onClick={handleAddCue}
-            variant="outline"
-            className="px-4 h-10 rounded-xl font-semibold"
-          >
-            Add
-          </Button>
-        </div>
-        {memoryCues.length > 0 && (
-          <ul className="space-y-2 mt-2">
-            {memoryCues.map((cue, idx) => (
-              <li
-                key={idx}
-                className="flex justify-between items-center bg-muted/30 dark:bg-[#131920] border border-border/80 dark:border-[#222A35]/50 px-4 py-3 rounded-2xl text-sm text-foreground shadow-sm transition-all hover:bg-muted/40 dark:hover:bg-[#171E27]"
-              >
-                <div className="flex items-center gap-3">
-                  <Lightbulb className="w-4 h-4 text-amber-500 dark:text-amber-400 select-none flex-shrink-0" />
-                  <span className="font-semibold text-foreground/90">
-                    {cue}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleRemoveCue(idx)}
-                  className="text-destructive/80 hover:text-destructive text-xs font-semibold transition-colors px-1.5 py-0.5"
-                >
-                  Remove
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      {/* Tags Selector */}
-      <div className="space-y-3">
-        <div>
-          <Label className="text-sm font-semibold flex items-center gap-1.5">
-            Tags
-            <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-              optional
-            </span>
-          </Label>
-          <p className="text-[11px] text-muted-foreground mt-0.5">
-            Labels to group and filter tasks — e.g. &ldquo;engineering&rdquo;,
-            &ldquo;finance&rdquo;, &ldquo;operations&rdquo;.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Input
-            value={newTagInput}
-            onChange={(e) => setNewTagInput(e.target.value)}
-            placeholder="Add new tag name..."
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                handleAddTag();
-              }
-            }}
-            className="rounded-xl h-10 text-sm"
-          />
-          <Button
-            type="button"
-            onClick={handleAddTag}
-            variant="outline"
-            className="px-4 h-10 rounded-xl font-semibold"
-          >
-            Add Tag
-          </Button>
-        </div>
-
-        {/* Selected Tags list */}
-        {selectedTags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {selectedTags.map((t) => (
-              <span
-                key={t}
-                className="bg-primary/20 text-foreground border border-primary/30 text-xs px-2.5 py-1 rounded-full flex items-center gap-1.5 cursor-pointer hover:bg-primary/30 transition-colors"
-                onClick={() => handleToggleAvailableTag(t)}
-              >
-                #{t}
-                <span className="text-[10px] opacity-60">×</span>
+        {/* Subtasks checklist */}
+        <div className="space-y-3">
+          <div>
+            <Label className="text-sm font-semibold flex items-center gap-1.5">
+              Subtasks / Checklist
+              <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                optional
               </span>
-            ))}
-          </div>
-        )}
-
-        {/* Available Tags list */}
-        {availableTags.length > 0 && (
-          <div className="space-y-1">
-            <p className="text-[11px] text-muted-foreground">
-              Select from existing tags:
+            </Label>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              Break this task into smaller steps you can check off.
             </p>
-            <div className="flex flex-wrap gap-1.5">
-              {availableTags
-                .filter((tag) => !selectedTags.includes(tag.name))
-                .map((tag) => (
-                  <button
-                    key={tag.id}
-                    type="button"
-                    onClick={() => handleToggleAvailableTag(tag.name)}
-                    className="bg-muted hover:bg-muted/80 border border-border text-xs text-foreground px-2.5 py-1 rounded-full transition-all"
-                  >
-                    #{tag.name}
-                  </button>
-                ))}
-            </div>
           </div>
-        )}
-      </div>
-
-      {/* Notes */}
-      <div className="grid gap-2">
-        <Label
-          htmlFor="notes"
-          className="text-sm font-semibold flex items-center gap-1.5"
-        >
-          Notes
-          <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-            optional
-          </span>
-        </Label>
-        <Textarea
-          id="notes"
-          placeholder="Any other mental hooks or reference notes..."
-          {...register("notes")}
-          className="min-h-[80px]"
-        />
-      </div>
-
-      {/* Form Controls */}
-      <div className="flex justify-end gap-3 pt-4 border-t border-border">
-        <Button
-          type="button"
-          onClick={onCancel}
-          variant="outline"
-          className="h-10 min-w-[100px] rounded-xl font-semibold"
-        >
-          Cancel
-        </Button>
-        <Button
-          type="submit"
-          className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold flex items-center justify-center min-w-[100px] rounded-xl h-10"
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? (
-            <Spinner
-              size="sm"
-              className="border-t-primary-foreground border-primary-foreground/30"
+          <div className="flex gap-2">
+            <Input
+              value={newSubtask}
+              onChange={(e) => setNewSubtask(e.target.value)}
+              placeholder="Add subtask details..."
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleAddSubtask();
+                }
+              }}
+              className="rounded-xl h-10 text-sm"
             />
-          ) : (
-            "Save Task"
+            <Button
+              type="button"
+              onClick={handleAddSubtask}
+              variant="outline"
+              className="px-4 h-10 rounded-xl font-semibold"
+            >
+              Add
+            </Button>
+          </div>
+          {subtasks.length > 0 && (
+            <ul className="space-y-2 mt-2">
+              {subtasks.map((sub, idx) => (
+                <li
+                  key={idx}
+                  className="flex justify-between items-center bg-muted/30 dark:bg-[#131920] border border-border/80 dark:border-[#222A35]/50 px-4 py-3 rounded-2xl text-sm text-foreground shadow-sm transition-all hover:bg-muted/40 dark:hover:bg-[#171E27]"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/60 flex-shrink-0" />
+                    <span className="font-semibold text-foreground/90">
+                      {sub}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveSubtask(idx)}
+                    className="text-destructive/80 hover:text-destructive text-xs font-semibold transition-colors px-1.5 py-0.5"
+                  >
+                    Remove
+                  </button>
+                </li>
+              ))}
+            </ul>
           )}
-        </Button>
-      </div>
-    </form>
+        </div>
+
+        {/* Memory Cues */}
+        <div className="space-y-3">
+          <div>
+            <Label className="text-sm font-semibold flex items-center gap-1.5">
+              Memory Cues
+              <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                optional
+              </span>
+            </Label>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              Environmental triggers to help you remember — e.g. &ldquo;Place
+              server logs spreadsheet on secondary monitor&rdquo;.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Input
+              value={newCue}
+              onChange={(e) => setNewCue(e.target.value)}
+              placeholder="e.g. Place server logs spreadsheet on secondary monitor, post-it on screen..."
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleAddCue();
+                }
+              }}
+              className="rounded-xl h-10 text-sm"
+            />
+            <Button
+              type="button"
+              onClick={handleAddCue}
+              variant="outline"
+              className="px-4 h-10 rounded-xl font-semibold"
+            >
+              Add
+            </Button>
+          </div>
+          {memoryCues.length > 0 && (
+            <ul className="space-y-2 mt-2">
+              {memoryCues.map((cue, idx) => (
+                <li
+                  key={idx}
+                  className="flex justify-between items-center bg-muted/30 dark:bg-[#131920] border border-border/80 dark:border-[#222A35]/50 px-4 py-3 rounded-2xl text-sm text-foreground shadow-sm transition-all hover:bg-muted/40 dark:hover:bg-[#171E27]"
+                >
+                  <div className="flex items-center gap-3">
+                    <Lightbulb className="w-4 h-4 text-amber-500 dark:text-amber-400 select-none flex-shrink-0" />
+                    <span className="font-semibold text-foreground/90">
+                      {cue}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveCue(idx)}
+                    className="text-destructive/80 hover:text-destructive text-xs font-semibold transition-colors px-1.5 py-0.5"
+                  >
+                    Remove
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {/* Tags Selector */}
+        <div className="space-y-3">
+          <div>
+            <Label className="text-sm font-semibold flex items-center gap-1.5">
+              Tags
+              <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                optional
+              </span>
+            </Label>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              Labels to group and filter tasks — e.g. &ldquo;engineering&rdquo;,
+              &ldquo;finance&rdquo;, &ldquo;operations&rdquo;.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Input
+              value={newTagInput}
+              onChange={(e) => setNewTagInput(e.target.value)}
+              placeholder="Add new tag name..."
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleAddTag();
+                }
+              }}
+              className="rounded-xl h-10 text-sm"
+            />
+            <Button
+              type="button"
+              onClick={handleAddTag}
+              variant="outline"
+              className="px-4 h-10 rounded-xl font-semibold"
+            >
+              Add Tag
+            </Button>
+          </div>
+
+          {/* Selected Tags list */}
+          {selectedTags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {selectedTags.map((t) => (
+                <span
+                  key={t}
+                  className="bg-primary/20 text-foreground border border-primary/30 text-xs px-2.5 py-1 rounded-full flex items-center gap-1.5 cursor-pointer hover:bg-primary/30 transition-colors"
+                  onClick={() => handleToggleAvailableTag(t)}
+                >
+                  #{t}
+                  <span className="text-[10px] opacity-60">×</span>
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Available Tags list */}
+          {availableTags.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-[11px] text-muted-foreground">
+                Select from existing tags:
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {availableTags
+                  .filter((tag) => !selectedTags.includes(tag.name))
+                  .map((tag) => (
+                    <button
+                      key={tag.id}
+                      type="button"
+                      onClick={() => handleToggleAvailableTag(tag.name)}
+                      className="bg-muted hover:bg-muted/80 border border-border text-xs text-foreground px-2.5 py-1 rounded-full transition-all"
+                    >
+                      #{tag.name}
+                    </button>
+                  ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Notes */}
+        <div className="grid gap-2">
+          <Label
+            htmlFor="notes"
+            className="text-sm font-semibold flex items-center gap-1.5"
+          >
+            Notes
+            <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+              optional
+            </span>
+          </Label>
+          <Textarea
+            id="notes"
+            placeholder="Any other mental hooks or reference notes..."
+            {...register("notes")}
+            className="min-h-[80px]"
+          />
+        </div>
+
+        {/* Form Controls */}
+        <div className="flex justify-end gap-3 pt-4 border-t border-border">
+          <Button
+            type="button"
+            onClick={onCancel}
+            variant="outline"
+            className="h-10 min-w-[100px] rounded-xl font-semibold"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold flex items-center justify-center min-w-[100px] rounded-xl h-10"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <Spinner
+                size="sm"
+                className="border-t-primary-foreground border-primary-foreground/30"
+              />
+            ) : (
+              "Save Task"
+            )}
+          </Button>
+        </div>
+      </form>
+    </>
   );
 }
