@@ -89,19 +89,54 @@ async function processNudges() {
 
   const allTasks = [...(reminderTasks || []), ...(dueTasks || [])];
 
-  if (allTasks.length === 0) {
+  // 1c. Fetch idle users
+  const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString();
+  const { data: idleActivity, error: idleError } = await supabase
+    .from("user_activity")
+    .select("user_id")
+    .lt("last_active_at", fourHoursAgo)
+    .or(`last_idle_nudge_at.is.null,last_idle_nudge_at.lt.${fourHoursAgo}`);
+
+  if (idleError) {
+    console.error("Failed to query idle activity:", idleError);
+  }
+
+  const potentialIdleUserIds = idleActivity?.map((a) => a.user_id) || [];
+
+  // Filter out users who have pending tasks
+  let idleUserIdsToNudge: string[] = [];
+  if (potentialIdleUserIds.length > 0) {
+    const { data: activeTasks } = await supabase
+      .from("tasks")
+      .select("user_id")
+      .in("user_id", potentialIdleUserIds)
+      .eq("status", "pending");
+
+    const usersWithPendingTasks = new Set(
+      activeTasks?.map((t) => t.user_id) || [],
+    );
+    idleUserIdsToNudge = potentialIdleUserIds.filter(
+      (id) => !usersWithPendingTasks.has(id),
+    );
+  }
+
+  const taskUserIds = Array.from(new Set(allTasks.map((t) => t.user_id)));
+  const allUserIds = Array.from(
+    new Set([...taskUserIds, ...idleUserIdsToNudge]),
+  );
+
+  if (allUserIds.length === 0) {
     return {
       sentCount: 0,
-      message: "No pending reminders or due dates at this time.",
+      message: "No pending reminders, due dates, or idle nudges at this time.",
     };
   }
 
-  // 2. Fetch push subscriptions for users with pending reminders or due dates
-  const userIds = Array.from(new Set(allTasks.map((t) => t.user_id)));
+  // 2. Fetch push subscriptions for users
   const { data: subscriptions, error: subsError } = await supabase
     .from("push_subscriptions")
     .select("*")
-    .in("user_id", userIds);
+    .in("user_id", allUserIds);
 
   if (subsError) {
     throw new Error(`Failed to fetch subscriptions: ${subsError.message}`);
@@ -209,6 +244,50 @@ async function processNudges() {
 
     // Mark task due notification as sent
     await supabase.from("tasks").update({ due_sent: true }).eq("id", task.id);
+  }
+
+  // 4. Dispatch idle nudges
+  const idleMessages = [
+    "Your task list is empty! Time to add something new?",
+    "Nothing on your plate? Add a task to keep the momentum going!",
+    "All caught up? Plan your next move.",
+    "Nudger is resting. Give it some work to do!",
+    "You're all clear! Ready to tackle a new goal?",
+  ];
+
+  for (const userId of idleUserIdsToNudge) {
+    const userSubs = subsByUser[userId] || [];
+    if (userSubs.length === 0) continue;
+
+    const randomMessage =
+      idleMessages[Math.floor(Math.random() * idleMessages.length)];
+    const payload = JSON.stringify({
+      title: "Quiet day? 👋",
+      body: randomMessage,
+      data: { url: `/` },
+    });
+
+    for (const sub of userSubs) {
+      try {
+        await webpush.sendNotification(sub.subscription, payload);
+        sentCount++;
+      } catch (err: unknown) {
+        console.error(
+          `Failed to send push idle nudge to subscription ID ${sub.id}:`,
+          err,
+        );
+        const statusCode = (err as { statusCode?: number })?.statusCode;
+        if (statusCode === 410 || statusCode === 404) {
+          await supabase.from("push_subscriptions").delete().eq("id", sub.id);
+        }
+      }
+    }
+
+    // Update last_idle_nudge_at
+    await supabase
+      .from("user_activity")
+      .update({ last_idle_nudge_at: new Date().toISOString() })
+      .eq("user_id", userId);
   }
 
   return {

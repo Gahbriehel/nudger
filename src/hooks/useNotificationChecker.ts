@@ -150,60 +150,6 @@ export function useNotificationChecker() {
           );
         }
       }
-
-      // 3. Process idle nudges (no pending tasks)
-      const hasPendingTasks = currentTasks.some(
-        (task) => task.status === "pending",
-      );
-      if (!hasPendingTasks && !loadingRef.current) {
-        let lastIdleNudge = 0;
-        try {
-          const cached = localStorage.getItem("nudger_last_idle_nudge");
-          if (cached) {
-            lastIdleNudge = parseInt(cached, 10);
-          } else {
-            // First time seeing no tasks, initialize the timer to now so it doesn't trigger immediately
-            lastIdleNudge = now.getTime();
-            localStorage.setItem(
-              "nudger_last_idle_nudge",
-              lastIdleNudge.toString(),
-            );
-          }
-        } catch (err) {
-          console.error("Failed to read last idle nudge:", err);
-        }
-
-        // Check if 4 hours have passed since the last nudge (or since they had no tasks)
-        if (now.getTime() - lastIdleNudge > 4 * 60 * 60 * 1000) {
-          // 2% chance every 15 seconds (~12.5 minutes average wait after the 4 hours)
-          if (Math.random() < 0.02) {
-            const messages = [
-              "Your task list is empty! Time to add something new?",
-              "Nothing on your plate? Add a task to keep the momentum going!",
-              "All caught up? Plan your next move.",
-              "Nudger is resting. Give it some work to do!",
-              "You're all clear! Ready to tackle a new goal?",
-            ];
-            const randomMessage =
-              messages[Math.floor(Math.random() * messages.length)];
-
-            toast("Quiet day?", {
-              description: randomMessage,
-              duration: 8000,
-              icon: "👋",
-            });
-
-            try {
-              localStorage.setItem(
-                "nudger_last_idle_nudge",
-                now.getTime().toString(),
-              );
-            } catch (e) {
-              console.error("Failed to save last idle nudge:", e);
-            }
-          }
-        }
-      }
     };
 
     // Run check immediately on load/mount

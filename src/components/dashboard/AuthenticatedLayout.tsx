@@ -9,6 +9,7 @@ import { DashboardHeader } from "./DashboardHeader";
 import { PwaInstallBanner } from "./PwaInstallBanner";
 import { NotificationPromptModal } from "./NotificationPromptModal";
 import { useNotificationChecker } from "@/hooks/useNotificationChecker";
+import { useActivityTracker } from "@/hooks/useActivityTracker";
 import { Spinner } from "@/components/ui/spinner";
 import { TaskForm } from "./TaskForm";
 
@@ -23,6 +24,9 @@ export function AuthenticatedLayout({
 
   // Run real-time background task reminder scanner
   useNotificationChecker();
+
+  // Track user activity
+  useActivityTracker();
 
   // Sync session on mount
   useEffect(() => {
