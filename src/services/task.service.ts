@@ -5,13 +5,43 @@ import { getRandomReminderTime } from "@/lib/utils";
 
 const supabase = createClient();
 
+export function calculateInitialDueDate(
+  startDate: Date,
+  recurrenceDays: number[],
+): string {
+  const currentDay = startDate.getDay();
+  if (recurrenceDays.includes(currentDay)) {
+    return startDate.toISOString();
+  }
+  for (let i = 1; i <= 7; i++) {
+    const nextDate = new Date(startDate);
+    nextDate.setDate(startDate.getDate() + i);
+    if (recurrenceDays.includes(nextDate.getDay())) {
+      return nextDate.toISOString();
+    }
+  }
+  return startDate.toISOString();
+}
+
 function calculateNextDueDate(
   dueDateStr: string | null,
   type: string,
   interval: number,
+  recurrenceDays: number[] | null = null,
 ): string | null {
   if (!dueDateStr) return null;
   const date = new Date(dueDateStr);
+
+  if (type === "weekly" && recurrenceDays && recurrenceDays.length > 0) {
+    for (let i = 1; i <= 7; i++) {
+      const nextDate = new Date(date);
+      nextDate.setDate(date.getDate() + i);
+      if (recurrenceDays.includes(nextDate.getDay())) {
+        return nextDate.toISOString();
+      }
+    }
+  }
+
   const add = interval || 1;
 
   switch (type) {
@@ -155,6 +185,17 @@ export const taskService = {
     } = await supabase.auth.getUser();
     if (!user) throw new Error("Unauthenticated");
 
+    let dueDate = taskData.due_date;
+    if (
+      taskData.task_type === "recurring" &&
+      taskData.recurrence_type === "weekly" &&
+      taskData.recurrence_days &&
+      taskData.recurrence_days.length > 0 &&
+      !dueDate
+    ) {
+      dueDate = calculateInitialDueDate(new Date(), taskData.recurrence_days);
+    }
+
     // 1. Insert task
     const { data: task, error: taskError } = await supabase
       .from("tasks")
@@ -165,7 +206,8 @@ export const taskService = {
         task_type: taskData.task_type,
         recurrence_type: taskData.recurrence_type,
         recurrence_interval: taskData.recurrence_interval,
-        due_date: taskData.due_date,
+        recurrence_days: taskData.recurrence_days,
+        due_date: dueDate,
         reminder_at:
           taskData.reminder_at ||
           (taskData.task_type === "flexible"
@@ -420,6 +462,7 @@ export const taskService = {
         task.due_date || nowStr,
         task.recurrence_type,
         task.recurrence_interval || 1,
+        task.recurrence_days,
       );
 
       // Calculate next reminder date
@@ -428,6 +471,7 @@ export const taskService = {
             task.reminder_at,
             task.recurrence_type,
             task.recurrence_interval || 1,
+            task.recurrence_days,
           )
         : null;
 

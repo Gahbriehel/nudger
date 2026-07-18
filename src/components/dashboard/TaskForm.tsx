@@ -19,6 +19,16 @@ import { cn } from "@/lib/utils";
 import { Spinner } from "@/components/ui/spinner";
 import { Lightbulb } from "lucide-react";
 
+export const DAYS_OF_WEEK = [
+  { label: "M", value: 1, fullName: "Monday" },
+  { label: "T", value: 2, fullName: "Tuesday" },
+  { label: "W", value: 3, fullName: "Wednesday" },
+  { label: "T", value: 4, fullName: "Thursday" },
+  { label: "F", value: 5, fullName: "Friday" },
+  { label: "S", value: 6, fullName: "Saturday" },
+  { label: "S", value: 0, fullName: "Sunday" },
+];
+
 const taskSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
@@ -41,6 +51,11 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
   const addTaskState = useTaskStore((s) => s.addTaskState);
   const [error, setError] = useState<string | null>(null);
   const { toasts, toast, dismiss } = useToast();
+
+  const [recurrencePattern, setRecurrencePattern] = useState<
+    "interval" | "specific_days"
+  >("interval");
+  const [selectedDays, setSelectedDays] = useState<number[]>([]);
 
   // Subtasks & Memory Cues local state
   const [subtasks, setSubtasks] = useState<string[]>([]);
@@ -177,6 +192,15 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
       return;
     }
 
+    if (
+      data.task_type === "recurring" &&
+      recurrencePattern === "specific_days" &&
+      selectedDays.length === 0
+    ) {
+      setError("Please select at least one day of the week.");
+      return;
+    }
+
     try {
       const interval = data.recurrence_interval
         ? parseInt(data.recurrence_interval, 10)
@@ -192,10 +216,21 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
           : null,
         recurrence_type:
           data.task_type === "recurring"
-            ? (data.recurrence_type as RecurrenceType)
+            ? recurrencePattern === "specific_days"
+              ? ("weekly" as RecurrenceType)
+              : (data.recurrence_type as RecurrenceType)
             : null,
         recurrence_interval:
-          data.task_type === "recurring" ? interval || 1 : null,
+          data.task_type === "recurring"
+            ? recurrencePattern === "specific_days"
+              ? 1
+              : interval || 1
+            : null,
+        recurrence_days:
+          data.task_type === "recurring" &&
+          recurrencePattern === "specific_days"
+            ? selectedDays
+            : null,
         notes: data.notes || null,
       };
 
@@ -367,40 +402,107 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label
-                  htmlFor="recurrence_type"
-                  className="text-sm font-semibold"
+            <div className="grid gap-2">
+              <Label className="text-sm font-semibold">
+                Recurrence Pattern
+              </Label>
+              <div className="flex gap-2 p-1 bg-muted/50 rounded-lg max-w-md">
+                <button
+                  type="button"
+                  onClick={() => setRecurrencePattern("interval")}
+                  className={cn(
+                    "flex-1 py-1.5 px-3 rounded-md text-xs font-semibold transition-all duration-150 active:scale-[0.98]",
+                    recurrencePattern === "interval"
+                      ? "bg-card text-foreground shadow-sm border border-border/50"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
                 >
-                  Recurrence Interval
-                </Label>
-                <select
-                  id="recurrence_type"
-                  {...register("recurrence_type")}
-                  className="bg-background border border-input text-foreground rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  Regular Interval
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRecurrencePattern("specific_days")}
+                  className={cn(
+                    "flex-1 py-1.5 px-3 rounded-md text-xs font-semibold transition-all duration-150 active:scale-[0.98]",
+                    recurrencePattern === "specific_days"
+                      ? "bg-card text-foreground shadow-sm border border-border/50"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
                 >
-                  <option value="daily">Daily</option>
-                  <option value="weekly">Weekly</option>
-                  <option value="monthly">Monthly</option>
-                  <option value="yearly">Yearly</option>
-                </select>
-              </div>
-              <div className="grid gap-2">
-                <Label
-                  htmlFor="recurrence_interval"
-                  className="text-sm font-semibold"
-                >
-                  Repeat Every
-                </Label>
-                <Input
-                  id="recurrence_interval"
-                  type="number"
-                  min="1"
-                  {...register("recurrence_interval")}
-                />
+                  Specific Days of Week
+                </button>
               </div>
             </div>
+
+            {recurrencePattern === "interval" ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label
+                    htmlFor="recurrence_type"
+                    className="text-sm font-semibold"
+                  >
+                    Recurrence Interval
+                  </Label>
+                  <select
+                    id="recurrence_type"
+                    {...register("recurrence_type")}
+                    className="bg-background border border-input text-foreground rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                    <option value="yearly">Yearly</option>
+                  </select>
+                </div>
+                <div className="grid gap-2">
+                  <Label
+                    htmlFor="recurrence_interval"
+                    className="text-sm font-semibold"
+                  >
+                    Repeat Every
+                  </Label>
+                  <Input
+                    id="recurrence_interval"
+                    type="number"
+                    min="1"
+                    {...register("recurrence_interval")}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="grid gap-3 pt-1">
+                <Label className="text-sm font-semibold">Repeat On</Label>
+                <div className="flex flex-wrap gap-2">
+                  {DAYS_OF_WEEK.map((day) => {
+                    const isSelected = selectedDays.includes(day.value);
+                    return (
+                      <button
+                        key={day.value}
+                        type="button"
+                        onClick={() => {
+                          if (isSelected) {
+                            setSelectedDays(
+                              selectedDays.filter((d) => d !== day.value),
+                            );
+                          } else {
+                            setSelectedDays([...selectedDays, day.value]);
+                          }
+                        }}
+                        className={cn(
+                          "w-10 h-10 rounded-full text-xs font-bold border transition-all duration-200 active:scale-90 flex items-center justify-center select-none shadow-sm",
+                          isSelected
+                            ? "bg-brand-indigo hover:bg-brand-indigo/90 text-white border-brand-indigo dark:bg-brand-purple dark:border-brand-purple"
+                            : "bg-background border-border text-foreground hover:bg-muted",
+                        )}
+                        title={day.fullName}
+                      >
+                        {day.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

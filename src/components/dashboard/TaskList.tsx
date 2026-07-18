@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useTaskStore } from "@/store/taskStore";
-import { taskService } from "@/services/task.service";
+import { taskService, calculateInitialDueDate } from "@/services/task.service";
 import {
   Task,
   Subtask,
@@ -31,6 +31,19 @@ import { Lightbulb, Repeat, Moon, MoreVertical } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { tagService } from "@/services/tag.service";
+import { DAYS_OF_WEEK } from "./TaskForm";
+
+const getRecurrenceDaysLabel = (days: number[]) => {
+  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  // Sort the days first (so it goes Mon, Tue, etc.)
+  // Let's sort starting with Mon (1) to Sun (0)
+  const sorted = [...days].sort((a, b) => {
+    const adjA = a === 0 ? 7 : a;
+    const adjB = b === 0 ? 7 : b;
+    return adjA - adjB;
+  });
+  return sorted.map((d) => dayNames[d]).join(", ");
+};
 
 interface TaskListProps {
   initialExpandedTaskId?: string | null;
@@ -91,6 +104,10 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
   const [editReminderAt, setEditReminderAt] = useState("");
   const [editRecurrenceType, setEditRecurrenceType] = useState("daily");
   const [editRecurrenceInterval, setEditRecurrenceInterval] = useState("1");
+  const [editRecurrencePattern, setEditRecurrencePattern] = useState<
+    "interval" | "specific_days"
+  >("interval");
+  const [editRecurrenceDays, setEditRecurrenceDays] = useState<number[]>([]);
   const [editTags, setEditTags] = useState<string[]>([]);
   const [newTagInput, setNewTagInput] = useState("");
   const [isSavingEdit, setIsSavingEdit] = useState(false);
@@ -137,6 +154,12 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
     setEditReminderAt(formatDateForInput(task.reminder_at));
     setEditRecurrenceType(task.recurrence_type || "daily");
     setEditRecurrenceInterval(String(task.recurrence_interval || 1));
+    setEditRecurrencePattern(
+      task.recurrence_days && task.recurrence_days.length > 0
+        ? "specific_days"
+        : "interval",
+    );
+    setEditRecurrenceDays(task.recurrence_days || []);
     setEditTags(task.tags?.map((t) => t.name) || []);
     setNewTagInput("");
   };
@@ -202,30 +225,61 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
       return;
     }
 
+    if (
+      editTaskType === "recurring" &&
+      editRecurrencePattern === "specific_days" &&
+      editRecurrenceDays.length === 0
+    ) {
+      toast.error("Please select at least one day of the week.");
+      return;
+    }
+
     setIsSavingEdit(true);
     try {
       const interval = editRecurrenceInterval
         ? parseInt(editRecurrenceInterval, 10)
         : null;
 
+      let finalDueDate =
+        editTaskType !== "flexible" && editDueDate
+          ? new Date(editDueDate).toISOString()
+          : null;
+
+      if (
+        editTaskType === "recurring" &&
+        editRecurrencePattern === "specific_days" &&
+        editRecurrenceDays.length > 0 &&
+        !finalDueDate
+      ) {
+        finalDueDate = calculateInitialDueDate(new Date(), editRecurrenceDays);
+      }
+
       const updates = {
         title: editTitle.trim(),
         description: editDescription.trim() || null,
         task_type: editTaskType as TaskType,
-        due_date:
-          editTaskType !== "flexible" && editDueDate
-            ? new Date(editDueDate).toISOString()
-            : null,
+        due_date: finalDueDate,
         reminder_at:
           editTaskType !== "flexible" && editReminderAt
             ? new Date(editReminderAt).toISOString()
             : null,
         recurrence_type:
           editTaskType === "recurring"
-            ? (editRecurrenceType as RecurrenceType)
+            ? editRecurrencePattern === "specific_days"
+              ? ("weekly" as RecurrenceType)
+              : (editRecurrenceType as RecurrenceType)
             : null,
         recurrence_interval:
-          editTaskType === "recurring" ? interval || 1 : null,
+          editTaskType === "recurring"
+            ? editRecurrencePattern === "specific_days"
+              ? 1
+              : interval || 1
+            : null,
+        recurrence_days:
+          editTaskType === "recurring" &&
+          editRecurrencePattern === "specific_days"
+            ? editRecurrenceDays
+            : null,
         notes: editNotes.trim() || null,
       };
 
@@ -1100,46 +1154,127 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
 
                         {/* Recurrence Details */}
                         {editTaskType === "recurring" && (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-muted/40 p-3 rounded-xl border border-border">
-                            <div className="grid gap-1">
-                              <Label
-                                htmlFor={`edit-recurrence-type-${task.id}`}
-                                className="font-semibold text-muted-foreground text-[11px]"
-                              >
-                                Recurrence Interval
+                          <div className="space-y-4 bg-muted/40 p-4 rounded-xl border border-border">
+                            <div className="grid gap-2">
+                              <Label className="font-semibold text-muted-foreground text-[11px]">
+                                Recurrence Pattern
                               </Label>
-                              <select
-                                id={`edit-recurrence-type-${task.id}`}
-                                value={editRecurrenceType}
-                                onChange={(e) =>
-                                  setEditRecurrenceType(e.target.value)
-                                }
-                                className="bg-background border border-border/80 text-foreground rounded-xl p-2 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
-                              >
-                                <option value="daily">Daily</option>
-                                <option value="weekly">Weekly</option>
-                                <option value="monthly">Monthly</option>
-                                <option value="yearly">Yearly</option>
-                              </select>
+                              <div className="flex gap-2 p-1 bg-muted/80 rounded-lg max-w-md">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setEditRecurrencePattern("interval")
+                                  }
+                                  className={cn(
+                                    "flex-1 py-1 px-2.5 rounded-md text-[10px] font-semibold transition-all duration-150 active:scale-[0.98]",
+                                    editRecurrencePattern === "interval"
+                                      ? "bg-card text-foreground shadow-sm border border-border/50"
+                                      : "text-muted-foreground hover:text-foreground",
+                                  )}
+                                >
+                                  Regular Interval
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setEditRecurrencePattern("specific_days")
+                                  }
+                                  className={cn(
+                                    "flex-1 py-1 px-2.5 rounded-md text-[10px] font-semibold transition-all duration-150 active:scale-[0.98]",
+                                    editRecurrencePattern === "specific_days"
+                                      ? "bg-card text-foreground shadow-sm border border-border/50"
+                                      : "text-muted-foreground hover:text-foreground",
+                                  )}
+                                >
+                                  Specific Days of Week
+                                </button>
+                              </div>
                             </div>
-                            <div className="grid gap-1">
-                              <Label
-                                htmlFor={`edit-recurrence-interval-${task.id}`}
-                                className="font-semibold text-muted-foreground text-[11px]"
-                              >
-                                Repeat Every
-                              </Label>
-                              <Input
-                                id={`edit-recurrence-interval-${task.id}`}
-                                type="number"
-                                min="1"
-                                value={editRecurrenceInterval}
-                                onChange={(e) =>
-                                  setEditRecurrenceInterval(e.target.value)
-                                }
-                                className="text-xs h-9 rounded-xl border-border/80 bg-background"
-                              />
-                            </div>
+
+                            {editRecurrencePattern === "interval" ? (
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="grid gap-1">
+                                  <Label
+                                    htmlFor={`edit-recurrence-type-${task.id}`}
+                                    className="font-semibold text-muted-foreground text-[11px]"
+                                  >
+                                    Recurrence Interval
+                                  </Label>
+                                  <select
+                                    id={`edit-recurrence-type-${task.id}`}
+                                    value={editRecurrenceType}
+                                    onChange={(e) =>
+                                      setEditRecurrenceType(e.target.value)
+                                    }
+                                    className="bg-background border border-border/80 text-foreground rounded-xl p-2 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
+                                  >
+                                    <option value="daily">Daily</option>
+                                    <option value="weekly">Weekly</option>
+                                    <option value="monthly">Monthly</option>
+                                    <option value="yearly">Yearly</option>
+                                  </select>
+                                </div>
+                                <div className="grid gap-1">
+                                  <Label
+                                    htmlFor={`edit-recurrence-interval-${task.id}`}
+                                    className="font-semibold text-muted-foreground text-[11px]"
+                                  >
+                                    Repeat Every
+                                  </Label>
+                                  <Input
+                                    id={`edit-recurrence-interval-${task.id}`}
+                                    type="number"
+                                    min="1"
+                                    value={editRecurrenceInterval}
+                                    onChange={(e) =>
+                                      setEditRecurrenceInterval(e.target.value)
+                                    }
+                                    className="text-xs h-9 rounded-xl border-border/80 bg-background"
+                                  />
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="grid gap-2">
+                                <Label className="font-semibold text-muted-foreground text-[11px]">
+                                  Repeat On
+                                </Label>
+                                <div className="flex flex-wrap gap-2">
+                                  {DAYS_OF_WEEK.map((day) => {
+                                    const isSelected =
+                                      editRecurrenceDays.includes(day.value);
+                                    return (
+                                      <button
+                                        key={day.value}
+                                        type="button"
+                                        onClick={() => {
+                                          if (isSelected) {
+                                            setEditRecurrenceDays(
+                                              editRecurrenceDays.filter(
+                                                (d) => d !== day.value,
+                                              ),
+                                            );
+                                          } else {
+                                            setEditRecurrenceDays([
+                                              ...editRecurrenceDays,
+                                              day.value,
+                                            ]);
+                                          }
+                                        }}
+                                        className={cn(
+                                          "w-8 h-8 rounded-full text-[10px] font-bold border transition-all duration-200 active:scale-90 flex items-center justify-center select-none shadow-sm",
+                                          isSelected
+                                            ? "bg-brand-indigo hover:bg-brand-indigo/90 text-white border-brand-indigo dark:bg-brand-purple dark:border-brand-purple"
+                                            : "bg-background border-border text-foreground hover:bg-muted",
+                                        )}
+                                        title={day.fullName}
+                                      >
+                                        {day.label}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         )}
 
@@ -1435,8 +1570,18 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
                           task.recurrence_type && (
                             <span className="text-emerald-600 dark:text-emerald-400 mr-3 inline-flex items-center gap-1">
                               <Repeat className="w-3 h-3" />
-                              Repeats: {task.recurrence_type} (Every{" "}
-                              {task.recurrence_interval || 1} units)
+                              {task.recurrence_days &&
+                              task.recurrence_days.length > 0 ? (
+                                <>
+                                  Repeats:{" "}
+                                  {getRecurrenceDaysLabel(task.recurrence_days)}
+                                </>
+                              ) : (
+                                <>
+                                  Repeats: {task.recurrence_type} (Every{" "}
+                                  {task.recurrence_interval || 1} units)
+                                </>
+                              )}
                             </span>
                           )}
                         <span>Created: {format(task.created_at, "PP")}</span>

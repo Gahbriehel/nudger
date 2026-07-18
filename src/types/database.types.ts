@@ -11,6 +11,7 @@ export interface Task {
   status: TaskStatus;
   recurrence_type: RecurrenceType | null;
   recurrence_interval: number | null;
+  recurrence_days: number[] | null;
   due_date: string | null;
   reminder_at: string | null;
   notes: string | null;
