@@ -69,6 +69,15 @@ export default {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      keyframes: {
+        "subtle-glow": {
+          "0%, 100%": { opacity: "1" },
+          "50%": { opacity: "0.8" },
+        },
+      },
+      animation: {
+        "subtle-glow": "subtle-glow 2s ease-in-out",
+      },
     },
   },
   plugins: [tailwindcssAnimate],

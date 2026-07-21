@@ -812,7 +812,7 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
                   borderLeftClass,
                   task.status === "completed" && "opacity-60 border-border/50",
                   highlightedTaskId === task.id &&
-                    "ring-2 ring-primary ring-offset-2 ring-offset-background shadow-xl scale-[1.01] transition-all duration-500 animate-pulse",
+                    "ring-2 ring-primary ring-offset-2 ring-offset-background shadow-xl scale-[1.01] transition-all duration-500 animate-subtle-glow",
                 )}
               >
                 {/* Collapsed view / Header */}
