@@ -102,9 +102,9 @@ export function NudgelistView() {
           {tasks.map((task) => (
             <div
               key={task.id}
-              className="border border-border bg-card backdrop-blur-sm p-4 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-md"
+              className="border border-border bg-card backdrop-blur-sm p-4 rounded-xl flex flex-col gap-4 shadow-md"
             >
-              <div className="space-y-1 flex-1">
+              <div className="space-y-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <button
                     onClick={() => router.push(`/tasks?taskId=${task.id}`)}
@@ -142,12 +142,12 @@ export function NudgelistView() {
                 )}
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex flex-wrap gap-2 items-center">
+              {/* Action Buttons - Responsive Grid */}
+              <div className="grid grid-cols-2 md:flex md:flex-wrap gap-2">
                 <Button
                   onClick={() => router.push(`/tasks?taskId=${task.id}`)}
                   variant="outline"
-                  className="text-xs py-1 h-8 rounded px-3 border-border hover:bg-muted text-foreground flex items-center gap-1.5"
+                  className="text-xs py-1 h-8 rounded px-3 border-border hover:bg-muted text-foreground flex items-center justify-center gap-1.5 md:w-auto"
                   title="View task details in task list"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
@@ -156,26 +156,24 @@ export function NudgelistView() {
 
                 <Button
                   onClick={() => handleComplete(task)}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold py-1 h-8 rounded px-3"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold py-1 h-8 rounded px-3 flex items-center justify-center md:w-auto"
                 >
                   Complete
                 </Button>
 
                 {type === "overdue" ? (
-                  <>
-                    <Button
-                      onClick={() => setSnoozeTask(task)}
-                      variant="outline"
-                      className="text-xs py-1 h-8 rounded px-3"
-                    >
-                      Snooze
-                    </Button>
-                  </>
+                  <Button
+                    onClick={() => setSnoozeTask(task)}
+                    variant="outline"
+                    className="text-xs py-1 h-8 rounded px-3 flex items-center justify-center md:w-auto"
+                  >
+                    Snooze
+                  </Button>
                 ) : (
                   <Button
                     onClick={() => handleAcknowledge(task)}
                     variant="outline"
-                    className="text-xs py-1 h-8 rounded px-3"
+                    className="text-xs py-1 h-8 rounded px-3 flex items-center justify-center md:w-auto col-span-2 sm:col-span-1"
                     title="Updates the task's timestamp to keep it off the nudgelist"
                   >
                     Acknowledge (Reset Timer)
