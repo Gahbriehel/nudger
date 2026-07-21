@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuthStore } from "@/store/authStore";
 import { authService } from "@/services/auth.service";
 import {
@@ -36,6 +36,8 @@ export function SettingsView() {
   const [isTogglingPush, setIsTogglingPush] = useState(false);
   const [isSendingTest, setIsSendingTest] = useState(false);
   const [permissionState, setPermissionState] = useState<string>("default");
+  const [titleClickCount, setTitleClickCount] = useState(0);
+  const titleClickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     // Check support for Push Notifications
@@ -56,6 +58,20 @@ export function SettingsView() {
           console.error("Error fetching push subscription state:", err),
         );
     }
+  }, []);
+
+  const handleTitleClick = useCallback(() => {
+    setTitleClickCount((prev) => {
+      const next = prev + 1;
+      if (titleClickTimer.current) clearTimeout(titleClickTimer.current);
+      if (next >= 3) {
+        sendTestNotification();
+        return 0;
+      }
+      titleClickTimer.current = setTimeout(() => setTitleClickCount(0), 1500);
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleUpdateName = async (e: React.FormEvent) => {
@@ -294,7 +310,13 @@ export function SettingsView() {
 
       {/* Push Notifications Settings Card */}
       <div className="border border-border bg-card/85 backdrop-blur-md p-6 rounded-2xl shadow-lg relative overflow-hidden before:absolute before:top-0 before:left-0 before:right-0 before:h-[3px] before:bg-gradient-to-r before:from-brand-indigo before:to-brand-blue">
-        <h2 className="text-lg font-bold tracking-tight text-foreground mb-1">
+        <h2
+          className="text-lg font-bold tracking-tight text-foreground mb-1 select-none cursor-default"
+          onClick={handleTitleClick}
+          title={
+            titleClickCount > 0 ? `${3 - titleClickCount} more…` : undefined
+          }
+        >
           Notification Preferences
         </h2>
         <p className="text-xs text-muted-foreground leading-normal mb-5">
@@ -323,17 +345,6 @@ export function SettingsView() {
 
               <div className="flex items-center gap-3">
                 {(isTogglingPush || isSendingTest) && <Spinner size="sm" />}
-                {/* {isSubscribed && (
-                  <button
-                    type="button"
-                    onClick={() => sendTestNotification()}
-                    disabled={isSendingTest || isTogglingPush}
-                    title="Send a test push notification to confirm it's working"
-                    className="text-[11px] font-semibold text-primary underline underline-offset-2 hover:text-primary/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {isSendingTest ? "Sending…" : "Send Test"}
-                  </button>
-                )} */}
                 <button
                   type="button"
                   onClick={handleTogglePush}
