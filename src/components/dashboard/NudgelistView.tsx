@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { useTaskStore } from "@/store/taskStore";
 import { taskService } from "@/services/task.service";
@@ -10,10 +11,11 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
-import { Sparkles } from "lucide-react";
+import { Sparkles, ExternalLink } from "lucide-react";
 import { SnoozeModal } from "./SnoozeModal";
 
 export function NudgelistView() {
+  const router = useRouter();
   const { fetchTasks } = useTaskStore();
   const [data, setData] = useState<NudgelistData>({
     overdue: [],
@@ -102,11 +104,16 @@ export function NudgelistView() {
               key={task.id}
               className="border border-border bg-card backdrop-blur-sm p-4 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-md"
             >
-              <div className="space-y-1">
+              <div className="space-y-1 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-bold text-sm text-foreground">
-                    {task.title}
-                  </span>
+                  <button
+                    onClick={() => router.push(`/tasks?taskId=${task.id}`)}
+                    className="font-bold text-sm text-foreground hover:text-brand-indigo dark:hover:text-brand-blue flex items-center gap-1.5 group text-left transition-colors"
+                    title="View task details in task list"
+                  >
+                    <span>{task.title}</span>
+                    <ExternalLink className="w-3.5 h-3.5 opacity-60 group-hover:opacity-100 transition-opacity text-muted-foreground group-hover:text-brand-indigo dark:group-hover:text-brand-blue" />
+                  </button>
                   <span className="text-[10px] bg-muted border border-border text-muted-foreground px-2 py-0.5 rounded-full uppercase">
                     {task.task_type}
                   </span>
@@ -137,6 +144,16 @@ export function NudgelistView() {
 
               {/* Action Buttons */}
               <div className="flex flex-wrap gap-2 items-center">
+                <Button
+                  onClick={() => router.push(`/tasks?taskId=${task.id}`)}
+                  variant="outline"
+                  className="text-xs py-1 h-8 rounded px-3 border-border hover:bg-muted text-foreground flex items-center gap-1.5"
+                  title="View task details in task list"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  View
+                </Button>
+
                 <Button
                   onClick={() => handleComplete(task)}
                   className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold py-1 h-8 rounded px-3"

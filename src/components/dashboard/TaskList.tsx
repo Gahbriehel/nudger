@@ -64,6 +64,18 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(
     initialExpandedTaskId ?? null,
   );
+  const [highlightedTaskId, setHighlightedTaskId] = useState<string | null>(
+    initialExpandedTaskId ?? null,
+  );
+
+  useEffect(() => {
+    if (!initialExpandedTaskId) return;
+    setHighlightedTaskId(initialExpandedTaskId);
+    const timer = setTimeout(() => {
+      setHighlightedTaskId(null);
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, [initialExpandedTaskId]);
 
   // Local inputs for adding items in expanded view
   const [newSubtaskTexts, setNewSubtaskTexts] = useState<{
@@ -321,16 +333,29 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
     fetchTasks();
   }, [fetchTasks]);
 
-  // Scroll to the initially-expanded task once tasks are loaded
+  // Scroll to the initially-expanded task once tasks are loaded and adjust filters if needed
   useEffect(() => {
     if (!initialExpandedTaskId || !tasks.length) return;
-    const el = document.getElementById(`task-card-${initialExpandedTaskId}`);
-    if (el) {
-      setTimeout(() => {
-        el.scrollIntoView({ behavior: "smooth", block: "center" });
-      }, 100);
+
+    // Check if target task exists and if current filters would hide it
+    const targetTask = tasks.find((t) => t.id === initialExpandedTaskId);
+    if (targetTask) {
+      if (targetTask.status === "completed" && filters.status === "pending") {
+        setFilters({ status: "all" });
+      }
     }
-  }, [initialExpandedTaskId, tasks.length]);
+
+    setExpandedTaskId(initialExpandedTaskId);
+
+    const timer = setTimeout(() => {
+      const el = document.getElementById(`task-card-${initialExpandedTaskId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }, 150);
+
+    return () => clearTimeout(timer);
+  }, [initialExpandedTaskId, tasks.length, tasks, filters.status, setFilters]);
 
   const handleToggleExpand = (id: string) => {
     if (expandedTaskId === id) {
@@ -783,9 +808,11 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
                 key={task.id}
                 id={`task-card-${task.id}`}
                 className={cn(
-                  "border border-border bg-card backdrop-blur-md rounded-xl transition-all duration-200 overflow-hidden shadow-md hover:border-brand-indigo/20 dark:hover:border-brand-blue/20",
+                  "scroll-mt-24 md:scroll-mt-20 border border-border bg-card backdrop-blur-md rounded-xl transition-all duration-300 overflow-hidden shadow-md hover:border-brand-indigo/20 dark:hover:border-brand-blue/20",
                   borderLeftClass,
                   task.status === "completed" && "opacity-60 border-border/50",
+                  highlightedTaskId === task.id &&
+                    "ring-2 ring-primary ring-offset-2 ring-offset-background shadow-xl scale-[1.01] transition-all duration-500 animate-pulse",
                 )}
               >
                 {/* Collapsed view / Header */}
