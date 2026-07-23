@@ -91,12 +91,12 @@ async function processNudges() {
   const allTasks = [...(reminderTasks || []), ...(dueTasks || [])];
 
   // 1c. Fetch idle users
-  const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString();
+  const eightHoursAgo = new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString();
   const { data: idleActivity, error: idleError } = await supabase
     .from("user_activity")
     .select("user_id")
-    .lt("last_active_at", fourHoursAgo)
-    .or(`last_idle_nudge_at.is.null,last_idle_nudge_at.lt.${fourHoursAgo}`);
+    .lt("last_active_at", eightHoursAgo)
+    .or(`last_idle_nudge_at.is.null,last_idle_nudge_at.lt.${eightHoursAgo}`);
 
   if (idleError) {
     console.error("Failed to query idle activity:", idleError);
