@@ -4,6 +4,24 @@ import { Task, Subtask, Tag, MemoryCue } from "@/types/database.types";
 import { getRandomReminderTime } from "@/lib/utils";
 
 const supabase = createClient();
+const RECURRING_RESET_WINDOW_HOURS = 6;
+
+function shouldResetRecurringTask(
+  task: Task | null | undefined,
+  now: Date = new Date(),
+): boolean {
+  if (!task || task.task_type !== "recurring") return false;
+  if (task.status !== "completed" || !task.due_date) return false;
+
+  const dueDate = new Date(task.due_date);
+  if (Number.isNaN(dueDate.getTime())) return false;
+
+  const resetThreshold = new Date(
+    dueDate.getTime() - RECURRING_RESET_WINDOW_HOURS * 60 * 60 * 1000,
+  );
+
+  return now >= resetThreshold;
+}
 
 export function calculateInitialDueDate(
   startDate: Date,
@@ -93,13 +111,8 @@ export const taskService = {
         memory_cues: task.task_memory_cues || [],
       } as Task;
 
-      // Silent reset for overdue recurring tasks that are marked completed
-      if (
-        mappedTask.task_type === "recurring" &&
-        mappedTask.status === "completed" &&
-        mappedTask.due_date &&
-        new Date(mappedTask.due_date) <= new Date()
-      ) {
+      // Reset recurring tasks to pending once they are within the lead-up window
+      if (shouldResetRecurringTask(mappedTask)) {
         mappedTask.status = "pending";
         if (mappedTask.subtasks) {
           mappedTask.subtasks = mappedTask.subtasks.map((st: any) => ({
@@ -144,12 +157,7 @@ export const taskService = {
       memory_cues: data.task_memory_cues || [],
     } as Task;
 
-    if (
-      mappedTask.task_type === "recurring" &&
-      mappedTask.status === "completed" &&
-      mappedTask.due_date &&
-      new Date(mappedTask.due_date) <= new Date()
-    ) {
+    if (shouldResetRecurringTask(mappedTask)) {
       mappedTask.status = "pending";
       if (mappedTask.subtasks) {
         mappedTask.subtasks = mappedTask.subtasks.map((st: any) => ({

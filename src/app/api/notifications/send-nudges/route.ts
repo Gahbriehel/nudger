@@ -26,13 +26,14 @@ async function processNudges() {
   const supabase = createAdminClient();
   const now = new Date().toISOString();
 
-  // 0. Find and reset recurring completed tasks whose next due date has arrived
+  // 0. Find and reset recurring completed tasks that are within the lead-up window
+  const resetCutoff = new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString();
   const { data: overdueRecurring, error: recurringError } = await supabase
     .from("tasks")
     .select("id")
     .eq("task_type", "recurring")
     .eq("status", "completed")
-    .lte("due_date", now);
+    .lte("due_date", resetCutoff);
 
   if (recurringError) {
     console.error("Failed to query completed recurring tasks:", recurringError);
