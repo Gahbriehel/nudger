@@ -184,12 +184,34 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
     // Validate past dates (with 60 seconds buffer)
     const nowBuffer = new Date(Date.now() - 60000);
     if (data.due_date && new Date(data.due_date) < nowBuffer) {
+      toast({
+        message: "Due date cannot be in the past.",
+        variant: "destructive",
+      });
       setError("Due date cannot be in the past.");
       return;
     }
     if (data.reminder_at && new Date(data.reminder_at) < nowBuffer) {
+      toast({
+        message: "Reminder date/time cannot be in the past.",
+        variant: "destructive",
+      });
       setError("Reminder date/time cannot be in the past.");
       return;
+    }
+
+    // Validate reminder_at is not after due_date
+    if (data.due_date && data.reminder_at) {
+      const dueDate = new Date(data.due_date);
+      const reminderDate = new Date(data.reminder_at);
+      if (reminderDate > dueDate) {
+        toast({
+          message: "Reminder date/time cannot be set after the due date.",
+          variant: "destructive",
+        });
+        setError("Reminder date/time cannot be set after the due date.");
+        return;
+      }
     }
 
     if (

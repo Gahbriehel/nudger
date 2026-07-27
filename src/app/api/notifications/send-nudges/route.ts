@@ -65,9 +65,10 @@ async function processNudges() {
   }
 
   // 1. Fetch tasks where reminder_at <= NOW(), status is 'pending', and reminder_sent is false
+  // 1. Fetch tasks where reminder_at <= NOW(), status is 'pending', and reminder_sent is false
   const { data: reminderTasks, error: reminderError } = await supabase
     .from("tasks")
-    .select("*")
+    .select("*, subtasks(*)")
     .eq("status", "pending")
     .eq("reminder_sent", false)
     .lte("reminder_at", now);
@@ -166,11 +167,26 @@ async function processNudges() {
       continue;
     }
 
+    const pendingSubtasks =
+      (
+        task.subtasks as { id: string; title: string; completed: boolean }[]
+      )?.filter((s) => !s.completed) || [];
+
+    let pushTitle = "Task Nudge!";
+    let pushBody = `Don't forget: ${task.title}`;
+
+    if (pendingSubtasks.length > 0) {
+      const randomSubtask =
+        pendingSubtasks[Math.floor(Math.random() * pendingSubtasks.length)];
+      pushTitle = "Checklist Nudge 📝";
+      pushBody = `What do you think about checking off "${randomSubtask.title}" in "${task.title}"?`;
+    }
+
     const payload = JSON.stringify({
-      title: "Task Nudge!",
-      body: `Don't forget: ${task.title}`,
+      title: pushTitle,
+      body: pushBody,
       data: {
-        url: `/`, // open main dashboard
+        url: `/tasks/${task.id}`,
       },
     });
 

@@ -80,16 +80,28 @@ export function useNotificationChecker() {
         saveToLocalStorage(key);
         saveToLocalStorage(task.id); // for backward compatibility
 
-        // Display the Sonner Toast for Reminder
-        toast.info(
+        // Check if task has uncompleted checklist items
+        const pendingSubtasks =
+          task.subtasks?.filter((s) => !s.completed) || [];
+
+        let toastTitle =
           task.task_type === "flexible"
-            ? `Task Nudge (Flexible)`
-            : `Task Nudge!`,
-          {
-            description: task.title,
-            duration: 10000,
-          },
-        );
+            ? "Task Nudge (Flexible)"
+            : "Task Nudge!";
+        let toastDescription = task.title;
+
+        if (pendingSubtasks.length > 0) {
+          const randomSubtask =
+            pendingSubtasks[Math.floor(Math.random() * pendingSubtasks.length)];
+          toastTitle = "Checklist Nudge 📝";
+          toastDescription = `What do you think about checking off "${randomSubtask.title}" in "${task.title}"?`;
+        }
+
+        // Display the Sonner Toast for Reminder
+        toast.info(toastTitle, {
+          description: toastDescription,
+          duration: 10000,
+        });
 
         // Update the task status in store and database to prevent duplicate alerts
         try {

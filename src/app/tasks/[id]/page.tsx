@@ -132,6 +132,33 @@ function TaskDetailContent() {
       return;
     }
 
+    const nowBuffer = new Date(Date.now() - 60000);
+    if (
+      editTaskType !== "flexible" &&
+      editDueDate &&
+      new Date(editDueDate) < nowBuffer
+    ) {
+      toast.error("Due date cannot be in the past.");
+      return;
+    }
+    if (
+      editTaskType !== "flexible" &&
+      editReminderAt &&
+      new Date(editReminderAt) < nowBuffer
+    ) {
+      toast.error("Reminder date/time cannot be in the past.");
+      return;
+    }
+    if (
+      editTaskType !== "flexible" &&
+      editDueDate &&
+      editReminderAt &&
+      new Date(editReminderAt) > new Date(editDueDate)
+    ) {
+      toast.error("Reminder date/time cannot be set after the due date.");
+      return;
+    }
+
     setIsSavingEdit(true);
     try {
       const type = editTaskType;

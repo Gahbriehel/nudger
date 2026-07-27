@@ -236,6 +236,15 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
       toast.error("Reminder date/time cannot be in the past.");
       return;
     }
+    if (
+      editTaskType !== "flexible" &&
+      editDueDate &&
+      editReminderAt &&
+      new Date(editReminderAt) > new Date(editDueDate)
+    ) {
+      toast.error("Reminder date/time cannot be set after the due date.");
+      return;
+    }
 
     if (
       editTaskType === "recurring" &&
