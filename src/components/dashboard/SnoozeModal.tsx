@@ -32,6 +32,9 @@ export function SnoozeModal({
   const [customValue, setCustomValue] = useState("4");
   const [customUnit, setCustomUnit] = useState<"hours" | "days">("hours");
 
+  const [showScopePrompt, setShowScopePrompt] = useState(false);
+  const [pendingSnoozeMs, setPendingSnoozeMs] = useState<number | null>(null);
+
   if (!task) return null;
 
   const presets: SnoozePreset[] = [
@@ -58,26 +61,50 @@ export function SnoozeModal({
   ];
 
   const handleSnooze = async (ms: number) => {
+    if (task?.task_type === "recurring") {
+      setPendingSnoozeMs(ms);
+      setShowScopePrompt(true);
+      return;
+    }
+    await executeSnooze(ms, "series");
+  };
+
+  const executeSnooze = async (ms: number, scope: "instance" | "series") => {
     setIsSubmitting(true);
+    setShowScopePrompt(false);
     try {
       const nextTime = new Date(Date.now() + ms).toISOString();
 
-      // Update both due_date and reminder_at to ensure notification resets properly
-      await taskService.updateTask(task.id, {
-        due_date: nextTime,
-        reminder_at: nextTime,
-        status: "pending",
-        task_type: "scheduled", // Convert to scheduled so it has a valid target due date
-      });
+      if (scope === "instance" && task?.task_type === "recurring") {
+        await taskService.editTaskInstance(
+          task.id,
+          {
+            due_date: nextTime,
+            reminder_at: nextTime,
+            status: "pending",
+            task_type: "scheduled",
+          },
+          task.tags?.map((t) => t.name) || [],
+        );
+      } else {
+        await taskService.updateTask(task!.id, {
+          due_date: nextTime,
+          reminder_at: nextTime,
+          status: "pending",
+          task_type:
+            task!.task_type === "recurring" ? "recurring" : "scheduled",
+        });
+      }
 
       toast.success("Task snoozed successfully!");
       onSuccess();
-      onClose();
+      handleClose();
     } catch (err) {
       console.error(err);
       toast.error("Failed to snooze task");
     } finally {
       setIsSubmitting(false);
+      setPendingSnoozeMs(null);
     }
   };
 
@@ -94,16 +121,56 @@ export function SnoozeModal({
     handleSnooze(val * unitMs);
   };
 
+  const handleClose = () => {
+    onClose();
+    setShowScopePrompt(false);
+    setPendingSnoozeMs(null);
+    setCustomMode(false);
+  };
+
   return (
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
-      title="Snooze Task"
-      description={`Postpone "${task.title}" to a later time.`}
+      onClose={handleClose}
+      title={showScopePrompt ? "Snooze Recurring Task" : "Snooze Task"}
+      description={
+        showScopePrompt
+          ? "This is a recurring task. Do you want to snooze this instance only, or the entire series?"
+          : `Postpone "${task.title}" to a later time.`
+      }
       isLoading={isSubmitting}
     >
       <div className="w-full space-y-4 py-2">
-        {!customMode ? (
+        {showScopePrompt ? (
+          <div className="flex flex-col gap-2">
+            <Button
+              onClick={() => executeSnooze(pendingSnoozeMs!, "instance")}
+              disabled={isSubmitting}
+              className="w-full h-10 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-sm transition-all"
+            >
+              This instance only
+            </Button>
+            <Button
+              onClick={() => executeSnooze(pendingSnoozeMs!, "series")}
+              disabled={isSubmitting}
+              variant="outline"
+              className="w-full h-10 rounded-xl font-semibold text-sm transition-all"
+            >
+              All future instances
+            </Button>
+            <Button
+              onClick={() => {
+                setShowScopePrompt(false);
+                setPendingSnoozeMs(null);
+              }}
+              disabled={isSubmitting}
+              variant="ghost"
+              className="w-full h-10 rounded-xl font-semibold text-sm transition-all text-muted-foreground"
+            >
+              Back
+            </Button>
+          </div>
+        ) : !customMode ? (
           <>
             <div className="grid grid-cols-1 gap-2.5">
               {presets.map((preset, index) => (
