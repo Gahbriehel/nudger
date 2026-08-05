@@ -52,6 +52,9 @@ function TaskDetailContent() {
   const [newTagInput, setNewTagInput] = useState("");
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
 
+  // Edit scope prompt state
+  const [showEditScopePrompt, setShowEditScopePrompt] = useState(false);
+
   // smart completion prompt state
   const [showCompletePrompt, setShowCompletePrompt] = useState(false);
   const [isCompletingTask, setIsCompletingTask] = useState(false);
@@ -125,7 +128,7 @@ function TaskDetailContent() {
     }
   };
 
-  const handleSaveEdit = async () => {
+  const handleSaveClick = () => {
     if (!task) return;
     if (!editTitle.trim()) {
       toast.error("Task title is required");
@@ -159,7 +162,17 @@ function TaskDetailContent() {
       return;
     }
 
+    if (task.task_type === "recurring") {
+      setShowEditScopePrompt(true);
+    } else {
+      executeSave("series");
+    }
+  };
+
+  const executeSave = async (scope: "instance" | "series") => {
+    if (!task) return;
     setIsSavingEdit(true);
+    setShowEditScopePrompt(false);
     try {
       const type = editTaskType;
       const updates: Partial<Task> = {
@@ -194,12 +207,23 @@ function TaskDetailContent() {
         updates.recurrence_interval = parseInt(editRecurrenceInterval) || 1;
       }
 
-      await taskService.updateTask(task.id, updates);
-      await taskService.updateTaskTags(task.id, editTags);
-
-      toast.success("Task updated successfully");
-      setIsEditing(false);
-      loadTask();
+      if (scope === "instance") {
+        const newTask = await taskService.editTaskInstance(
+          task.id,
+          updates,
+          editTags,
+        );
+        toast.success("Task updated successfully");
+        setIsEditing(false);
+        router.push(`/tasks/${newTask.id}`);
+        router.refresh();
+      } else {
+        await taskService.updateTask(task.id, updates);
+        await taskService.updateTaskTags(task.id, editTags);
+        toast.success("Task updated successfully");
+        setIsEditing(false);
+        loadTask();
+      }
     } catch (err) {
       console.error(err);
       toast.error("Failed to save changes");
@@ -437,6 +461,56 @@ function TaskDetailContent() {
               to   { opacity: 1; transform: translateY(0) scale(1); }
             }
           `}</style>
+        </div>
+      )}
+
+      {/* Edit Scope Prompt Modal */}
+      {showEditScopePrompt && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+          style={{ animation: "fadeInOverlay 0.2s ease" }}
+        >
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-background/70 backdrop-blur-sm"
+            onClick={() => setShowEditScopePrompt(false)}
+          />
+
+          {/* Dialog */}
+          <div
+            className="relative z-10 w-full max-w-sm bg-card border border-border rounded-2xl shadow-2xl p-6 space-y-5"
+            style={{
+              animation: "slideUpPrompt 0.3s cubic-bezier(0.34,1.56,0.64,1)",
+            }}
+          >
+            <div className="text-center space-y-1.5">
+              <h2 className="text-base font-bold text-foreground">
+                Edit Recurring Task
+              </h2>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                This is a recurring task. Do you want to apply these changes to
+                this instance only, or to the entire series?
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <Button
+                onClick={() => executeSave("instance")}
+                disabled={isSavingEdit}
+                className="w-full h-10 rounded-xl bg-brand-indigo hover:bg-brand-indigo/90 text-white font-semibold text-sm transition-all"
+              >
+                {isSavingEdit ? <Spinner size="sm" /> : "This instance only"}
+              </Button>
+              <Button
+                onClick={() => executeSave("series")}
+                disabled={isSavingEdit}
+                variant="outline"
+                className="w-full h-10 rounded-xl font-semibold text-sm transition-all"
+              >
+                {isSavingEdit ? <Spinner size="sm" /> : "All future instances"}
+              </Button>
+            </div>
+          </div>
         </div>
       )}
       <div className="max-w-2xl w-full mx-auto space-y-6">
@@ -973,7 +1047,7 @@ function TaskDetailContent() {
               {isEditing ? (
                 <>
                   <Button
-                    onClick={handleSaveEdit}
+                    onClick={handleSaveClick}
                     disabled={isSavingEdit}
                     className="bg-brand-indigo hover:bg-brand-indigo/90 text-white text-xs font-semibold py-1.5 h-8 rounded px-4 transition-all"
                   >

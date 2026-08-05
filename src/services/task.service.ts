@@ -533,4 +533,84 @@ export const taskService = {
 
     if (subtasksError) throw subtasksError;
   },
+  async editTaskInstance(
+    taskId: string,
+    updates: Partial<Task>,
+    tagNames: string[],
+  ): Promise<Task> {
+    const originalTask = await taskService.getTaskById(taskId);
+    if (!originalTask) throw new Error("Task not found");
+
+    const newTaskPayload = {
+      title: updates.title || originalTask.title,
+      description:
+        updates.description !== undefined
+          ? updates.description
+          : originalTask.description,
+      task_type:
+        updates.task_type && updates.task_type !== "recurring"
+          ? updates.task_type
+          : updates.due_date
+            ? "scheduled"
+            : "flexible",
+      due_date:
+        updates.due_date !== undefined
+          ? updates.due_date
+          : originalTask.due_date,
+      reminder_at:
+        updates.reminder_at !== undefined
+          ? updates.reminder_at
+          : originalTask.reminder_at,
+      notes: updates.notes !== undefined ? updates.notes : originalTask.notes,
+      recurrence_type: null,
+      recurrence_interval: null,
+      recurrence_days: null,
+    };
+
+    const subtasks = originalTask.subtasks?.map((st) => st.title) || [];
+    const cues = originalTask.memory_cues?.map((cue) => cue.content) || [];
+
+    const newTask = await taskService.createTask(
+      newTaskPayload as any,
+      subtasks,
+      cues,
+      tagNames,
+    );
+
+    const nowStr = new Date().toISOString();
+    if (
+      originalTask.task_type === "recurring" &&
+      originalTask.recurrence_type
+    ) {
+      const nextDue = calculateNextDueDate(
+        originalTask.due_date || nowStr,
+        originalTask.recurrence_type,
+        originalTask.recurrence_interval || 1,
+        originalTask.recurrence_days,
+      );
+
+      const nextReminder = originalTask.reminder_at
+        ? calculateNextDueDate(
+            originalTask.reminder_at,
+            originalTask.recurrence_type,
+            originalTask.recurrence_interval || 1,
+            originalTask.recurrence_days,
+          )
+        : null;
+
+      const { error: rollError } = await supabase
+        .from("tasks")
+        .update({
+          due_date: nextDue,
+          reminder_at: nextReminder,
+          reminder_sent: false,
+          due_sent: false,
+        })
+        .eq("id", taskId);
+
+      if (rollError) throw rollError;
+    }
+
+    return newTask;
+  },
 };
