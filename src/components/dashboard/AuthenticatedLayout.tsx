@@ -10,6 +10,7 @@ import { PwaInstallBanner } from "./PwaInstallBanner";
 import { NotificationPromptModal } from "./NotificationPromptModal";
 import { useNotificationChecker } from "@/hooks/useNotificationChecker";
 import { useActivityTracker } from "@/hooks/useActivityTracker";
+import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
 import { TaskForm } from "./TaskForm";
 
@@ -44,6 +45,36 @@ export function AuthenticatedLayout({
         setLoading(false);
       });
   }, [fetchTasks, setLoading, setSession]);
+
+  // Listen for Service Worker messages (e.g. task completed via push action)
+  useEffect(() => {
+    if (typeof window === "undefined" || !("serviceWorker" in navigator)) {
+      return;
+    }
+
+    const handleServiceWorkerMessage = (event: MessageEvent) => {
+      if (event.data?.type === "TASK_COMPLETED_VIA_NOTIFICATION") {
+        toast.success("Task completed!", {
+          description: event.data.title
+            ? `"${event.data.title}" was marked complete.`
+            : "Task marked complete via notification.",
+        });
+        fetchTasks();
+      }
+    };
+
+    navigator.serviceWorker.addEventListener(
+      "message",
+      handleServiceWorkerMessage,
+    );
+
+    return () => {
+      navigator.serviceWorker.removeEventListener(
+        "message",
+        handleServiceWorkerMessage,
+      );
+    };
+  }, [fetchTasks]);
 
   if (authLoading) {
     return (

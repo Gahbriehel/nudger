@@ -41,7 +41,7 @@ export function calculateInitialDueDate(
   return startDate.toISOString();
 }
 
-function calculateNextDueDate(
+export function calculateNextDueDate(
   dueDateStr: string | null,
   type: string,
   interval: number,

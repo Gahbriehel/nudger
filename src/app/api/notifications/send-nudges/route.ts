@@ -187,6 +187,8 @@ async function processNudges() {
       body: pushBody,
       data: {
         url: `/tasks/${task.id}`,
+        taskId: task.id,
+        type: "reminder",
       },
     });
 
@@ -238,7 +240,9 @@ async function processNudges() {
       title: "Task Due!",
       body: `Due now: ${task.title}`,
       data: {
-        url: `/`, // open main dashboard
+        url: `/tasks/${task.id}`,
+        taskId: task.id,
+        type: "due",
       },
     });
 
