@@ -76,6 +76,7 @@ self.addEventListener("notificationclick", (event) => {
     event.waitUntil(
       fetch("/api/tasks/complete", {
         method: "POST",
+        credentials: "same-origin",
         headers: {
           "Content-Type": "application/json",
         },

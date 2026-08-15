@@ -70,10 +70,28 @@ export async function POST(request: Request) {
       );
     }
 
+    // Fetch the user's latest pending task if available to test action buttons
+    const { data: sampleTask } = await supabase
+      .from("tasks")
+      .select("id, title")
+      .eq("user_id", user.id)
+      .eq("status", "pending")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
     const payload = JSON.stringify({
-      title: "Nudger Notifications Active!",
-      body: "Push notifications are working. You will be nudged when tasks are due.",
-      data: { url: "/" },
+      title: sampleTask
+        ? `Nudger Nudge: ${sampleTask.title}`
+        : "Nudger Notifications Active!",
+      body: sampleTask
+        ? `Try tapping "✓ Mark Complete" below to test task completion!`
+        : "Push notifications are working. You will be nudged when tasks are due.",
+      data: {
+        url: sampleTask ? `/tasks/${sampleTask.id}` : "/",
+        taskId: sampleTask?.id || null,
+        type: "test",
+      },
     });
 
     let sentCount = 0;
