@@ -65,7 +65,6 @@ async function processNudges() {
   }
 
   // 1. Fetch tasks where reminder_at <= NOW(), status is 'pending', and reminder_sent is false
-  // 1. Fetch tasks where reminder_at <= NOW(), status is 'pending', and reminder_sent is false
   const { data: reminderTasks, error: reminderError } = await supabase
     .from("tasks")
     .select("*, subtasks(*)")
