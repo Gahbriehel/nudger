@@ -20,7 +20,8 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
-import { Lightbulb, PartyPopper } from "lucide-react";
+import { Lightbulb, PartyPopper, SkipForward } from "lucide-react";
+import { SkipModal } from "@/components/dashboard/SkipModal";
 
 function TaskDetailContent() {
   const params = useParams();
@@ -54,6 +55,9 @@ function TaskDetailContent() {
 
   // Edit scope prompt state
   const [showEditScopePrompt, setShowEditScopePrompt] = useState(false);
+
+  // Skip modal state
+  const [showSkipModal, setShowSkipModal] = useState(false);
 
   // smart completion prompt state
   const [showCompletePrompt, setShowCompletePrompt] = useState(false);
@@ -1071,6 +1075,17 @@ function TaskDetailContent() {
                   >
                     Edit Task
                   </Button>
+                  {task.task_type === "recurring" &&
+                    task.status !== "completed" && (
+                      <Button
+                        onClick={() => setShowSkipModal(true)}
+                        variant="outline"
+                        className="text-xs border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 py-1.5 h-8 rounded px-4 font-semibold transition-all flex items-center gap-1.5"
+                      >
+                        <SkipForward className="w-3.5 h-3.5" />
+                        Skip
+                      </Button>
+                    )}
                   {task.status !== "completed" && (
                     <Button
                       onClick={handleCompleteTask}
@@ -1085,6 +1100,14 @@ function TaskDetailContent() {
           </div>
         </div>
       </div>
+
+      {/* Skip Modal */}
+      <SkipModal
+        isOpen={showSkipModal}
+        onClose={() => setShowSkipModal(false)}
+        task={task}
+        onSuccess={() => loadTask()}
+      />
     </div>
   );
 }

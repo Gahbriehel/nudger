@@ -27,7 +27,14 @@ import { toast } from "sonner";
 import { FilterSidebar } from "./FilterSidebar";
 import { Spinner } from "@/components/ui/spinner";
 import { SnoozeModal } from "./SnoozeModal";
-import { Lightbulb, Repeat, Moon, MoreVertical } from "lucide-react";
+import { SkipModal } from "./SkipModal";
+import {
+  Lightbulb,
+  Repeat,
+  Moon,
+  MoreVertical,
+  SkipForward,
+} from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { tagService } from "@/services/tag.service";
@@ -103,6 +110,9 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
 
   // task snooze modal state
   const [snoozeTask, setSnoozeTask] = useState<Task | null>(null);
+
+  // task skip modal state
+  const [skipTaskItem, setSkipTaskItem] = useState<Task | null>(null);
 
   // Track task currently in Edit Mode
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
@@ -1040,6 +1050,19 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
                             </svg>
                             Edit Task
                           </DropdownMenuItem>
+                          {task.task_type === "recurring" &&
+                            task.status !== "completed" && (
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSkipTaskItem(task);
+                                }}
+                                className="flex items-center gap-2 text-amber-600 dark:text-amber-400 focus:text-amber-600 cursor-pointer font-medium"
+                              >
+                                <SkipForward className="w-4 h-4" />
+                                Skip Occurrence
+                              </DropdownMenuItem>
+                            )}
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
                             onClick={(e) => {
@@ -1774,6 +1797,18 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
                               Edit
                             </Button>
 
+                            {task.task_type === "recurring" &&
+                              task.status !== "completed" && (
+                                <Button
+                                  onClick={() => setSkipTaskItem(task)}
+                                  variant="outline"
+                                  className="text-xs border border-amber-500/30 bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 dark:text-amber-400 py-1.5 h-8 rounded-xl px-3.5 font-semibold transition-all flex items-center gap-1.5"
+                                >
+                                  <SkipForward className="w-3.5 h-3.5" />
+                                  Skip
+                                </Button>
+                              )}
+
                             <Button
                               onClick={() => handleToggleTaskCompletion(task)}
                               className={cn(
@@ -1798,6 +1833,14 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
           })}
         </div>
       )}
+      {/* Skip Task Modal */}
+      <SkipModal
+        isOpen={!!skipTaskItem}
+        onClose={() => setSkipTaskItem(null)}
+        task={skipTaskItem}
+        onSuccess={() => fetchTasks()}
+      />
+
       {/* Delete Task Confirmation Modal */}
       <Modal
         isOpen={!!deleteConfirmTaskId}

@@ -81,6 +81,37 @@ export function calculateNextDueDate(
   return date.toISOString();
 }
 
+export function calculateCatchUpDueDate(
+  dueDateStr: string | null,
+  type: string | null,
+  interval: number | null,
+  recurrenceDays: number[] | null = null,
+  targetDate: Date = new Date(),
+): string | null {
+  if (!dueDateStr || !type) return null;
+  let currentDueStr: string | null = dueDateStr;
+  const maxSafetyIterations = 1000;
+  let count = 0;
+
+  while (currentDueStr && count < maxSafetyIterations) {
+    const nextDue = calculateNextDueDate(
+      currentDueStr,
+      type,
+      interval || 1,
+      recurrenceDays,
+    );
+    if (!nextDue) break;
+    currentDueStr = nextDue;
+
+    if (new Date(currentDueStr).getTime() >= targetDate.getTime()) {
+      break;
+    }
+    count++;
+  }
+
+  return currentDueStr;
+}
+
 export const taskService = {
   async getTasks(): Promise<Task[]> {
     // We join subtasks, cues, and tag relationships
@@ -463,6 +494,25 @@ export const taskService = {
     task: Task,
   ): Promise<{ status: "pending" | "completed"; due_date: string | null }> {
     const nowStr = new Date().toISOString();
+    const scheduledDate = task.due_date || nowStr;
+
+    // Log occurrence
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from("task_occurrences").insert({
+          task_id: task.id,
+          user_id: user.id,
+          scheduled_date: scheduledDate,
+          action_date: nowStr,
+          status: "completed",
+        });
+      }
+    } catch (err) {
+      console.error("Failed to log task completion occurrence:", err);
+    }
 
     if (task.task_type === "recurring" && task.recurrence_type) {
       // 1. Calculate next due date
@@ -512,6 +562,107 @@ export const taskService = {
       if (error) throw error;
       return { status: "completed", due_date: null };
     }
+  },
+
+  async skipTask(
+    task: Task,
+    mode: "single" | "catch_up" = "single",
+    status: "skipped" | "missed" = "skipped",
+  ): Promise<{ status: "completed"; due_date: string | null }> {
+    if (task.task_type !== "recurring" || !task.recurrence_type) {
+      throw new Error("Only recurring tasks can be skipped");
+    }
+
+    const nowStr = new Date().toISOString();
+    const scheduledDate = task.due_date || nowStr;
+
+    const nextDue =
+      mode === "catch_up"
+        ? calculateCatchUpDueDate(
+            scheduledDate,
+            task.recurrence_type,
+            task.recurrence_interval || 1,
+            task.recurrence_days,
+          )
+        : calculateNextDueDate(
+            scheduledDate,
+            task.recurrence_type,
+            task.recurrence_interval || 1,
+            task.recurrence_days,
+          );
+
+    const nextReminder = task.reminder_at
+      ? mode === "catch_up"
+        ? calculateCatchUpDueDate(
+            task.reminder_at,
+            task.recurrence_type,
+            task.recurrence_interval || 1,
+            task.recurrence_days,
+          )
+        : calculateNextDueDate(
+            task.reminder_at,
+            task.recurrence_type,
+            task.recurrence_interval || 1,
+            task.recurrence_days,
+          )
+      : null;
+
+    // Log the occurrence
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from("task_occurrences").insert({
+          task_id: task.id,
+          user_id: user.id,
+          scheduled_date: scheduledDate,
+          action_date: nowStr,
+          status,
+        });
+      }
+    } catch (err) {
+      console.error("Failed to log task skip occurrence:", err);
+    }
+
+    // Roll over task due date & record last_skipped_at
+    const { error: taskError } = await supabase
+      .from("tasks")
+      .update({
+        last_skipped_at: nowStr,
+        due_date: nextDue,
+        reminder_at: nextReminder,
+        reminder_sent: false,
+        due_sent: false,
+        status: "completed",
+      })
+      .eq("id", task.id);
+
+    if (taskError) throw taskError;
+
+    return { status: "completed", due_date: nextDue };
+  },
+
+  async getTaskOccurrences(
+    taskId?: string,
+    startDate?: string,
+    endDate?: string,
+  ): Promise<any[]> {
+    let query = supabase.from("task_occurrences").select("*");
+    if (taskId) {
+      query = query.eq("task_id", taskId);
+    }
+    if (startDate) {
+      query = query.gte("scheduled_date", startDate);
+    }
+    if (endDate) {
+      query = query.lte("scheduled_date", endDate);
+    }
+    const { data, error } = await query.order("created_at", {
+      ascending: false,
+    });
+    if (error) throw error;
+    return data || [];
   },
 
   async resetRecurringTask(taskId: string): Promise<void> {

@@ -40,6 +40,23 @@ export async function POST(request: Request) {
     }
 
     const nowStr = new Date().toISOString();
+    const scheduledDate = task.due_date || nowStr;
+
+    // Log occurrence into task_occurrences
+    try {
+      await supabase.from("task_occurrences").insert({
+        task_id: task.id,
+        user_id: user.id,
+        scheduled_date: scheduledDate,
+        action_date: nowStr,
+        status: "completed",
+      });
+    } catch (err) {
+      console.error(
+        "Failed to insert task_occurrence in API complete route:",
+        err,
+      );
+    }
 
     if (task.task_type === "recurring" && task.recurrence_type) {
       // Calculate next due date and reminder

@@ -13,6 +13,8 @@ import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
 import { Sparkles, ExternalLink } from "lucide-react";
 import { SnoozeModal } from "./SnoozeModal";
+import { SkipModal } from "./SkipModal";
+import { SkipForward } from "lucide-react";
 
 export function NudgelistView() {
   const router = useRouter();
@@ -23,6 +25,7 @@ export function NudgelistView() {
     stale: [],
   });
   const [loading, setLoading] = useState(false);
+  const [skipTaskItem, setSkipTaskItem] = useState<Task | null>(null);
 
   const loadNudgelist = async () => {
     setLoading(true);
@@ -161,6 +164,17 @@ export function NudgelistView() {
                   Complete
                 </Button>
 
+                {task.task_type === "recurring" && (
+                  <Button
+                    onClick={() => setSkipTaskItem(task)}
+                    variant="outline"
+                    className="text-xs py-1 h-8 rounded px-3 border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 flex items-center justify-center gap-1.5 md:w-auto"
+                  >
+                    <SkipForward className="w-3.5 h-3.5" />
+                    Skip
+                  </Button>
+                )}
+
                 {type === "overdue" ? (
                   <Button
                     onClick={() => setSnoozeTask(task)}
@@ -240,6 +254,16 @@ export function NudgelistView() {
         onClose={() => setSnoozeTask(null)}
         task={snoozeTask}
         onSuccess={handleSnoozeSuccess}
+      />
+
+      <SkipModal
+        isOpen={!!skipTaskItem}
+        onClose={() => setSkipTaskItem(null)}
+        task={skipTaskItem}
+        onSuccess={() => {
+          fetchTasks();
+          loadNudgelist();
+        }}
       />
     </div>
   );

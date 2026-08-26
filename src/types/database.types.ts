@@ -1,6 +1,7 @@
 export type TaskType = "flexible" | "scheduled" | "recurring";
 export type TaskStatus = "pending" | "completed";
 export type RecurrenceType = "daily" | "weekly" | "monthly" | "yearly";
+export type OccurrenceStatus = "completed" | "skipped" | "missed";
 
 export interface Task {
   id: string;
@@ -16,6 +17,7 @@ export interface Task {
   reminder_at: string | null;
   notes: string | null;
   last_completed_at: string | null;
+  last_skipped_at?: string | null;
   completed_at: string | null;
   created_at: string;
   updated_at: string;
@@ -26,6 +28,17 @@ export interface Task {
   subtasks?: Subtask[];
   tags?: Tag[];
   memory_cues?: MemoryCue[];
+}
+
+export interface TaskOccurrence {
+  id: string;
+  task_id: string;
+  user_id: string;
+  scheduled_date: string;
+  action_date: string;
+  status: OccurrenceStatus;
+  notes?: string | null;
+  created_at: string;
 }
 
 export interface Subtask {
@@ -73,13 +86,24 @@ export type Database = {
           | "status"
           | "completed_at"
           | "last_completed_at"
+          | "last_skipped_at"
         > & {
           id?: string;
           status?: TaskStatus;
           completed_at?: string | null;
           last_completed_at?: string | null;
+          last_skipped_at?: string | null;
         };
         Update: Partial<Task>;
+      };
+      task_occurrences: {
+        Row: TaskOccurrence;
+        Insert: Omit<TaskOccurrence, "id" | "created_at" | "action_date"> & {
+          id?: string;
+          action_date?: string;
+          created_at?: string;
+        };
+        Update: Partial<TaskOccurrence>;
       };
       subtasks: {
         Row: Subtask;
