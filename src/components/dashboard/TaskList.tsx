@@ -1732,7 +1732,7 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
                         )}
                       </div>
 
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2">
                         {editingTaskId === task.id ? (
                           <>
                             <Button
