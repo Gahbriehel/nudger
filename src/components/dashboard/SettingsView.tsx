@@ -71,7 +71,6 @@ export function SettingsView() {
       titleClickTimer.current = setTimeout(() => setTitleClickCount(0), 1500);
       return next;
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleUpdateName = async (e: React.FormEvent) => {
