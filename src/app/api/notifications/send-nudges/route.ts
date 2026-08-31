@@ -171,14 +171,35 @@ async function processNudges() {
         task.subtasks as { id: string; title: string; completed: boolean }[]
       )?.filter((s) => !s.completed) || [];
 
+    const taskTemplates = [
+      `Don't forget: {task}`,
+      `Friendly reminder: {task}`,
+      `Time to work on: {task}`,
+      `Have you started on "{task}" yet?`,
+    ];
+    const checklistTemplates = [
+      `What do you think about checking off "{subtask}" in "{task}"?`,
+      `Knock out "{subtask}" to make progress on "{task}"!`,
+      `Ready to tackle "{subtask}" for "{task}"?`,
+      `"{task}" is waiting! How about starting with "{subtask}"?`,
+    ];
+
     let pushTitle = "Task Nudge!";
-    let pushBody = `Don't forget: ${task.title}`;
+    const randomTaskTemplate =
+      taskTemplates[Math.floor(Math.random() * taskTemplates.length)];
+    let pushBody = randomTaskTemplate.replace("{task}", task.title);
 
     if (pendingSubtasks.length > 0) {
       const randomSubtask =
         pendingSubtasks[Math.floor(Math.random() * pendingSubtasks.length)];
       pushTitle = "Checklist Nudge 📝";
-      pushBody = `What do you think about checking off "${randomSubtask.title}" in "${task.title}"?`;
+      const randomChecklistTemplate =
+        checklistTemplates[
+          Math.floor(Math.random() * checklistTemplates.length)
+        ];
+      pushBody = randomChecklistTemplate
+        .replace("{subtask}", randomSubtask.title)
+        .replace("{task}", task.title);
     }
 
     const payload = JSON.stringify({
@@ -235,9 +256,18 @@ async function processNudges() {
       continue;
     }
 
+    const dueTemplates = [
+      `Due now: {task}`,
+      `Time's up for: {task}`,
+      `"{task}" is due!`,
+    ];
+    const randomDueTemplate =
+      dueTemplates[Math.floor(Math.random() * dueTemplates.length)];
+    const pushBody = randomDueTemplate.replace("{task}", task.title);
+
     const payload = JSON.stringify({
       title: "Task Due!",
-      body: `Due now: ${task.title}`,
+      body: pushBody,
       data: {
         url: `/tasks/${task.id}`,
         taskId: task.id,
