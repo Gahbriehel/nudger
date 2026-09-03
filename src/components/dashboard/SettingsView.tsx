@@ -39,6 +39,16 @@ export function SettingsView() {
   const [titleClickCount, setTitleClickCount] = useState(0);
   const titleClickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Notification Control settings state
+  const [maxFlexibleNudges, setMaxFlexibleNudges] = useState(2);
+  const [enableIdleNudges, setEnableIdleNudges] = useState(true);
+  const [enableSubtaskNudges, setEnableSubtaskNudges] = useState(true);
+  const [quietHoursEnabled, setQuietHoursEnabled] = useState(false);
+  const [quietHoursStart, setQuietHoursStart] = useState("22:00");
+  const [quietHoursEnd, setQuietHoursEnd] = useState("07:00");
+  const [isLoadingSettings, setIsLoadingSettings] = useState(true);
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+
   useEffect(() => {
     // Check support for Push Notifications
     const supported =
@@ -58,7 +68,57 @@ export function SettingsView() {
           console.error("Error fetching push subscription state:", err),
         );
     }
+
+    // Fetch User Settings
+    fetch("/api/settings")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && !data.error) {
+          if (data.max_flexible_nudges_per_day !== undefined)
+            setMaxFlexibleNudges(data.max_flexible_nudges_per_day);
+          if (data.enable_idle_nudges !== undefined)
+            setEnableIdleNudges(data.enable_idle_nudges);
+          if (data.enable_subtask_nudges !== undefined)
+            setEnableSubtaskNudges(data.enable_subtask_nudges);
+          if (data.quiet_hours_enabled !== undefined)
+            setQuietHoursEnabled(data.quiet_hours_enabled);
+          if (data.quiet_hours_start)
+            setQuietHoursStart(data.quiet_hours_start);
+          if (data.quiet_hours_end) setQuietHoursEnd(data.quiet_hours_end);
+        }
+      })
+      .catch((err) => console.error("Failed to load user settings:", err))
+      .finally(() => setIsLoadingSettings(false));
   }, []);
+
+  const handleSaveNotificationSettings = async (
+    updates: Partial<{
+      max_flexible_nudges_per_day: number;
+      enable_idle_nudges: boolean;
+      enable_subtask_nudges: boolean;
+      quiet_hours_enabled: boolean;
+      quiet_hours_start: string;
+      quiet_hours_end: string;
+    }>,
+  ) => {
+    setIsSavingSettings(true);
+    try {
+      const res = await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to save settings");
+      toast.success("Notification preferences updated!");
+    } catch (err: unknown) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to update preferences",
+      );
+    } finally {
+      setIsSavingSettings(false);
+    }
+  };
 
   const handleTitleClick = useCallback(() => {
     setTitleClickCount((prev) => {
@@ -323,6 +383,21 @@ export function SettingsView() {
         </p>
 
         <div className="space-y-4">
+          {/* Reassurance Notice */}
+          <div className="bg-primary/5 border border-primary/20 text-foreground text-xs rounded-xl p-3.5 leading-normal flex items-start gap-2.5">
+            <span className="text-base shrink-0">📌</span>
+            <div>
+              <span className="font-semibold text-primary block mb-0.5">
+                Guaranteed Due Dates & Recurring Tasks
+              </span>
+              <span>
+                Tasks with set due dates and recurring habits will{" "}
+                <strong>always</strong> alert you on time. Use the options below
+                to tune flexible nudges and Quiet Hours.
+              </span>
+            </div>
+          </div>
+
           {!isPushSupported ? (
             <div className="bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs rounded-xl p-3.5 leading-normal">
               ⚠️ Push notifications are not supported in your current browser or
@@ -338,7 +413,7 @@ export function SettingsView() {
                 <span className="text-[11px] text-muted-foreground leading-normal block">
                   {permissionState === "denied"
                     ? "Notification permission is blocked. Please reset site permissions in your browser settings to enable."
-                    : "Receive urgent task nudges directly on your desktop or mobile device."}
+                    : "Receive task nudges directly on your desktop or mobile device."}
                 </span>
               </div>
 
@@ -365,6 +440,196 @@ export function SettingsView() {
               </div>
             </div>
           )}
+
+          {/* Smart Controls Division */}
+          <div className="pt-2 space-y-4 border-t border-border/60">
+            {/* Daily Flexible Nudge Cap */}
+            <div className="flex items-center justify-between p-4 bg-muted/40 border border-border rounded-xl">
+              <div className="space-y-0.5 pr-4">
+                <Label
+                  htmlFor="maxFlexibleNudges"
+                  className="text-sm font-semibold block text-foreground"
+                >
+                  Max Daily Flexible Nudges
+                </Label>
+                <span className="text-[11px] text-muted-foreground leading-normal block">
+                  Caps random reminders for flexible tasks per day to prevent
+                  notification fatigue.
+                </span>
+              </div>
+              <select
+                id="maxFlexibleNudges"
+                value={maxFlexibleNudges}
+                disabled={isLoadingSettings || isSavingSettings}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  setMaxFlexibleNudges(val);
+                  handleSaveNotificationSettings({
+                    max_flexible_nudges_per_day: val,
+                  });
+                }}
+                className="bg-background border border-border text-foreground text-xs font-semibold rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+              >
+                <option value={1}>1 / day (Minimal)</option>
+                <option value={2}>2 / day (Balanced)</option>
+                <option value={3}>3 / day (Active)</option>
+                <option value={5}>5 / day (Frequent)</option>
+                <option value={10}>10 / day (Maximum)</option>
+              </select>
+            </div>
+
+            {/* Quiet Hours */}
+            <div className="p-4 bg-muted/40 border border-border rounded-xl space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5 pr-4">
+                  <span className="text-sm font-semibold block text-foreground">
+                    Quiet Hours
+                  </span>
+                  <span className="text-[11px] text-muted-foreground leading-normal block">
+                    Pause flexible reminders and idle nudges during your quiet
+                    window.
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nextVal = !quietHoursEnabled;
+                    setQuietHoursEnabled(nextVal);
+                    handleSaveNotificationSettings({
+                      quiet_hours_enabled: nextVal,
+                    });
+                  }}
+                  disabled={isLoadingSettings || isSavingSettings}
+                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    quietHoursEnabled ? "bg-primary" : "bg-input"
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-background shadow ring-0 transition duration-200 ease-in-out ${
+                      quietHoursEnabled ? "translate-x-5" : "translate-x-0"
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {quietHoursEnabled && (
+                <div className="flex items-center gap-3 pt-2 border-t border-border/40">
+                  <div className="flex-1 grid gap-1">
+                    <Label
+                      htmlFor="quietStart"
+                      className="text-[11px] font-semibold text-muted-foreground"
+                    >
+                      Start Time
+                    </Label>
+                    <Input
+                      id="quietStart"
+                      type="time"
+                      value={quietHoursStart}
+                      onChange={(e) => setQuietHoursStart(e.target.value)}
+                      onBlur={() =>
+                        handleSaveNotificationSettings({
+                          quiet_hours_start: quietHoursStart,
+                        })
+                      }
+                      className="bg-background border-border text-xs h-8 rounded-lg"
+                    />
+                  </div>
+                  <span className="text-xs text-muted-foreground self-end mb-1.5">
+                    to
+                  </span>
+                  <div className="flex-1 grid gap-1">
+                    <Label
+                      htmlFor="quietEnd"
+                      className="text-[11px] font-semibold text-muted-foreground"
+                    >
+                      End Time
+                    </Label>
+                    <Input
+                      id="quietEnd"
+                      type="time"
+                      value={quietHoursEnd}
+                      onChange={(e) => setQuietHoursEnd(e.target.value)}
+                      onBlur={() =>
+                        handleSaveNotificationSettings({
+                          quiet_hours_end: quietHoursEnd,
+                        })
+                      }
+                      className="bg-background border-border text-xs h-8 rounded-lg"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Subtask Prompts Toggle */}
+            <div className="flex items-center justify-between p-4 bg-muted/40 border border-border rounded-xl">
+              <div className="space-y-0.5 pr-4">
+                <span className="text-sm font-semibold block text-foreground">
+                  Checklist & Subtask Nudges 📝
+                </span>
+                <span className="text-[11px] text-muted-foreground leading-normal block">
+                  Include specific subtasks in reminders to help break down
+                  larger tasks.
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const nextVal = !enableSubtaskNudges;
+                  setEnableSubtaskNudges(nextVal);
+                  handleSaveNotificationSettings({
+                    enable_subtask_nudges: nextVal,
+                  });
+                }}
+                disabled={isLoadingSettings || isSavingSettings}
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                  enableSubtaskNudges ? "bg-primary" : "bg-input"
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-background shadow ring-0 transition duration-200 ease-in-out ${
+                    enableSubtaskNudges ? "translate-x-5" : "translate-x-0"
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Idle User Nudges Toggle */}
+            <div className="flex items-center justify-between p-4 bg-muted/40 border border-border rounded-xl">
+              <div className="space-y-0.5 pr-4">
+                <span className="text-sm font-semibold block text-foreground">
+                  Idle Prompts 👋
+                </span>
+                <span className="text-[11px] text-muted-foreground leading-normal block">
+                  Get a friendly prompt when your task list is clear to add new
+                  goals.
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const nextVal = !enableIdleNudges;
+                  setEnableIdleNudges(nextVal);
+                  handleSaveNotificationSettings({
+                    enable_idle_nudges: nextVal,
+                  });
+                }}
+                disabled={isLoadingSettings || isSavingSettings}
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                  enableIdleNudges ? "bg-primary" : "bg-input"
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-background shadow ring-0 transition duration-200 ease-in-out ${
+                    enableIdleNudges ? "translate-x-5" : "translate-x-0"
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 

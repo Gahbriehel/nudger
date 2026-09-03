@@ -69,6 +69,19 @@ export interface MemoryCue {
   created_at: string;
 }
 
+export interface UserSettings {
+  user_id: string;
+  max_flexible_nudges_per_day: number;
+  enable_idle_nudges: boolean;
+  enable_subtask_nudges: boolean;
+  quiet_hours_enabled: boolean;
+  quiet_hours_start: string;
+  quiet_hours_end: string;
+  flexible_nudges_count_today: number;
+  last_nudge_date: string | null;
+  updated_at: string;
+}
+
 // Supabase Database Type Helpers
 export type Tables<T extends keyof Database["public"]["Tables"]> =
   Database["public"]["Tables"][T]["Row"];
@@ -127,6 +140,11 @@ export type Database = {
         Row: MemoryCue;
         Insert: Omit<MemoryCue, "id" | "created_at"> & { id?: string };
         Update: Partial<MemoryCue>;
+      };
+      user_settings: {
+        Row: UserSettings;
+        Insert: Partial<UserSettings> & { user_id: string };
+        Update: Partial<UserSettings>;
       };
     };
   };

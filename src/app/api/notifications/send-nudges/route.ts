@@ -9,6 +9,18 @@ interface PushSubscriptionRecord {
   subscription: webpush.PushSubscription;
 }
 
+interface UserSettingsRecord {
+  user_id: string;
+  max_flexible_nudges_per_day: number;
+  enable_idle_nudges: boolean;
+  enable_subtask_nudges: boolean;
+  quiet_hours_enabled: boolean;
+  quiet_hours_start: string;
+  quiet_hours_end: string;
+  flexible_nudges_count_today: number;
+  last_nudge_date: string | null;
+}
+
 // Initialize web-push VAPID details
 const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
@@ -21,10 +33,36 @@ if (vapidPublicKey && vapidPrivateKey) {
   );
 }
 
+function isQuietHours(
+  settings: UserSettingsRecord,
+  nowDate: Date = new Date(),
+): boolean {
+  if (!settings.quiet_hours_enabled) return false;
+
+  const currentMinutes = nowDate.getHours() * 60 + nowDate.getMinutes();
+
+  const [startH, startM] = (settings.quiet_hours_start || "22:00")
+    .split(":")
+    .map(Number);
+  const [endH, endM] = (settings.quiet_hours_end || "07:00")
+    .split(":")
+    .map(Number);
+
+  const startMinutes = (startH || 0) * 60 + (startM || 0);
+  const endMinutes = (endH || 0) * 60 + (endM || 0);
+
+  if (startMinutes <= endMinutes) {
+    return currentMinutes >= startMinutes && currentMinutes < endMinutes;
+  } else {
+    return currentMinutes >= startMinutes || currentMinutes < endMinutes;
+  }
+}
+
 async function processNudges() {
   // Use service role client so RLS doesn't block cron job reads
   const supabase = createAdminClient();
   const now = new Date().toISOString();
+  const todayStr = new Date().toISOString().split("T")[0];
 
   // 0. Find and reset recurring completed tasks that are within the lead-up window
   const resetCutoff = new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString();
@@ -133,32 +171,153 @@ async function processNudges() {
     };
   }
 
-  // 2. Fetch push subscriptions for users
-  const { data: subscriptions, error: subsError } = await supabase
-    .from("push_subscriptions")
-    .select("*")
-    .in("user_id", allUserIds);
+  // 2. Fetch push subscriptions and user settings
+  const [subsResult, settingsResult] = await Promise.all([
+    supabase.from("push_subscriptions").select("*").in("user_id", allUserIds),
+    supabase.from("user_settings").select("*").in("user_id", allUserIds),
+  ]);
 
-  if (subsError) {
-    throw new Error(`Failed to fetch subscriptions: ${subsError.message}`);
+  if (subsResult.error) {
+    throw new Error(
+      `Failed to fetch subscriptions: ${subsResult.error.message}`,
+    );
   }
 
   // Group subscriptions by user_id
   const subsByUser: Record<string, PushSubscriptionRecord[]> = {};
-  subscriptions?.forEach((sub) => {
+  subsResult.data?.forEach((sub) => {
     if (!subsByUser[sub.user_id]) {
       subsByUser[sub.user_id] = [];
     }
     subsByUser[sub.user_id].push(sub);
   });
 
+  // Group user settings by user_id
+  const userSettingsMap: Record<string, UserSettingsRecord> = {};
+  settingsResult.data?.forEach((setting) => {
+    userSettingsMap[setting.user_id] = setting;
+  });
+
+  // Helper to resolve settings with defaults and handle daily counter resets
+  const getUserSettings = (userId: string): UserSettingsRecord => {
+    const existing = userSettingsMap[userId];
+    const defaultSettings: UserSettingsRecord = {
+      user_id: userId,
+      max_flexible_nudges_per_day: 2,
+      enable_idle_nudges: true,
+      enable_subtask_nudges: true,
+      quiet_hours_enabled: false,
+      quiet_hours_start: "22:00",
+      quiet_hours_end: "07:00",
+      flexible_nudges_count_today: 0,
+      last_nudge_date: todayStr,
+    };
+
+    if (!existing) {
+      return defaultSettings;
+    }
+
+    // Reset daily count if date has changed
+    if (existing.last_nudge_date !== todayStr) {
+      existing.flexible_nudges_count_today = 0;
+      existing.last_nudge_date = todayStr;
+    }
+
+    return existing;
+  };
+
   let sentCount = 0;
 
-  // 3. Dispatch push notifications for reminders
-  for (const task of reminderTasks || []) {
-    const userSubs = subsByUser[task.user_id] || [];
+  // 3. Dispatch DUE DATE notifications (TIER 1 - GUARANTEED & CONSOLIDATED)
+  // Group due tasks by user_id
+  const dueTasksByUser: Record<string, typeof dueTasks> = {};
+  dueTasks?.forEach((task) => {
+    if (!dueTasksByUser[task.user_id]) {
+      dueTasksByUser[task.user_id] = [];
+    }
+    dueTasksByUser[task.user_id]!.push(task);
+  });
+
+  for (const [userId, tasksGroup] of Object.entries(dueTasksByUser)) {
+    if (!tasksGroup || tasksGroup.length === 0) continue;
+    const userSubs = subsByUser[userId] || [];
+    const taskIds = tasksGroup.map((t) => t.id);
+
     if (userSubs.length === 0) {
-      // Mark as sent anyway so we don't keep polling a user with no devices subscribed
+      // Mark as sent anyway so we don't keep polling users with no active subscriptions
+      await supabase.from("tasks").update({ due_sent: true }).in("id", taskIds);
+      continue;
+    }
+
+    let payloadString: string;
+
+    if (tasksGroup.length === 1) {
+      const task = tasksGroup[0];
+      const dueTemplates = [
+        `Due now: {task}`,
+        `Time's up for: {task}`,
+        `"{task}" is due!`,
+      ];
+      const randomDueTemplate =
+        dueTemplates[Math.floor(Math.random() * dueTemplates.length)];
+      const pushBody = randomDueTemplate.replace("{task}", task.title);
+
+      payloadString = JSON.stringify({
+        title: "Task Due!",
+        body: pushBody,
+        data: {
+          url: `/tasks/${task.id}`,
+          taskId: task.id,
+          type: "due",
+        },
+      });
+    } else {
+      // Consolidated Multi-Task Due Nudge
+      const firstTitle = tasksGroup[0].title;
+      const secondTitle = tasksGroup[1].title;
+      const extraCount = tasksGroup.length - 2;
+
+      let bodyText = `Due now: "${firstTitle}", "${secondTitle}"`;
+      if (extraCount > 0) {
+        bodyText += ` and ${extraCount} more task${extraCount > 1 ? "s" : ""}`;
+      }
+
+      payloadString = JSON.stringify({
+        title: `${tasksGroup.length} Tasks Due Now! ⏰`,
+        body: bodyText,
+        data: {
+          url: `/`,
+          type: "due_consolidated",
+        },
+      });
+    }
+
+    for (const sub of userSubs) {
+      try {
+        await webpush.sendNotification(sub.subscription, payloadString);
+        sentCount++;
+      } catch (err: unknown) {
+        console.error(
+          `Failed to send due push alert to subscription ID ${sub.id}:`,
+          err,
+        );
+        const statusCode = (err as { statusCode?: number })?.statusCode;
+        if (statusCode === 410 || statusCode === 404) {
+          await supabase.from("push_subscriptions").delete().eq("id", sub.id);
+        }
+      }
+    }
+
+    // Mark all tasks in this group as due_sent = true
+    await supabase.from("tasks").update({ due_sent: true }).in("id", taskIds);
+  }
+
+  // 4. Dispatch REMINDER notifications (TIER 2 - MANAGED & THROTTLED for Flexible, GUARANTEED for Scheduled/Recurring)
+  for (const task of reminderTasks || []) {
+    const settings = getUserSettings(task.user_id);
+    const userSubs = subsByUser[task.user_id] || [];
+
+    if (userSubs.length === 0) {
       await supabase
         .from("tasks")
         .update({ reminder_sent: true })
@@ -166,6 +325,27 @@ async function processNudges() {
       continue;
     }
 
+    const isFlexible = task.task_type === "flexible";
+
+    if (isFlexible) {
+      // Check Quiet Hours or Daily Nudge Cap
+      const inQuietHours = isQuietHours(settings);
+      const capReached =
+        settings.flexible_nudges_count_today >=
+        settings.max_flexible_nudges_per_day;
+
+      if (inQuietHours || capReached) {
+        // Reschedule flexible task for a later time without firing push notification
+        const nextReminder = getRandomReminderTime().toISOString();
+        await supabase
+          .from("tasks")
+          .update({ reminder_at: nextReminder, reminder_sent: false })
+          .eq("id", task.id);
+        continue;
+      }
+    }
+
+    // Build Payload
     const pendingSubtasks =
       (
         task.subtasks as { id: string; title: string; completed: boolean }[]
@@ -189,7 +369,7 @@ async function processNudges() {
       taskTemplates[Math.floor(Math.random() * taskTemplates.length)];
     let pushBody = randomTaskTemplate.replace("{task}", task.title);
 
-    if (pendingSubtasks.length > 0) {
+    if (pendingSubtasks.length > 0 && settings.enable_subtask_nudges) {
       const randomSubtask =
         pendingSubtasks[Math.floor(Math.random() * pendingSubtasks.length)];
       pushTitle = "Checklist Nudge 📝";
@@ -221,7 +401,6 @@ async function processNudges() {
           `Failed to send push reminder to subscription ID ${sub.id}:`,
           err,
         );
-        // If subscription is expired or revoked (410 Gone / 404 Not Found), delete it
         const statusCode = (err as { statusCode?: number })?.statusCode;
         if (statusCode === 410 || statusCode === 404) {
           await supabase.from("push_subscriptions").delete().eq("id", sub.id);
@@ -229,15 +408,24 @@ async function processNudges() {
       }
     }
 
-    // Mark task reminder as sent (or reschedule if flexible)
-    if (task.task_type === "flexible") {
+    if (isFlexible) {
+      // Increment flexible nudge count and update settings
+      settings.flexible_nudges_count_today += 1;
+      settings.last_nudge_date = todayStr;
+
+      await supabase.from("user_settings").upsert(
+        {
+          user_id: task.user_id,
+          flexible_nudges_count_today: settings.flexible_nudges_count_today,
+          last_nudge_date: todayStr,
+        },
+        { onConflict: "user_id" },
+      );
+
       const nextReminder = getRandomReminderTime().toISOString();
       await supabase
         .from("tasks")
-        .update({
-          reminder_at: nextReminder,
-          reminder_sent: false,
-        })
+        .update({ reminder_at: nextReminder, reminder_sent: false })
         .eq("id", task.id);
     } else {
       await supabase
@@ -247,56 +435,7 @@ async function processNudges() {
     }
   }
 
-  // 3b. Dispatch push notifications for due dates
-  for (const task of dueTasks || []) {
-    const userSubs = subsByUser[task.user_id] || [];
-    if (userSubs.length === 0) {
-      // Mark as sent anyway so we don't keep polling a user with no devices subscribed
-      await supabase.from("tasks").update({ due_sent: true }).eq("id", task.id);
-      continue;
-    }
-
-    const dueTemplates = [
-      `Due now: {task}`,
-      `Time's up for: {task}`,
-      `"{task}" is due!`,
-    ];
-    const randomDueTemplate =
-      dueTemplates[Math.floor(Math.random() * dueTemplates.length)];
-    const pushBody = randomDueTemplate.replace("{task}", task.title);
-
-    const payload = JSON.stringify({
-      title: "Task Due!",
-      body: pushBody,
-      data: {
-        url: `/tasks/${task.id}`,
-        taskId: task.id,
-        type: "due",
-      },
-    });
-
-    for (const sub of userSubs) {
-      try {
-        await webpush.sendNotification(sub.subscription, payload);
-        sentCount++;
-      } catch (err: unknown) {
-        console.error(
-          `Failed to send push due alert to subscription ID ${sub.id}:`,
-          err,
-        );
-        // If subscription is expired or revoked (410 Gone / 404 Not Found), delete it
-        const statusCode = (err as { statusCode?: number })?.statusCode;
-        if (statusCode === 410 || statusCode === 404) {
-          await supabase.from("push_subscriptions").delete().eq("id", sub.id);
-        }
-      }
-    }
-
-    // Mark task due notification as sent
-    await supabase.from("tasks").update({ due_sent: true }).eq("id", task.id);
-  }
-
-  // 4. Dispatch idle nudges
+  // 5. Dispatch IDLE NUDGES (respect settings & Quiet Hours)
   const idleMessages = [
     "Your task list is empty! Time to add something new?",
     "Nothing on your plate? Add a task to keep the momentum going!",
@@ -306,6 +445,9 @@ async function processNudges() {
   ];
 
   for (const userId of idleUserIdsToNudge) {
+    const settings = getUserSettings(userId);
+    if (!settings.enable_idle_nudges || isQuietHours(settings)) continue;
+
     const userSubs = subsByUser[userId] || [];
     if (userSubs.length === 0) continue;
 
