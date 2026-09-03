@@ -444,8 +444,8 @@ export function SettingsView() {
           {/* Smart Controls Division */}
           <div className="pt-2 space-y-4 border-t border-border/60">
             {/* Daily Flexible Nudge Cap */}
-            <div className="flex items-center justify-between p-4 bg-muted/40 border border-border rounded-xl">
-              <div className="space-y-0.5 pr-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-muted/40 border border-border rounded-xl">
+              <div className="flex-1 min-w-0 space-y-0.5 pr-2">
                 <Label
                   htmlFor="maxFlexibleNudges"
                   className="text-sm font-semibold block text-foreground"
@@ -468,7 +468,7 @@ export function SettingsView() {
                     max_flexible_nudges_per_day: val,
                   });
                 }}
-                className="bg-background border border-border text-foreground text-xs font-semibold rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+                className="shrink-0 bg-background border border-border text-foreground text-xs font-semibold rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
               >
                 <option value={1}>1 / day (Minimal)</option>
                 <option value={2}>2 / day (Balanced)</option>
