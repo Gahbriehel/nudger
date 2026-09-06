@@ -3,6 +3,7 @@ import { Poppins, Inter } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "sonner";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
+import { AnnouncementModal } from "@/components/AnnouncementModal";
 import "./globals.css";
 
 const defaultUrl = process.env.VERCEL_URL
@@ -66,6 +67,7 @@ export default function RootLayout({
           {children}
           <Toaster richColors closeButton position="top-right" />
           <ServiceWorkerRegister />
+          <AnnouncementModal />
         </ThemeProvider>
       </body>
     </html>
