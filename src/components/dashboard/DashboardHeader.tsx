@@ -8,9 +8,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 interface DashboardHeaderProps {
-  activeTab?: "dashboard" | "tasks" | "nudgelist" | "settings";
+  activeTab?: "dashboard" | "tasks" | "nudgelist" | "reports" | "settings";
   setActiveTab?: (
-    tab: "dashboard" | "tasks" | "nudgelist" | "settings",
+    tab: "dashboard" | "tasks" | "nudgelist" | "reports" | "settings",
   ) => void;
 }
 
@@ -26,9 +26,11 @@ export function DashboardHeader({ activeTab }: DashboardHeaderProps) {
         ? "tasks"
         : pathname.startsWith("/nudgelist")
           ? "nudgelist"
-          : pathname.startsWith("/settings")
-            ? "settings"
-            : "dashboard");
+          : pathname.startsWith("/reports")
+            ? "reports"
+            : pathname.startsWith("/settings")
+              ? "settings"
+              : "dashboard");
 
   return (
     <nav className="w-full border-b border-border bg-background/80 backdrop-blur-md sticky top-0 z-50">
@@ -94,6 +96,17 @@ export function DashboardHeader({ activeTab }: DashboardHeaderProps) {
             Nudgelist
           </Link>
           <Link
+            href="/reports"
+            className={cn(
+              "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200",
+              computedActiveTab === "reports"
+                ? "bg-foreground text-background font-bold"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted",
+            )}
+          >
+            Reports
+          </Link>
+          <Link
             href="/settings"
             className={cn(
               "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200",
@@ -132,7 +145,7 @@ export function DashboardHeader({ activeTab }: DashboardHeaderProps) {
         <Link
           href="/"
           className={cn(
-            "text-[10px] font-semibold py-1.5 px-3 rounded-md transition-all",
+            "text-[10px] font-semibold py-1.5 px-2.5 rounded-md transition-all",
             computedActiveTab === "dashboard"
               ? "bg-foreground text-background font-bold"
               : "text-muted-foreground",
@@ -143,7 +156,7 @@ export function DashboardHeader({ activeTab }: DashboardHeaderProps) {
         <Link
           href="/tasks"
           className={cn(
-            "text-[10px] font-semibold py-1.5 px-3 rounded-md transition-all",
+            "text-[10px] font-semibold py-1.5 px-2.5 rounded-md transition-all",
             computedActiveTab === "tasks"
               ? "bg-foreground text-background font-bold"
               : "text-muted-foreground",
@@ -154,7 +167,7 @@ export function DashboardHeader({ activeTab }: DashboardHeaderProps) {
         <Link
           href="/nudgelist"
           className={cn(
-            "text-[10px] font-semibold py-1.5 px-3 rounded-md transition-all",
+            "text-[10px] font-semibold py-1.5 px-2.5 rounded-md transition-all",
             computedActiveTab === "nudgelist"
               ? "bg-foreground text-background font-bold"
               : "text-muted-foreground",
@@ -163,9 +176,20 @@ export function DashboardHeader({ activeTab }: DashboardHeaderProps) {
           Nudgelist
         </Link>
         <Link
+          href="/reports"
+          className={cn(
+            "text-[10px] font-semibold py-1.5 px-2.5 rounded-md transition-all",
+            computedActiveTab === "reports"
+              ? "bg-foreground text-background font-bold"
+              : "text-muted-foreground",
+          )}
+        >
+          Reports
+        </Link>
+        <Link
           href="/settings"
           className={cn(
-            "text-[10px] font-semibold py-1.5 px-3 rounded-md transition-all",
+            "text-[10px] font-semibold py-1.5 px-2.5 rounded-md transition-all",
             computedActiveTab === "settings"
               ? "bg-foreground text-background font-bold"
               : "text-muted-foreground",

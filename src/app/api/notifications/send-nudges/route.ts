@@ -19,6 +19,10 @@ interface UserSettingsRecord {
   quiet_hours_end: string;
   flexible_nudges_count_today: number;
   last_nudge_date: string | null;
+  enable_weekly_report?: boolean;
+  enable_monthly_report?: boolean;
+  last_weekly_report_date?: string | null;
+  last_monthly_report_date?: string | null;
 }
 
 // Initialize web-push VAPID details
@@ -56,6 +60,133 @@ function isQuietHours(
   } else {
     return currentMinutes >= startMinutes || currentMinutes < endMinutes;
   }
+}
+
+async function processReportDigests(
+  supabase: ReturnType<typeof createAdminClient>,
+  nowDate: Date = new Date(),
+): Promise<number> {
+  const isSundayEvening = nowDate.getDay() === 0 && nowDate.getHours() >= 19;
+  const isFirstOfMonthMorning =
+    nowDate.getDate() === 1 && nowDate.getHours() >= 9;
+
+  if (!isSundayEvening && !isFirstOfMonthMorning) {
+    return 0;
+  }
+
+  const todayStr = nowDate.toISOString().split("T")[0];
+
+  // Fetch all push subscriptions
+  const { data: subs, error: subsError } = await supabase
+    .from("push_subscriptions")
+    .select("*");
+
+  if (subsError || !subs || subs.length === 0) {
+    return 0;
+  }
+
+  // Group by user_id
+  const subsByUser: Record<string, PushSubscriptionRecord[]> = {};
+  subs.forEach((sub: PushSubscriptionRecord) => {
+    if (!subsByUser[sub.user_id]) {
+      subsByUser[sub.user_id] = [];
+    }
+    subsByUser[sub.user_id].push(sub);
+  });
+
+  const userIds = Object.keys(subsByUser);
+  const { data: settingsList } = await supabase
+    .from("user_settings")
+    .select("*")
+    .in("user_id", userIds);
+
+  const settingsMap: Record<string, UserSettingsRecord> = {};
+  settingsList?.forEach((s: UserSettingsRecord) => {
+    settingsMap[s.user_id] = s;
+  });
+
+  let reportSentCount = 0;
+
+  for (const userId of userIds) {
+    const settings = settingsMap[userId];
+    if (settings && isQuietHours(settings, nowDate)) {
+      continue;
+    }
+
+    const userSubs = subsByUser[userId] || [];
+    if (userSubs.length === 0) continue;
+
+    if (
+      isSundayEvening &&
+      (!settings || settings.enable_weekly_report !== false) &&
+      settings?.last_weekly_report_date !== todayStr
+    ) {
+      const payload = JSON.stringify({
+        title: "Weekly Performance Digest 📊",
+        body: "Your weekly productivity review is ready! See your completion rate and habit consistency score.",
+        data: { url: "/reports?period=weekly" },
+      });
+
+      for (const sub of userSubs) {
+        try {
+          await webpush.sendNotification(sub.subscription, payload);
+          reportSentCount++;
+        } catch (err: unknown) {
+          console.error(`Failed to send weekly report push to ${sub.id}:`, err);
+          const statusCode = (err as { statusCode?: number })?.statusCode;
+          if (statusCode === 410 || statusCode === 404) {
+            await supabase.from("push_subscriptions").delete().eq("id", sub.id);
+          }
+        }
+      }
+
+      await supabase.from("user_settings").upsert(
+        {
+          user_id: userId,
+          last_weekly_report_date: todayStr,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id" },
+      );
+    } else if (
+      isFirstOfMonthMorning &&
+      (!settings || settings.enable_monthly_report !== false) &&
+      settings?.last_monthly_report_date !== todayStr
+    ) {
+      const payload = JSON.stringify({
+        title: "Monthly Productivity Review 🗓️",
+        body: "Your monthly summary is ready. Review your milestone accomplishments and cue impact.",
+        data: { url: "/reports?period=monthly" },
+      });
+
+      for (const sub of userSubs) {
+        try {
+          await webpush.sendNotification(sub.subscription, payload);
+          reportSentCount++;
+        } catch (err: unknown) {
+          console.error(
+            `Failed to send monthly report push to ${sub.id}:`,
+            err,
+          );
+          const statusCode = (err as { statusCode?: number })?.statusCode;
+          if (statusCode === 410 || statusCode === 404) {
+            await supabase.from("push_subscriptions").delete().eq("id", sub.id);
+          }
+        }
+      }
+
+      await supabase.from("user_settings").upsert(
+        {
+          user_id: userId,
+          last_monthly_report_date: todayStr,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id" },
+      );
+    }
+  }
+
+  return reportSentCount;
 }
 
 async function processNudges() {
@@ -165,9 +296,13 @@ async function processNudges() {
   );
 
   if (allUserIds.length === 0) {
+    const reportSent = await processReportDigests(supabase);
     return {
-      sentCount: 0,
-      message: "No pending reminders, due dates, or idle nudges at this time.",
+      sentCount: reportSent,
+      message:
+        reportSent > 0
+          ? `Dispatched ${reportSent} report digest notifications successfully.`
+          : "No pending reminders, due dates, idle nudges, or report digests at this time.",
     };
   }
 
@@ -481,6 +616,9 @@ async function processNudges() {
       .update({ last_idle_nudge_at: new Date().toISOString() })
       .eq("user_id", userId);
   }
+
+  const reportSent = await processReportDigests(supabase);
+  sentCount += reportSent;
 
   return {
     sentCount,

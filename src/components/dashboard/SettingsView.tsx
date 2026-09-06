@@ -46,6 +46,8 @@ export function SettingsView() {
   const [quietHoursEnabled, setQuietHoursEnabled] = useState(false);
   const [quietHoursStart, setQuietHoursStart] = useState("22:00");
   const [quietHoursEnd, setQuietHoursEnd] = useState("07:00");
+  const [enableWeeklyReport, setEnableWeeklyReport] = useState(true);
+  const [enableMonthlyReport, setEnableMonthlyReport] = useState(true);
   const [isLoadingSettings, setIsLoadingSettings] = useState(true);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
 
@@ -85,6 +87,10 @@ export function SettingsView() {
           if (data.quiet_hours_start)
             setQuietHoursStart(data.quiet_hours_start);
           if (data.quiet_hours_end) setQuietHoursEnd(data.quiet_hours_end);
+          if (data.enable_weekly_report !== undefined)
+            setEnableWeeklyReport(data.enable_weekly_report);
+          if (data.enable_monthly_report !== undefined)
+            setEnableMonthlyReport(data.enable_monthly_report);
         }
       })
       .catch((err) => console.error("Failed to load user settings:", err))
@@ -99,6 +105,8 @@ export function SettingsView() {
       quiet_hours_enabled: boolean;
       quiet_hours_start: string;
       quiet_hours_end: string;
+      enable_weekly_report: boolean;
+      enable_monthly_report: boolean;
     }>,
   ) => {
     setIsSavingSettings(true);
@@ -625,6 +633,74 @@ export function SettingsView() {
                 <span
                   className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-background shadow ring-0 transition duration-200 ease-in-out ${
                     enableIdleNudges ? "translate-x-5" : "translate-x-0"
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Weekly Report Digest Toggle */}
+            <div className="flex items-center justify-between p-4 bg-muted/40 border border-border rounded-xl">
+              <div className="space-y-0.5 pr-4">
+                <span className="text-sm font-semibold block text-foreground">
+                  Weekly Performance Digest 📊
+                </span>
+                <span className="text-[11px] text-muted-foreground leading-normal block">
+                  Receive a weekly push digest every Sunday evening with your
+                  task completion velocity and habit consistency score.
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const nextVal = !enableWeeklyReport;
+                  setEnableWeeklyReport(nextVal);
+                  handleSaveNotificationSettings({
+                    enable_weekly_report: nextVal,
+                  });
+                }}
+                disabled={isLoadingSettings || isSavingSettings}
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                  enableWeeklyReport ? "bg-primary" : "bg-input"
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-background shadow ring-0 transition duration-200 ease-in-out ${
+                    enableWeeklyReport ? "translate-x-5" : "translate-x-0"
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Monthly Report Digest Toggle */}
+            <div className="flex items-center justify-between p-4 bg-muted/40 border border-border rounded-xl">
+              <div className="space-y-0.5 pr-4">
+                <span className="text-sm font-semibold block text-foreground">
+                  Monthly Productivity Review 🗓️
+                </span>
+                <span className="text-[11px] text-muted-foreground leading-normal block">
+                  Receive a summary on the 1st of each month highlighting your
+                  monthly milestone completions and cognitive cue impact.
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const nextVal = !enableMonthlyReport;
+                  setEnableMonthlyReport(nextVal);
+                  handleSaveNotificationSettings({
+                    enable_monthly_report: nextVal,
+                  });
+                }}
+                disabled={isLoadingSettings || isSavingSettings}
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                  enableMonthlyReport ? "bg-primary" : "bg-input"
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-background shadow ring-0 transition duration-200 ease-in-out ${
+                    enableMonthlyReport ? "translate-x-5" : "translate-x-0"
                   }`}
                 />
               </button>

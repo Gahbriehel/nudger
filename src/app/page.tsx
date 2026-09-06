@@ -147,7 +147,7 @@ export default function HomePage() {
         </div>
 
         {/* Action buttons */}
-        <div className="flex gap-3 items-center">
+        <div className="flex gap-3 items-center flex-wrap">
           <Button
             onClick={() => setShowCreateModal(true)}
             className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold h-10 px-5 rounded-lg text-xs"
@@ -160,6 +160,27 @@ export default function HomePage() {
               className="font-semibold h-10 px-5 rounded-lg text-xs"
             >
               Review Nudgelist
+            </Button>
+          </Link>
+          <Link href="/reports">
+            <Button
+              variant="outline"
+              className="font-semibold h-10 px-5 rounded-lg text-xs flex items-center gap-1.5"
+            >
+              <svg
+                className="w-3.5 h-3.5 text-brand-indigo"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                />
+              </svg>
+              Weekly & Monthly Reports
             </Button>
           </Link>
           <button
@@ -285,6 +306,46 @@ export default function HomePage() {
               </div>
             )}
           </div>
+        </div>
+
+        {/* Weekly & Monthly Reports Teaser */}
+        <div className="border border-border/80 bg-gradient-to-r from-brand-indigo/10 via-card to-brand-blue/10 p-5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+          <div className="flex items-center gap-3.5">
+            <div className="p-3 rounded-2xl bg-brand-indigo/15 text-brand-indigo shrink-0">
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                />
+              </svg>
+            </div>
+            <div className="space-y-0.5">
+              <h3 className="text-sm font-bold text-foreground">
+                Weekly & Monthly Productivity Reports
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Track completion velocity, routine adherence, and cognitive cue
+                impact with exportable summaries.
+              </p>
+            </div>
+          </div>
+
+          <Link href="/reports" className="shrink-0">
+            <Button
+              variant="outline"
+              className="w-full sm:w-auto text-xs font-semibold h-9 rounded-xl gap-2 border-brand-indigo/30 hover:bg-brand-indigo/10 text-brand-indigo"
+            >
+              <span>View Analytics</span>
+              <span>&rarr;</span>
+            </Button>
+          </Link>
         </div>
       </div>
     </AuthenticatedLayout>

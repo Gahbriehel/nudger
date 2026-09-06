@@ -79,7 +79,82 @@ export interface UserSettings {
   quiet_hours_end: string;
   flexible_nudges_count_today: number;
   last_nudge_date: string | null;
+  enable_weekly_report?: boolean;
+  enable_monthly_report?: boolean;
+  last_weekly_report_date?: string | null;
+  last_monthly_report_date?: string | null;
   updated_at: string;
+}
+
+export type ReportPeriod = "weekly" | "monthly";
+
+export interface ReportTimeframe {
+  period: ReportPeriod;
+  startDate: string; // ISO string
+  endDate: string; // ISO string
+  label: string; // e.g. "Aug 31 – Sep 6, 2026" or "August 2026"
+  subLabel: string; // e.g. "Week 36" or "Monthly Review"
+  offset: number;
+}
+
+export interface DailyActivityPoint {
+  date: string; // yyyy-MM-dd
+  dayLabel: string; // "Mon", "Tue", etc.
+  fullDateLabel: string; // "Sep 1, 2026"
+  completedCount: number;
+  skippedCount: number;
+  totalActionCount: number;
+}
+
+export interface ReportTagSummary {
+  name: string;
+  count: number;
+  percentage: number;
+}
+
+export interface ReportTaskTypeSummary {
+  type: TaskType;
+  label: string;
+  completed: number;
+  percentage: number;
+}
+
+export interface CompletedReportItem {
+  id: string;
+  taskId: string;
+  title: string;
+  taskType: TaskType;
+  completedAt: string;
+  hasMemoryCue: boolean;
+  cueContent?: string;
+  tags: string[];
+  subtasksCompleted: number;
+  subtasksTotal: number;
+}
+
+export interface ReportData {
+  timeframe: ReportTimeframe;
+  metrics: {
+    totalCompleted: number;
+    totalScheduled: number;
+    totalSkipped: number;
+    completionRate: number; // 0-100
+    completionRateDelta: number | null; // e.g. +12 or -5 vs previous period
+    totalSubtasksCompleted: number;
+    recurringAdherenceRate: number; // 0-100
+    // Cognitive Cue Impact
+    cueCompletionRate: number; // 0-100
+    nonCueCompletionRate: number; // 0-100
+    cueImpactDelta: number; // difference in percentage points (+25%)
+    tasksWithCuesCount: number;
+    tasksWithoutCuesCount: number;
+    mostProductiveDay: string | null; // e.g. "Wednesday"
+    streakDays: number;
+  };
+  dailyActivity: DailyActivityPoint[];
+  taskTypeBreakdown: ReportTaskTypeSummary[];
+  topTags: ReportTagSummary[];
+  completedItems: CompletedReportItem[];
 }
 
 // Supabase Database Type Helpers

@@ -37,6 +37,8 @@ export async function GET() {
       quiet_hours_end: "07:00",
       flexible_nudges_count_today: 0,
       last_nudge_date: new Date().toISOString().split("T")[0],
+      enable_weekly_report: true,
+      enable_monthly_report: true,
     };
 
     return NextResponse.json(settings || defaultSettings);
@@ -67,6 +69,8 @@ export async function POST(request: Request) {
       quiet_hours_enabled,
       quiet_hours_start,
       quiet_hours_end,
+      enable_weekly_report,
+      enable_monthly_report,
     } = body;
 
     const payload = {
@@ -85,6 +89,12 @@ export async function POST(request: Request) {
       }),
       ...(quiet_hours_start !== undefined && { quiet_hours_start }),
       ...(quiet_hours_end !== undefined && { quiet_hours_end }),
+      ...(enable_weekly_report !== undefined && {
+        enable_weekly_report: Boolean(enable_weekly_report),
+      }),
+      ...(enable_monthly_report !== undefined && {
+        enable_monthly_report: Boolean(enable_monthly_report),
+      }),
       updated_at: new Date().toISOString(),
     };
 
