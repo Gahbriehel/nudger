@@ -149,10 +149,16 @@ async function processReportDigests(
             await webpush.sendNotification(sub.subscription, payload);
             reportSentCount++;
           } catch (err: unknown) {
-            console.error(`Failed to send weekly report push to ${sub.id}:`, err);
+            console.error(
+              `Failed to send weekly report push to ${sub.id}:`,
+              err,
+            );
             const statusCode = (err as { statusCode?: number })?.statusCode;
             if (statusCode === 410 || statusCode === 404) {
-              await supabase.from("push_subscriptions").delete().eq("id", sub.id);
+              await supabase
+                .from("push_subscriptions")
+                .delete()
+                .eq("id", sub.id);
             }
           }
         }
@@ -196,7 +202,10 @@ async function processReportDigests(
             );
             const statusCode = (err as { statusCode?: number })?.statusCode;
             if (statusCode === 410 || statusCode === 404) {
-              await supabase.from("push_subscriptions").delete().eq("id", sub.id);
+              await supabase
+                .from("push_subscriptions")
+                .delete()
+                .eq("id", sub.id);
             }
           }
         }
