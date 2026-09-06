@@ -121,26 +121,9 @@ async function processReportDigests(
       (!settings || settings.enable_weekly_report !== false) &&
       settings?.last_weekly_report_date !== todayStr
     ) {
-      const payload = JSON.stringify({
-        title: "Weekly Performance Digest 📊",
-        body: "Your weekly productivity review is ready! See your completion rate and habit consistency score.",
-        data: { url: "/reports?period=weekly" },
-      });
-
-      for (const sub of userSubs) {
-        try {
-          await webpush.sendNotification(sub.subscription, payload);
-          reportSentCount++;
-        } catch (err: unknown) {
-          console.error(`Failed to send weekly report push to ${sub.id}:`, err);
-          const statusCode = (err as { statusCode?: number })?.statusCode;
-          if (statusCode === 410 || statusCode === 404) {
-            await supabase.from("push_subscriptions").delete().eq("id", sub.id);
-          }
-        }
-      }
-
-      await supabase.from("user_settings").upsert(
+      // Claim the day before sending so a failed write can't cause a resend
+      // on every subsequent cron tick within this multi-hour eligibility window.
+      const { error: markError } = await supabase.from("user_settings").upsert(
         {
           user_id: userId,
           last_weekly_report_date: todayStr,
@@ -148,34 +131,40 @@ async function processReportDigests(
         },
         { onConflict: "user_id" },
       );
+
+      if (markError) {
+        console.error(
+          `Failed to mark weekly report sent for user ${userId}:`,
+          markError,
+        );
+      } else {
+        const payload = JSON.stringify({
+          title: "Weekly Performance Digest 📊",
+          body: "Your weekly productivity review is ready! See your completion rate and habit consistency score.",
+          data: { url: "/reports?period=weekly" },
+        });
+
+        for (const sub of userSubs) {
+          try {
+            await webpush.sendNotification(sub.subscription, payload);
+            reportSentCount++;
+          } catch (err: unknown) {
+            console.error(`Failed to send weekly report push to ${sub.id}:`, err);
+            const statusCode = (err as { statusCode?: number })?.statusCode;
+            if (statusCode === 410 || statusCode === 404) {
+              await supabase.from("push_subscriptions").delete().eq("id", sub.id);
+            }
+          }
+        }
+      }
     } else if (
       isFirstOfMonthMorning &&
       (!settings || settings.enable_monthly_report !== false) &&
       settings?.last_monthly_report_date !== todayStr
     ) {
-      const payload = JSON.stringify({
-        title: "Monthly Productivity Review 🗓️",
-        body: "Your monthly summary is ready. Review your milestone accomplishments and cue impact.",
-        data: { url: "/reports?period=monthly" },
-      });
-
-      for (const sub of userSubs) {
-        try {
-          await webpush.sendNotification(sub.subscription, payload);
-          reportSentCount++;
-        } catch (err: unknown) {
-          console.error(
-            `Failed to send monthly report push to ${sub.id}:`,
-            err,
-          );
-          const statusCode = (err as { statusCode?: number })?.statusCode;
-          if (statusCode === 410 || statusCode === 404) {
-            await supabase.from("push_subscriptions").delete().eq("id", sub.id);
-          }
-        }
-      }
-
-      await supabase.from("user_settings").upsert(
+      // Claim the day before sending so a failed write can't cause a resend
+      // on every subsequent cron tick within this multi-hour eligibility window.
+      const { error: markError } = await supabase.from("user_settings").upsert(
         {
           user_id: userId,
           last_monthly_report_date: todayStr,
@@ -183,6 +172,35 @@ async function processReportDigests(
         },
         { onConflict: "user_id" },
       );
+
+      if (markError) {
+        console.error(
+          `Failed to mark monthly report sent for user ${userId}:`,
+          markError,
+        );
+      } else {
+        const payload = JSON.stringify({
+          title: "Monthly Productivity Review 🗓️",
+          body: "Your monthly summary is ready. Review your milestone accomplishments and cue impact.",
+          data: { url: "/reports?period=monthly" },
+        });
+
+        for (const sub of userSubs) {
+          try {
+            await webpush.sendNotification(sub.subscription, payload);
+            reportSentCount++;
+          } catch (err: unknown) {
+            console.error(
+              `Failed to send monthly report push to ${sub.id}:`,
+              err,
+            );
+            const statusCode = (err as { statusCode?: number })?.statusCode;
+            if (statusCode === 410 || statusCode === 404) {
+              await supabase.from("push_subscriptions").delete().eq("id", sub.id);
+            }
+          }
+        }
+      }
     }
   }
 
