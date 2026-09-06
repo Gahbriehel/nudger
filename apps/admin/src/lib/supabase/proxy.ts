@@ -40,6 +40,29 @@ export async function updateSession(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
 
+  const redirectWithCookies = (destinationUrl: URL) => {
+    const redirectResponse = NextResponse.redirect(destinationUrl);
+    supabaseResponse.cookies.getAll().forEach((c) => {
+      redirectResponse.cookies.set(c.name, c.value, c);
+    });
+    return redirectResponse;
+  };
+
+  // If user is already logged in as admin and visits login page, redirect to dashboard
+  if (user && pathname.startsWith("/login")) {
+    const { data: roleData, error } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (!error && roleData?.role === "admin") {
+      const url = request.nextUrl.clone();
+      url.pathname = "/";
+      return redirectWithCookies(url);
+    }
+  }
+
   // Unprotected routes
   const isPublicRoute =
     pathname.startsWith("/login") ||
@@ -49,7 +72,7 @@ export async function updateSession(request: NextRequest) {
   if (!user && !isPublicRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    return NextResponse.redirect(url);
+    return redirectWithCookies(url);
   }
 
   // If user is logged in, verify admin role for protected routes
@@ -63,7 +86,7 @@ export async function updateSession(request: NextRequest) {
     if (error || roleData?.role !== "admin") {
       const url = request.nextUrl.clone();
       url.pathname = "/unauthorized";
-      return NextResponse.redirect(url);
+      return redirectWithCookies(url);
     }
   }
 

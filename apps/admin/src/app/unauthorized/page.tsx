@@ -1,9 +1,28 @@
 import { ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import Image from "next/image";
 
 export default function UnauthorizedPage() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+      <div className="mb-6 flex items-center justify-center">
+        <Image
+          width={130}
+          height={34}
+          src="/images/nudger-logo-black.svg"
+          alt="Nudger"
+          className="dark:hidden block h-8 w-auto"
+          priority
+        />
+        <Image
+          width={130}
+          height={34}
+          src="/images/nudger-logo-white.svg"
+          alt="Nudger"
+          className="hidden dark:block h-8 w-auto"
+          priority
+        />
+      </div>
       <div className="w-16 h-16 rounded-full bg-destructive/10 border border-destructive/20 flex items-center justify-center text-destructive mb-6">
         <ShieldAlert className="w-8 h-8" />
       </div>
