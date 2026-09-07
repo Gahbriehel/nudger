@@ -54,7 +54,7 @@ export function AccomplishmentList({ items }: AccomplishmentListProps) {
         </div>
 
         {/* Filter controls */}
-        <div className="flex items-center gap-2">
+        <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:items-center">
           <div className="relative w-full sm:w-48">
             <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -68,7 +68,7 @@ export function AccomplishmentList({ items }: AccomplishmentListProps) {
           <select
             value={selectedType}
             onChange={(e) => setSelectedType(e.target.value)}
-            className="h-8 rounded-xl border border-input bg-background px-2.5 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring font-medium"
+            className="h-8 w-full rounded-xl border border-input bg-background px-2.5 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring font-medium sm:w-auto"
           >
             <option value="all">All Types</option>
             <option value="flexible">Flexible</option>

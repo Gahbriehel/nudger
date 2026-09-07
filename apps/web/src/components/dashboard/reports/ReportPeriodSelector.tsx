@@ -65,8 +65,8 @@ export function ReportPeriodSelector({
       </div>
 
       {/* Date Range Navigator */}
-      <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 w-full min-w-0 sm:w-auto justify-between sm:justify-end">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
           <Button
             variant="outline"
             size="sm"
@@ -78,9 +78,9 @@ export function ReportPeriodSelector({
             <ChevronLeft className="w-4 h-4" />
           </Button>
 
-          <div className="flex items-center gap-2 px-3 py-1 bg-muted/40 rounded-lg border border-border/40 text-xs font-medium">
+          <div className="flex min-w-0 items-center gap-2 px-3 py-1 bg-muted/40 rounded-lg border border-border/40 text-xs font-medium">
             <Calendar className="w-3.5 h-3.5 text-brand-indigo shrink-0" />
-            <span className="font-semibold text-foreground whitespace-nowrap">
+            <span className="min-w-0 truncate font-semibold text-foreground whitespace-nowrap">
               {timeframe.label}
             </span>
             <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-foreground/10 text-muted-foreground font-mono">
@@ -119,7 +119,7 @@ export function ReportPeriodSelector({
           variant="outline"
           size="sm"
           onClick={onOpenExport}
-          className="h-8 text-xs gap-1.5 rounded-lg border-border hover:bg-muted font-medium ml-auto sm:ml-2"
+          className="h-8 shrink-0 text-xs gap-1.5 rounded-lg border-border hover:bg-muted font-medium ml-auto sm:ml-2"
         >
           <Share2 className="w-3.5 h-3.5" />
           <span className="hidden sm:inline">Export Summary</span>
