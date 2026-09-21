@@ -440,7 +440,10 @@ export const taskService = {
   async toggleSubtask(subtaskId: string, completed: boolean): Promise<void> {
     const { error } = await supabase
       .from("subtasks")
-      .update({ completed })
+      .update({
+        completed,
+        completed_at: completed ? new Date().toISOString() : null,
+      })
       .eq("id", subtaskId);
     if (error) throw error;
   },

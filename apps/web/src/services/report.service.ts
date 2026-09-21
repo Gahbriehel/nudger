@@ -231,6 +231,7 @@ export const reportService = {
         completedItemsMap.set(o.id, {
           id: o.id,
           taskId: o.task_id,
+          itemType: "task",
           title: task?.title || "Completed Task",
           taskType: task?.task_type || "scheduled",
           completedAt: o.action_date,
@@ -265,6 +266,7 @@ export const reportService = {
             completedItemsMap.set(`task-${task.id}`, {
               id: `task-${task.id}`,
               taskId: task.id,
+              itemType: "task",
               title: task.title,
               taskType: task.task_type,
               completedAt: compDate,
@@ -279,7 +281,50 @@ export const reportService = {
       }
     });
 
-    const completedItems = Array.from(completedItemsMap.values()).sort(
+    const completedTaskItems = Array.from(completedItemsMap.values());
+
+    // 4b. Build completed subtask / checklist items list across ALL user tasks
+    const completedSubtaskItems: CompletedReportItem[] = [];
+
+    tasks.forEach((task) => {
+      const subtasks = task.subtasks || [];
+      subtasks.forEach((subtask) => {
+        if (!subtask.completed) return;
+
+        // Subtask completion timestamp
+        const subCompDate =
+          subtask.completed_at ||
+          (task.completed_at || task.last_completed_at
+            ? task.completed_at || task.last_completed_at
+            : subtask.created_at);
+
+        if (subCompDate) {
+          const subCompTime = new Date(subCompDate).getTime();
+          if (subCompTime >= startMs && subCompTime <= endMs) {
+            completedSubtaskItems.push({
+              id: `subtask-${subtask.id}`,
+              taskId: task.id,
+              itemType: "subtask",
+              title: subtask.title,
+              parentTaskId: task.id,
+              parentTaskTitle: task.title,
+              taskType: task.task_type,
+              completedAt: subCompDate,
+              hasMemoryCue: (task.memory_cues?.length || 0) > 0,
+              cueContent: task.memory_cues?.[0]?.content,
+              tags: (task.tags || []).map((t) => t.name),
+              subtasksCompleted: 1,
+              subtasksTotal: 1,
+            });
+          }
+        }
+      });
+    });
+
+    const completedItems = [
+      ...completedTaskItems,
+      ...completedSubtaskItems,
+    ].sort(
       (a, b) =>
         new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime(),
     );
@@ -289,7 +334,12 @@ export const reportService = {
       (o) => o.status === "skipped",
     ).length;
 
-    // 6. Calculate total scheduled in timeframe
+    // 6. Calculate counts and completion rates
+    const totalTasksCompleted = completedTaskItems.length;
+    const totalSubtasksCompleted = completedSubtaskItems.length;
+    const totalCompletions = totalTasksCompleted + totalSubtasksCompleted;
+    const totalCompleted = totalTasksCompleted; // Kept for Option B (task completion rate)
+
     // Scheduled tasks whose due_date falls in the window + recurring occurrences
     const scheduledInWindow = tasks.filter((t) => {
       if (!t.due_date) return false;
@@ -297,11 +347,10 @@ export const reportService = {
       return dueTime >= startMs && dueTime <= endMs;
     }).length;
 
-    const totalCompleted = completedItems.length;
     const totalActions = totalCompleted + totalSkipped;
     const totalScheduled = Math.max(totalActions, scheduledInWindow);
 
-    // Completion Rate %
+    // Task Completion Rate % (Option B)
     const completionRate =
       totalScheduled > 0
         ? Math.min(100, Math.round((totalCompleted / totalScheduled) * 100))
@@ -322,12 +371,6 @@ export const reportService = {
 
     const completionRateDelta =
       prevCompletionRate !== null ? completionRate - prevCompletionRate : null;
-
-    // 7. Subtasks completed count
-    const totalSubtasksCompleted = completedItems.reduce(
-      (acc, item) => acc + item.subtasksCompleted,
-      0,
-    );
 
     // 8. Recurring Adherence Rate
     const recurringOccurrences = currentOccurrences.filter((o) => {
@@ -389,12 +432,24 @@ export const reportService = {
       startDate.getDate(),
     );
 
-    const dayCompletionsMap = new Map<string, number>();
+    const dayTaskCompletionsMap = new Map<string, number>();
+    const daySubtaskCompletionsMap = new Map<string, number>();
     const daySkippedMap = new Map<string, number>();
 
-    completedItems.forEach((item) => {
+    completedTaskItems.forEach((item) => {
       const dayKey = format(new Date(item.completedAt), "yyyy-MM-dd");
-      dayCompletionsMap.set(dayKey, (dayCompletionsMap.get(dayKey) || 0) + 1);
+      dayTaskCompletionsMap.set(
+        dayKey,
+        (dayTaskCompletionsMap.get(dayKey) || 0) + 1,
+      );
+    });
+
+    completedSubtaskItems.forEach((item) => {
+      const dayKey = format(new Date(item.completedAt), "yyyy-MM-dd");
+      daySubtaskCompletionsMap.set(
+        dayKey,
+        (daySubtaskCompletionsMap.get(dayKey) || 0) + 1,
+      );
     });
 
     currentOccurrences
@@ -407,7 +462,9 @@ export const reportService = {
     while (dayCursor <= endDate) {
       const dateKey = format(dayCursor, "yyyy-MM-dd");
       const dayIndex = dayCursor.getDay();
-      const completedCount = dayCompletionsMap.get(dateKey) || 0;
+      const taskCompletedCount = dayTaskCompletionsMap.get(dateKey) || 0;
+      const subtaskCompletedCount = daySubtaskCompletionsMap.get(dateKey) || 0;
+      const completedCount = taskCompletedCount + subtaskCompletedCount;
       const skippedCount = daySkippedMap.get(dateKey) || 0;
 
       dailyActivity.push({
@@ -415,6 +472,8 @@ export const reportService = {
         dayLabel: SHORT_DAY_NAMES[dayIndex],
         fullDateLabel: format(dayCursor, "MMM d, yyyy"),
         completedCount,
+        taskCompletedCount,
+        subtaskCompletedCount,
         skippedCount,
         totalActionCount: completedCount + skippedCount,
       });
@@ -445,7 +504,7 @@ export const reportService = {
       }
     });
 
-    // 13. Task Type Breakdown
+    // 13. Task Type Breakdown (across all completed tasks and checklist items)
     const typeCounts: Record<string, number> = {
       flexible: 0,
       scheduled: 0,
@@ -465,8 +524,8 @@ export const reportService = {
         label: "Flexible Tasks",
         completed: typeCounts.flexible,
         percentage:
-          totalCompleted > 0
-            ? Math.round((typeCounts.flexible / totalCompleted) * 100)
+          totalCompletions > 0
+            ? Math.round((typeCounts.flexible / totalCompletions) * 100)
             : 0,
       },
       {
@@ -474,8 +533,8 @@ export const reportService = {
         label: "Scheduled Tasks",
         completed: typeCounts.scheduled,
         percentage:
-          totalCompleted > 0
-            ? Math.round((typeCounts.scheduled / totalCompleted) * 100)
+          totalCompletions > 0
+            ? Math.round((typeCounts.scheduled / totalCompletions) * 100)
             : 0,
       },
       {
@@ -483,8 +542,8 @@ export const reportService = {
         label: "Recurring Tasks",
         completed: typeCounts.recurring,
         percentage:
-          totalCompleted > 0
-            ? Math.round((typeCounts.recurring / totalCompleted) * 100)
+          totalCompletions > 0
+            ? Math.round((typeCounts.recurring / totalCompletions) * 100)
             : 0,
       },
     ];
@@ -513,6 +572,8 @@ export const reportService = {
       timeframe,
       metrics: {
         totalCompleted,
+        totalTasksCompleted,
+        totalCompletions,
         totalScheduled,
         totalSkipped,
         completionRate,

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   CheckCircle,
+  CheckSquare,
   Search,
   Sparkles,
   ListOrdered,
@@ -20,10 +21,19 @@ interface AccomplishmentListProps {
 export function AccomplishmentList({ items }: AccomplishmentListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedType, setSelectedType] = useState<string>("all");
+  const [selectedItemCategory, setSelectedItemCategory] =
+    useState<string>("all");
+
+  const taskCount = items.filter((i) => i.itemType !== "subtask").length;
+  const subtaskCount = items.filter((i) => i.itemType === "subtask").length;
 
   const filteredItems = items.filter((item) => {
     const matchesSearch =
       item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.parentTaskTitle &&
+        item.parentTaskTitle
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase())) ||
       item.tags.some((t) =>
         t.toLowerCase().includes(searchTerm.toLowerCase()),
       ) ||
@@ -33,7 +43,12 @@ export function AccomplishmentList({ items }: AccomplishmentListProps) {
     const matchesType =
       selectedType === "all" || item.taskType === selectedType;
 
-    return matchesSearch && matchesType;
+    const matchesCategory =
+      selectedItemCategory === "all" ||
+      (selectedItemCategory === "task" && item.itemType !== "subtask") ||
+      (selectedItemCategory === "subtask" && item.itemType === "subtask");
+
+    return matchesSearch && matchesType && matchesCategory;
   });
 
   return (
@@ -48,14 +63,15 @@ export function AccomplishmentList({ items }: AccomplishmentListProps) {
               Accomplishments Log
             </h3>
             <p className="text-xs text-muted-foreground">
-              {items.length} tasks completed during this timeframe
+              {items.length} completions during this timeframe ({taskCount}{" "}
+              tasks • {subtaskCount} checklist items)
             </p>
           </div>
         </div>
 
         {/* Filter controls */}
         <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:items-center">
-          <div className="relative w-full sm:w-48">
+          <div className="relative w-full sm:w-44">
             <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={searchTerm}
@@ -64,6 +80,16 @@ export function AccomplishmentList({ items }: AccomplishmentListProps) {
               className="pl-8 h-8 text-xs rounded-xl"
             />
           </div>
+
+          <select
+            value={selectedItemCategory}
+            onChange={(e) => setSelectedItemCategory(e.target.value)}
+            className="h-8 w-full rounded-xl border border-input bg-background px-2.5 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring font-medium sm:w-auto"
+          >
+            <option value="all">All Items</option>
+            <option value="task">Tasks Only</option>
+            <option value="subtask">Checklist Items</option>
+          </select>
 
           <select
             value={selectedType}
@@ -81,67 +107,94 @@ export function AccomplishmentList({ items }: AccomplishmentListProps) {
       {filteredItems.length === 0 ? (
         <div className="py-12 text-center text-xs text-muted-foreground">
           {items.length === 0
-            ? "No completed tasks recorded in this period."
+            ? "No completions recorded in this period."
             : "No items match your search filter."}
         </div>
       ) : (
         <div className="divide-y divide-border/40">
-          {filteredItems.map((item) => (
-            <div
-              key={item.id}
-              className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 hover:bg-muted/20 px-2 rounded-xl transition-colors"
-            >
-              <div className="space-y-1.5 flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs font-semibold text-foreground truncate">
-                    {item.title}
-                  </span>
+          {filteredItems.map((item) => {
+            const isSubtask = item.itemType === "subtask";
+            return (
+              <div
+                key={item.id}
+                className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 hover:bg-muted/20 px-2 rounded-xl transition-colors"
+              >
+                <div className="space-y-1.5 flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {isSubtask ? (
+                      <CheckSquare className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400 shrink-0" />
+                    ) : (
+                      <CheckCircle className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    )}
 
-                  <Badge
-                    variant="outline"
-                    className="text-[10px] px-1.5 py-0 capitalize font-medium"
-                  >
-                    {item.taskType}
-                  </Badge>
-
-                  {item.subtasksTotal > 0 && (
-                    <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-md font-mono">
-                      <ListOrdered className="w-3 h-3" />
-                      {item.subtasksCompleted}/{item.subtasksTotal}
+                    <span className="text-xs font-semibold text-foreground truncate">
+                      {item.title}
                     </span>
+
+                    {isSubtask ? (
+                      <Badge
+                        variant="secondary"
+                        className="text-[10px] px-1.5 py-0 bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 font-medium"
+                      >
+                        Checklist Item
+                      </Badge>
+                    ) : (
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] px-1.5 py-0 capitalize font-medium"
+                      >
+                        {item.taskType}
+                      </Badge>
+                    )}
+
+                    {isSubtask && item.parentTaskTitle && (
+                      <span className="text-[11px] text-muted-foreground">
+                        under{" "}
+                        <span className="font-medium text-foreground/85">
+                          {item.parentTaskTitle}
+                        </span>
+                      </span>
+                    )}
+
+                    {!isSubtask && item.subtasksTotal > 0 && (
+                      <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-md font-mono">
+                        <ListOrdered className="w-3 h-3" />
+                        {item.subtasksCompleted}/{item.subtasksTotal}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Memory cue note snippet */}
+                  {item.hasMemoryCue && item.cueContent && (
+                    <div className="inline-flex items-center gap-1 text-[11px] text-brand-indigo/90 dark:text-indigo-400 bg-brand-indigo/5 px-2 py-0.5 rounded-md max-w-full truncate">
+                      <Sparkles className="w-3 h-3 shrink-0" />
+                      <span className="truncate">Cue: {item.cueContent}</span>
+                    </div>
+                  )}
+
+                  {/* Tags */}
+                  {item.tags.length > 0 && (
+                    <div className="flex items-center gap-1 flex-wrap">
+                      {item.tags.map((t) => (
+                        <span
+                          key={t}
+                          className="text-[10px] text-muted-foreground bg-muted/60 px-1.5 py-0.2 rounded"
+                        >
+                          #{t}
+                        </span>
+                      ))}
+                    </div>
                   )}
                 </div>
 
-                {/* Memory cue note snippet */}
-                {item.hasMemoryCue && item.cueContent && (
-                  <div className="inline-flex items-center gap-1 text-[11px] text-brand-indigo/90 dark:text-indigo-400 bg-brand-indigo/5 px-2 py-0.5 rounded-md max-w-full truncate">
-                    <Sparkles className="w-3 h-3 shrink-0" />
-                    <span className="truncate">Cue: {item.cueContent}</span>
-                  </div>
-                )}
-
-                {/* Tags */}
-                {item.tags.length > 0 && (
-                  <div className="flex items-center gap-1 flex-wrap">
-                    {item.tags.map((t) => (
-                      <span
-                        key={t}
-                        className="text-[10px] text-muted-foreground bg-muted/60 px-1.5 py-0.2 rounded"
-                      >
-                        #{t}
-                      </span>
-                    ))}
-                  </div>
-                )}
+                {/* Completion date */}
+                <div className="flex items-center gap-1 text-[11px] text-muted-foreground shrink-0 font-medium sm:text-right">
+                  <Calendar className="w-3 h-3 text-muted-foreground/70" />
+                  <span>{format(item.completedAt, "MMM d, h:mm a")}</span>
+                </div>
               </div>
-
-              {/* Completion date */}
-              <div className="flex items-center gap-1 text-[11px] text-muted-foreground shrink-0 font-medium sm:text-right">
-                <Calendar className="w-3 h-3 text-muted-foreground/70" />
-                <span>{format(item.completedAt, "MMM d, h:mm a")}</span>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

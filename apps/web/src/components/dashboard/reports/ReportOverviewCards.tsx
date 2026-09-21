@@ -19,10 +19,11 @@ export function ReportOverviewCards({ report }: ReportOverviewCardsProps) {
   const { metrics, timeframe } = report;
   const isWeekly = timeframe.period === "weekly";
   const numDays = isWeekly ? 7 : 30;
+  const totalItemsCompleted =
+    metrics.totalCompletions ??
+    metrics.totalCompleted + metrics.totalSubtasksCompleted;
   const dailyAverage =
-    metrics.totalCompleted > 0
-      ? (metrics.totalCompleted / numDays).toFixed(1)
-      : "0";
+    totalItemsCompleted > 0 ? (totalItemsCompleted / numDays).toFixed(1) : "0";
 
   const cards = [
     {
@@ -56,11 +57,13 @@ export function ReportOverviewCards({ report }: ReportOverviewCardsProps) {
       bg: "bg-emerald-500/10 border-emerald-500/20",
     },
     {
-      title: "Tasks Completed",
-      value: metrics.totalCompleted,
+      title: "Total Completions",
+      value: totalItemsCompleted,
       subtitle: (
         <span className="text-[11px] text-muted-foreground">
-          Avg. {dailyAverage} / day • {metrics.totalScheduled} scheduled
+          Avg. {dailyAverage} / day •{" "}
+          {metrics.totalTasksCompleted ?? metrics.totalCompleted} tasks,{" "}
+          {metrics.totalSubtasksCompleted} checklist
         </span>
       ),
       icon: Flame,

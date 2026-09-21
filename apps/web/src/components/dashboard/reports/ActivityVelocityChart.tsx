@@ -89,10 +89,19 @@ export function ActivityVelocityChart({
                 >
                   {/* Tooltip */}
                   {isHovered && (
-                    <div className="absolute -top-12 z-20 px-2.5 py-1.5 rounded-lg bg-foreground text-background text-[11px] font-semibold whitespace-nowrap shadow-lg pointer-events-none animate-in fade-in zoom-in-95 duration-150">
+                    <div className="absolute -top-14 z-20 px-2.5 py-1.5 rounded-lg bg-foreground text-background text-[11px] font-semibold whitespace-nowrap shadow-lg pointer-events-none animate-in fade-in zoom-in-95 duration-150">
                       <div className="font-bold">{point.fullDateLabel}</div>
                       <div className="text-[10px] opacity-90">
                         {point.completedCount} completed
+                        {point.completedCount > 0 &&
+                        point.taskCompletedCount !== undefined &&
+                        point.subtaskCompletedCount !== undefined ? (
+                          <span>
+                            {" "}
+                            ({point.taskCompletedCount} tasks,{" "}
+                            {point.subtaskCompletedCount} checklist)
+                          </span>
+                        ) : null}
                         {point.skippedCount > 0
                           ? ` • ${point.skippedCount} skipped`
                           : ""}

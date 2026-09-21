@@ -70,6 +70,7 @@ export interface Subtask {
   completed: boolean;
   sort_order: number;
   created_at: string;
+  completed_at?: string | null;
 }
 
 export interface Tag {
@@ -124,6 +125,8 @@ export interface DailyActivityPoint {
   dayLabel: string; // "Mon", "Tue", etc.
   fullDateLabel: string; // "Sep 1, 2026"
   completedCount: number;
+  taskCompletedCount?: number;
+  subtaskCompletedCount?: number;
   skippedCount: number;
   totalActionCount: number;
 }
@@ -152,12 +155,17 @@ export interface CompletedReportItem {
   tags: string[];
   subtasksCompleted: number;
   subtasksTotal: number;
+  itemType?: "task" | "subtask";
+  parentTaskId?: string;
+  parentTaskTitle?: string;
 }
 
 export interface ReportData {
   timeframe: ReportTimeframe;
   metrics: {
     totalCompleted: number;
+    totalTasksCompleted: number;
+    totalCompletions: number;
     totalScheduled: number;
     totalSkipped: number;
     completionRate: number; // 0-100
@@ -217,9 +225,13 @@ export type Database = {
       };
       subtasks: {
         Row: Subtask;
-        Insert: Omit<Subtask, "id" | "created_at" | "completed"> & {
+        Insert: Omit<
+          Subtask,
+          "id" | "created_at" | "completed" | "completed_at"
+        > & {
           id?: string;
           completed?: boolean;
+          completed_at?: string | null;
         };
         Update: Partial<Subtask>;
       };

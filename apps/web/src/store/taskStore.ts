@@ -62,7 +62,13 @@ export const useTaskStore = create<TaskState>((set) => ({
       tasks: state.tasks.map((t) => {
         if (t.id !== taskId) return t;
         const subtasks = t.subtasks?.map((sub) =>
-          sub.id === subtaskId ? { ...sub, completed } : sub,
+          sub.id === subtaskId
+            ? {
+                ...sub,
+                completed,
+                completed_at: completed ? new Date().toISOString() : null,
+              }
+            : sub,
         );
         return { ...t, subtasks };
       }),
