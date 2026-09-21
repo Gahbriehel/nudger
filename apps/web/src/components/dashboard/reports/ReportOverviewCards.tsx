@@ -75,9 +75,9 @@ export function ReportOverviewCards({ report }: ReportOverviewCardsProps) {
       value: `${metrics.recurringAdherenceRate}%`,
       subtitle: (
         <span className="text-[11px] text-muted-foreground">
-          {metrics.totalSkipped > 0
-            ? `${metrics.totalSkipped} occurrences skipped`
-            : "Zero occurrences skipped"}
+          {metrics.totalSkipped > 0 || metrics.totalMissed > 0
+            ? `${metrics.totalSkipped} skipped, ${metrics.totalMissed} missed`
+            : "Perfect routine adherence"}
         </span>
       ),
       icon: Repeat,

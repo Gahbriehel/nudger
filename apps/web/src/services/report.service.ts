@@ -329,9 +329,13 @@ export const reportService = {
         new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime(),
     );
 
-    // 5. Calculate skipped count
+    // 5. Calculate skipped and missed count
     const totalSkipped = currentOccurrences.filter(
       (o) => o.status === "skipped",
+    ).length;
+
+    const totalMissed = currentOccurrences.filter(
+      (o) => o.status === "missed",
     ).length;
 
     // 6. Calculate counts and completion rates
@@ -347,7 +351,7 @@ export const reportService = {
       return dueTime >= startMs && dueTime <= endMs;
     }).length;
 
-    const totalActions = totalCompleted + totalSkipped;
+    const totalActions = totalCompleted + totalSkipped + totalMissed;
     const totalScheduled = Math.max(totalActions, scheduledInWindow);
 
     // Task Completion Rate % (Option B)
@@ -363,7 +367,10 @@ export const reportService = {
     const prevSkippedCount = prevList.filter(
       (o: TaskOccurrence) => o.status === "skipped",
     ).length;
-    const prevTotal = prevCompletedCount + prevSkippedCount;
+    const prevMissedCount = prevList.filter(
+      (o: TaskOccurrence) => o.status === "missed",
+    ).length;
+    const prevTotal = prevCompletedCount + prevSkippedCount + prevMissedCount;
     const prevCompletionRate =
       prevTotal > 0
         ? Math.min(100, Math.round((prevCompletedCount / prevTotal) * 100))
@@ -435,6 +442,7 @@ export const reportService = {
     const dayTaskCompletionsMap = new Map<string, number>();
     const daySubtaskCompletionsMap = new Map<string, number>();
     const daySkippedMap = new Map<string, number>();
+    const dayMissedMap = new Map<string, number>();
 
     completedTaskItems.forEach((item) => {
       const dayKey = format(new Date(item.completedAt), "yyyy-MM-dd");
@@ -459,6 +467,13 @@ export const reportService = {
         daySkippedMap.set(dayKey, (daySkippedMap.get(dayKey) || 0) + 1);
       });
 
+    currentOccurrences
+      .filter((o) => o.status === "missed")
+      .forEach((o) => {
+        const dayKey = format(new Date(o.action_date), "yyyy-MM-dd");
+        dayMissedMap.set(dayKey, (dayMissedMap.get(dayKey) || 0) + 1);
+      });
+
     while (dayCursor <= endDate) {
       const dateKey = format(dayCursor, "yyyy-MM-dd");
       const dayIndex = dayCursor.getDay();
@@ -466,6 +481,7 @@ export const reportService = {
       const subtaskCompletedCount = daySubtaskCompletionsMap.get(dateKey) || 0;
       const completedCount = taskCompletedCount + subtaskCompletedCount;
       const skippedCount = daySkippedMap.get(dateKey) || 0;
+      const missedCount = dayMissedMap.get(dateKey) || 0;
 
       dailyActivity.push({
         date: dateKey,
@@ -475,7 +491,8 @@ export const reportService = {
         taskCompletedCount,
         subtaskCompletedCount,
         skippedCount,
-        totalActionCount: completedCount + skippedCount,
+        missedCount,
+        totalActionCount: completedCount + skippedCount + missedCount,
       });
 
       dayCursor.setDate(dayCursor.getDate() + 1);
@@ -576,6 +593,7 @@ export const reportService = {
         totalCompletions,
         totalScheduled,
         totalSkipped,
+        totalMissed,
         completionRate,
         completionRateDelta,
         totalSubtasksCompleted,

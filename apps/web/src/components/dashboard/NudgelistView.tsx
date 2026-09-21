@@ -26,6 +26,9 @@ export function NudgelistView() {
   });
   const [loading, setLoading] = useState(false);
   const [skipTaskItem, setSkipTaskItem] = useState<Task | null>(null);
+  const [skipActionType, setSkipActionType] = useState<"skipped" | "missed">(
+    "skipped",
+  );
 
   const loadNudgelist = async () => {
     setLoading(true);
@@ -165,14 +168,42 @@ export function NudgelistView() {
                 </Button>
 
                 {task.task_type === "recurring" && (
-                  <Button
-                    onClick={() => setSkipTaskItem(task)}
-                    variant="outline"
-                    className="text-xs py-1 h-8 rounded px-3 border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 flex items-center justify-center gap-1.5 md:w-auto"
-                  >
-                    <SkipForward className="w-3.5 h-3.5" />
-                    Skip
-                  </Button>
+                  <>
+                    <Button
+                      onClick={() => {
+                        setSkipActionType("skipped");
+                        setSkipTaskItem(task);
+                      }}
+                      variant="outline"
+                      className="text-xs py-1 h-8 rounded px-3 border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 flex items-center justify-center gap-1.5 md:w-auto"
+                    >
+                      <SkipForward className="w-3.5 h-3.5" />
+                      Skip
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setSkipActionType("missed");
+                        setSkipTaskItem(task);
+                      }}
+                      variant="outline"
+                      className="text-xs py-1 h-8 rounded px-3 border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 flex items-center justify-center gap-1.5 md:w-auto"
+                    >
+                      <svg
+                        className="w-3.5 h-3.5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      Missed
+                    </Button>
+                  </>
                 )}
 
                 {type === "overdue" ? (
@@ -264,6 +295,7 @@ export function NudgelistView() {
           fetchTasks();
           loadNudgelist();
         }}
+        actionType={skipActionType}
       />
     </div>
   );

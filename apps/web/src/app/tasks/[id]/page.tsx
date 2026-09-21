@@ -58,6 +58,9 @@ function TaskDetailContent() {
 
   // Skip modal state
   const [showSkipModal, setShowSkipModal] = useState(false);
+  const [skipActionType, setSkipActionType] = useState<"skipped" | "missed">(
+    "skipped",
+  );
 
   // smart completion prompt state
   const [showCompletePrompt, setShowCompletePrompt] = useState(false);
@@ -1077,14 +1080,42 @@ function TaskDetailContent() {
                   </Button>
                   {task.task_type === "recurring" &&
                     task.status !== "completed" && (
-                      <Button
-                        onClick={() => setShowSkipModal(true)}
-                        variant="outline"
-                        className="text-xs border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 py-1.5 h-8 rounded px-4 font-semibold transition-all flex items-center gap-1.5"
-                      >
-                        <SkipForward className="w-3.5 h-3.5" />
-                        Skip
-                      </Button>
+                      <>
+                        <Button
+                          onClick={() => {
+                            setSkipActionType("skipped");
+                            setShowSkipModal(true);
+                          }}
+                          variant="outline"
+                          className="text-xs border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 py-1.5 h-8 rounded px-4 font-semibold transition-all flex items-center gap-1.5"
+                        >
+                          <SkipForward className="w-3.5 h-3.5" />
+                          Skip
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setSkipActionType("missed");
+                            setShowSkipModal(true);
+                          }}
+                          variant="outline"
+                          className="text-xs border border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 py-1.5 h-8 rounded px-4 font-semibold transition-all flex items-center gap-1.5"
+                        >
+                          <svg
+                            className="w-3.5 h-3.5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                            />
+                          </svg>
+                          Missed
+                        </Button>
+                      </>
                     )}
                   {task.status !== "completed" && (
                     <Button
@@ -1107,6 +1138,7 @@ function TaskDetailContent() {
         onClose={() => setShowSkipModal(false)}
         task={task}
         onSuccess={() => loadTask()}
+        actionType={skipActionType}
       />
     </div>
   );

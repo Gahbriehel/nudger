@@ -21,7 +21,9 @@ export function ActivityVelocityChart({
   );
 
   const maxVal = Math.max(
-    ...dailyActivity.map((d) => d.completedCount + d.skippedCount),
+    ...dailyActivity.map(
+      (d) => d.completedCount + d.skippedCount + d.missedCount,
+    ),
     4, // Min scale ceiling
   );
 
@@ -104,6 +106,9 @@ export function ActivityVelocityChart({
                         ) : null}
                         {point.skippedCount > 0
                           ? ` • ${point.skippedCount} skipped`
+                          : ""}
+                        {point.missedCount > 0
+                          ? ` • ${point.missedCount} missed`
                           : ""}
                       </div>
                     </div>

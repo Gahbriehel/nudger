@@ -128,6 +128,7 @@ export interface DailyActivityPoint {
   taskCompletedCount?: number;
   subtaskCompletedCount?: number;
   skippedCount: number;
+  missedCount: number;
   totalActionCount: number;
 }
 
@@ -168,6 +169,7 @@ export interface ReportData {
     totalCompletions: number;
     totalScheduled: number;
     totalSkipped: number;
+    totalMissed: number;
     completionRate: number; // 0-100
     completionRateDelta: number | null; // e.g. +12 or -5 vs previous period
     totalSubtasksCompleted: number;

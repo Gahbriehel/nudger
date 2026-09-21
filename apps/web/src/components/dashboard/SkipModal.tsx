@@ -6,13 +6,13 @@ import { Modal } from "@/components/ui/modal";
 import { taskService } from "@/services/task.service";
 import { toast } from "sonner";
 import { SkipForward, FastForward } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 interface SkipModalProps {
   isOpen: boolean;
   onClose: () => void;
   task: Task | null;
   onSuccess: () => void;
+  actionType?: "skipped" | "missed";
 }
 
 export function SkipModal({
@@ -20,26 +20,26 @@ export function SkipModal({
   onClose,
   task,
   onSuccess,
+  actionType = "skipped",
 }: SkipModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [skipStatus, setSkipStatus] = useState<"skipped" | "missed">("skipped");
 
   if (!task) return null;
 
   const handleSkip = async (mode: "single" | "catch_up") => {
     setIsSubmitting(true);
     try {
-      await taskService.skipTask(task, mode, skipStatus);
+      await taskService.skipTask(task, mode, actionType);
       toast.success(
         mode === "catch_up"
-          ? "Caught up! Task skipped to current occurrence."
-          : "Occurrence skipped! Next due date scheduled.",
+          ? `Caught up! Task marked as ${actionType}.`
+          : `Occurrence ${actionType}! Next due date scheduled.`,
       );
       onSuccess();
       onClose();
     } catch (err) {
       console.error("Error skipping task:", err);
-      toast.error("Failed to skip task occurrence");
+      toast.error(`Failed to mark task as ${actionType}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -48,48 +48,21 @@ export function SkipModal({
   const isOverdue =
     task.due_date && new Date(task.due_date).getTime() < Date.now();
 
+  const title =
+    actionType === "skipped"
+      ? "Skip Recurring Occurrence"
+      : "Mark Occurrence as Missed";
+  const descWord = actionType === "skipped" ? "skipped" : "missed";
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Skip Recurring Occurrence"
-      description={`Choose how you'd like to handle "${task.title}". This won't count as a completed task.`}
+      title={title}
+      description={`Choose how you'd like to advance "${task.title}". This will be logged as ${descWord} and won't count as a completed task.`}
       isLoading={isSubmitting}
     >
       <div className="w-full space-y-4 py-2">
-        {/* Status Selection (Skipped vs Missed) */}
-        <div className="flex items-center justify-between p-2.5 bg-muted/40 border border-border rounded-xl">
-          <span className="text-xs font-semibold text-muted-foreground">
-            Log Action As:
-          </span>
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => setSkipStatus("skipped")}
-              className={cn(
-                "px-3 py-1 text-xs font-bold rounded-lg transition-all",
-                skipStatus === "skipped"
-                  ? "bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 shadow-sm"
-                  : "text-muted-foreground hover:bg-muted",
-              )}
-            >
-              Skipped
-            </button>
-            <button
-              type="button"
-              onClick={() => setSkipStatus("missed")}
-              className={cn(
-                "px-3 py-1 text-xs font-bold rounded-lg transition-all",
-                skipStatus === "missed"
-                  ? "bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30 shadow-sm"
-                  : "text-muted-foreground hover:bg-muted",
-              )}
-            >
-              Missed
-            </button>
-          </div>
-        </div>
-
         {/* Skip Options */}
         <div className="grid grid-cols-1 gap-3">
           {/* Single Skip */}
@@ -103,7 +76,9 @@ export function SkipModal({
             </div>
             <div className="space-y-1">
               <h4 className="text-sm font-bold text-foreground group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
-                Skip 1 Occurrence
+                {actionType === "skipped"
+                  ? "Skip 1 Occurrence"
+                  : "Mark 1 Missed"}
               </h4>
               <p className="text-xs text-muted-foreground leading-relaxed">
                 Advances the task by one recurrence interval (
@@ -131,8 +106,8 @@ export function SkipModal({
                 )}
               </h4>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Skip all past missed occurrences and advance due date straight
-                to today/next scheduled occurrence.
+                Log all past occurrences as {descWord} and advance due date
+                straight to today/next scheduled occurrence.
               </p>
             </div>
           </button>

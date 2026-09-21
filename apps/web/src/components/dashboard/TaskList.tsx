@@ -113,6 +113,9 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
 
   // task skip modal state
   const [skipTaskItem, setSkipTaskItem] = useState<Task | null>(null);
+  const [skipActionType, setSkipActionType] = useState<"skipped" | "missed">(
+    "skipped",
+  );
 
   // Track task currently in Edit Mode
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
@@ -1052,16 +1055,42 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
                           </DropdownMenuItem>
                           {task.task_type === "recurring" &&
                             task.status !== "completed" && (
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSkipTaskItem(task);
-                                }}
-                                className="flex items-center gap-2 text-amber-600 dark:text-amber-400 focus:text-amber-600 cursor-pointer font-medium"
-                              >
-                                <SkipForward className="w-4 h-4" />
-                                Skip Occurrence
-                              </DropdownMenuItem>
+                              <>
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSkipActionType("skipped");
+                                    setSkipTaskItem(task);
+                                  }}
+                                  className="flex items-center gap-2 text-amber-600 dark:text-amber-400 focus:text-amber-600 cursor-pointer font-medium"
+                                >
+                                  <SkipForward className="w-4 h-4" />
+                                  Skip Occurrence
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSkipActionType("missed");
+                                    setSkipTaskItem(task);
+                                  }}
+                                  className="flex items-center gap-2 text-rose-600 dark:text-rose-400 focus:text-rose-600 cursor-pointer font-medium"
+                                >
+                                  <svg
+                                    className="w-4 h-4"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth="2"
+                                      d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                    />
+                                  </svg>
+                                  Mark Missed
+                                </DropdownMenuItem>
+                              </>
                             )}
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
@@ -1799,14 +1828,42 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
 
                             {task.task_type === "recurring" &&
                               task.status !== "completed" && (
-                                <Button
-                                  onClick={() => setSkipTaskItem(task)}
-                                  variant="outline"
-                                  className="text-xs border border-amber-500/30 bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 dark:text-amber-400 py-1.5 h-8 rounded-xl px-3.5 font-semibold transition-all flex items-center gap-1.5"
-                                >
-                                  <SkipForward className="w-3.5 h-3.5" />
-                                  Skip
-                                </Button>
+                                <>
+                                  <Button
+                                    onClick={() => {
+                                      setSkipActionType("skipped");
+                                      setSkipTaskItem(task);
+                                    }}
+                                    variant="outline"
+                                    className="text-xs border border-amber-500/30 bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 dark:text-amber-400 py-1.5 h-8 rounded-xl px-3.5 font-semibold transition-all flex items-center gap-1.5"
+                                  >
+                                    <SkipForward className="w-3.5 h-3.5" />
+                                    Skip
+                                  </Button>
+                                  <Button
+                                    onClick={() => {
+                                      setSkipActionType("missed");
+                                      setSkipTaskItem(task);
+                                    }}
+                                    variant="outline"
+                                    className="text-xs border border-rose-500/30 bg-rose-500/10 text-rose-600 hover:bg-rose-500/20 dark:text-rose-400 py-1.5 h-8 rounded-xl px-3.5 font-semibold transition-all flex items-center gap-1.5"
+                                  >
+                                    <svg
+                                      className="w-3.5 h-3.5"
+                                      fill="none"
+                                      viewBox="0 0 24 24"
+                                      stroke="currentColor"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth="2"
+                                        d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                      />
+                                    </svg>
+                                    Missed
+                                  </Button>
+                                </>
                               )}
 
                             <Button
@@ -1839,6 +1896,7 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
         onClose={() => setSkipTaskItem(null)}
         task={skipTaskItem}
         onSuccess={() => fetchTasks()}
+        actionType={skipActionType}
       />
 
       {/* Delete Task Confirmation Modal */}
