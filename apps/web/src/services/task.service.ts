@@ -475,6 +475,14 @@ export const taskService = {
     if (error) throw error;
   },
 
+  async updateSubtask(subtaskId: string, title: string): Promise<void> {
+    const { error } = await supabase
+      .from("subtasks")
+      .update({ title })
+      .eq("id", subtaskId);
+    if (error) throw error;
+  },
+
   async addMemoryCue(taskId: string, content: string): Promise<MemoryCue> {
     const { data, error } = await supabase
       .from("task_memory_cues")

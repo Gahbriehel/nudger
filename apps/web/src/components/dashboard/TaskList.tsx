@@ -34,6 +34,10 @@ import {
   Moon,
   MoreVertical,
   SkipForward,
+  Pencil,
+  Trash2,
+  Check,
+  X,
 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -65,6 +69,8 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
     setFilters,
     fetchTasks,
     toggleSubtaskState,
+    updateSubtaskState,
+    deleteSubtaskState,
     deleteTaskState,
   } = useTaskStore();
 
@@ -91,6 +97,10 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
   const [newCueTexts, setNewCueTexts] = useState<{ [taskId: string]: string }>(
     {},
   );
+
+  // Inline subtask editing state
+  const [editingSubtaskId, setEditingSubtaskId] = useState<string | null>(null);
+  const [editingSubtaskTitle, setEditingSubtaskTitle] = useState("");
 
   // smart completion prompt state (triggered when all subtasks are ticked)
   const [promptTask, setPromptTask] = useState<Task | null>(null);
@@ -576,15 +586,47 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
     }
   };
 
-  const handleDeleteSubtask = async (subtaskId: string) => {
+  const handleDeleteSubtask = async (taskId: string, subtaskId: string) => {
+    deleteSubtaskState(taskId, subtaskId);
     try {
       await taskService.deleteSubtask(subtaskId);
-      await fetchTasks();
-      toast.success("Subtask deleted");
+      toast.success("Checklist item deleted");
     } catch (err) {
       console.error(err);
-      toast.error("Failed to delete subtask");
+      toast.error("Failed to delete checklist item");
+      await fetchTasks();
     }
+  };
+
+  const startEditingSubtask = (sub: Subtask) => {
+    setEditingSubtaskId(sub.id);
+    setEditingSubtaskTitle(sub.title);
+  };
+
+  const handleSaveSubtaskEdit = async (taskId: string) => {
+    if (!editingSubtaskId) return;
+    const trimmed = editingSubtaskTitle.trim();
+    if (!trimmed) {
+      toast.error("Checklist item cannot be empty");
+      return;
+    }
+    const currentSubtaskId = editingSubtaskId;
+    updateSubtaskState(taskId, currentSubtaskId, trimmed);
+    setEditingSubtaskId(null);
+    setEditingSubtaskTitle("");
+    try {
+      await taskService.updateSubtask(currentSubtaskId, trimmed);
+      toast.success("Checklist item updated");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to update checklist item");
+      await fetchTasks();
+    }
+  };
+
+  const handleCancelSubtaskEdit = () => {
+    setEditingSubtaskId(null);
+    setEditingSubtaskTitle("");
   };
 
   const handleAddCue = async (taskId: string) => {
@@ -1601,58 +1643,116 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
                             .map((sub: Subtask) => (
                               <div
                                 key={sub.id}
-                                className="flex items-center justify-between bg-muted/30 dark:bg-[#131920] border border-border/80 dark:border-[#222A35]/50 px-4 py-3 rounded-2xl text-xs transition-all hover:bg-muted/40 dark:hover:bg-[#171E27]"
+                                className="group flex items-center justify-between bg-muted/30 dark:bg-[#131920] border border-border/80 dark:border-[#222A35]/50 px-4 py-3 rounded-2xl text-xs transition-all hover:bg-muted/40 dark:hover:bg-[#171E27]"
                               >
-                                <label className="flex items-center gap-3 cursor-pointer flex-1 text-foreground">
-                                  <input
-                                    type="checkbox"
-                                    checked={sub.completed}
-                                    onChange={() =>
-                                      handleToggleSubtask(task.id, sub)
-                                    }
-                                    className="sr-only"
-                                  />
-                                  <div
-                                    className={cn(
-                                      "w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all",
-                                      sub.completed
-                                        ? "bg-foreground border-foreground text-background"
-                                        : "border-muted-foreground/60 hover:border-foreground",
-                                    )}
-                                  >
-                                    {sub.completed && (
-                                      <svg
-                                        className="w-3.5 h-3.5"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke="currentColor"
-                                        strokeWidth="3.5"
-                                      >
-                                        <path
-                                          strokeLinecap="round"
-                                          strokeLinejoin="round"
-                                          d="M5 13l4 4L19 7"
-                                        />
-                                      </svg>
-                                    )}
+                                {editingSubtaskId === sub.id ? (
+                                  <div className="flex items-center gap-2 flex-1">
+                                    <Input
+                                      value={editingSubtaskTitle}
+                                      onChange={(e) =>
+                                        setEditingSubtaskTitle(e.target.value)
+                                      }
+                                      className="text-xs h-8 rounded-xl border-border/80 bg-background flex-1"
+                                      autoFocus
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                          e.preventDefault();
+                                          handleSaveSubtaskEdit(task.id);
+                                        } else if (e.key === "Escape") {
+                                          e.preventDefault();
+                                          handleCancelSubtaskEdit();
+                                        }
+                                      }}
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handleSaveSubtaskEdit(task.id)
+                                      }
+                                      className="p-1.5 rounded-lg hover:bg-green-500/10 text-green-600 dark:text-green-400 transition-colors"
+                                      title="Save changes (Enter)"
+                                      aria-label="Save checklist item"
+                                    >
+                                      <Check className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={handleCancelSubtaskEdit}
+                                      className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                                      title="Cancel (Esc)"
+                                      aria-label="Cancel editing"
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </button>
                                   </div>
-                                  <span
-                                    className={cn(
-                                      "font-medium select-none text-foreground/90",
-                                      sub.completed &&
-                                        "line-through text-muted-foreground",
-                                    )}
-                                  >
-                                    {sub.title}
-                                  </span>
-                                </label>
-                                {editingTaskId === task.id && (
-                                  <button
-                                    onClick={() => handleDeleteSubtask(sub.id)}
-                                    className="text-destructive/70 hover:text-destructive text-[10px] font-semibold transition-colors px-1.5 py-0.5"
-                                  >
-                                    Delete
-                                  </button>
+                                ) : (
+                                  <>
+                                    <label className="flex items-center gap-3 cursor-pointer flex-1 text-foreground min-w-0 mr-2">
+                                      <input
+                                        type="checkbox"
+                                        checked={sub.completed}
+                                        onChange={() =>
+                                          handleToggleSubtask(task.id, sub)
+                                        }
+                                        className="sr-only"
+                                      />
+                                      <div
+                                        className={cn(
+                                          "w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all",
+                                          sub.completed
+                                            ? "bg-foreground border-foreground text-background"
+                                            : "border-muted-foreground/60 hover:border-foreground",
+                                        )}
+                                      >
+                                        {sub.completed && (
+                                          <svg
+                                            className="w-3.5 h-3.5"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                            strokeWidth="3.5"
+                                          >
+                                            <path
+                                              strokeLinecap="round"
+                                              strokeLinejoin="round"
+                                              d="M5 13l4 4L19 7"
+                                            />
+                                          </svg>
+                                        )}
+                                      </div>
+                                      <span
+                                        className={cn(
+                                          "font-medium select-none text-foreground/90 break-words",
+                                          sub.completed &&
+                                            "line-through text-muted-foreground",
+                                        )}
+                                      >
+                                        {sub.title}
+                                      </span>
+                                    </label>
+                                    <div className="flex items-center gap-1 shrink-0">
+                                      <button
+                                        type="button"
+                                        onClick={() => startEditingSubtask(sub)}
+                                        className="text-muted-foreground hover:text-foreground p-1 rounded-md hover:bg-muted/80 transition-colors"
+                                        title="Edit checklist item"
+                                        aria-label={`Edit ${sub.title}`}
+                                      >
+                                        <Pencil className="w-3.5 h-3.5" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          handleDeleteSubtask(task.id, sub.id)
+                                        }
+                                        className="text-muted-foreground hover:text-destructive p-1 rounded-md hover:bg-destructive/10 transition-colors"
+                                        title="Delete checklist item"
+                                        aria-label={`Delete ${sub.title}`}
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
+                                  </>
                                 )}
                               </div>
                             ))}

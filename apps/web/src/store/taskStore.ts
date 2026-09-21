@@ -25,6 +25,12 @@ interface TaskState {
     subtaskId: string,
     completed: boolean,
   ) => void;
+  updateSubtaskState: (
+    taskId: string,
+    subtaskId: string,
+    title: string,
+  ) => void;
+  deleteSubtaskState: (taskId: string, subtaskId: string) => void;
 }
 
 export const useTaskStore = create<TaskState>((set) => ({
@@ -70,6 +76,24 @@ export const useTaskStore = create<TaskState>((set) => ({
               }
             : sub,
         );
+        return { ...t, subtasks };
+      }),
+    })),
+  updateSubtaskState: (taskId, subtaskId, title) =>
+    set((state) => ({
+      tasks: state.tasks.map((t) => {
+        if (t.id !== taskId) return t;
+        const subtasks = t.subtasks?.map((sub) =>
+          sub.id === subtaskId ? { ...sub, title } : sub,
+        );
+        return { ...t, subtasks };
+      }),
+    })),
+  deleteSubtaskState: (taskId, subtaskId) =>
+    set((state) => ({
+      tasks: state.tasks.map((t) => {
+        if (t.id !== taskId) return t;
+        const subtasks = t.subtasks?.filter((sub) => sub.id !== subtaskId);
         return { ...t, subtasks };
       }),
     })),

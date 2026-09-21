@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/useToast";
 import { cn } from "@/lib/utils";
 
 import { Spinner } from "@/components/ui/spinner";
-import { Lightbulb } from "lucide-react";
+import { Lightbulb, Pencil, Trash2, Check, X } from "lucide-react";
 
 export const DAYS_OF_WEEK = [
   { label: "M", value: 1, fullName: "Monday" },
@@ -60,6 +60,10 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
   // Subtasks & Memory Cues local state
   const [subtasks, setSubtasks] = useState<string[]>([]);
   const [newSubtask, setNewSubtask] = useState("");
+  const [editingSubtaskIndex, setEditingSubtaskIndex] = useState<number | null>(
+    null,
+  );
+  const [editingSubtaskText, setEditingSubtaskText] = useState("");
   const [memoryCues, setMemoryCues] = useState<string[]>([]);
   const [newCue, setNewCue] = useState("");
 
@@ -122,6 +126,31 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
 
   const handleRemoveSubtask = (index: number) => {
     setSubtasks(subtasks.filter((_, i) => i !== index));
+    if (editingSubtaskIndex === index) {
+      setEditingSubtaskIndex(null);
+      setEditingSubtaskText("");
+    }
+  };
+
+  const handleStartEditSubtask = (index: number) => {
+    setEditingSubtaskIndex(index);
+    setEditingSubtaskText(subtasks[index]);
+  };
+
+  const handleSaveEditSubtask = (index: number) => {
+    const trimmed = editingSubtaskText.trim();
+    if (trimmed) {
+      const updated = [...subtasks];
+      updated[index] = trimmed;
+      setSubtasks(updated);
+    }
+    setEditingSubtaskIndex(null);
+    setEditingSubtaskText("");
+  };
+
+  const handleCancelEditSubtask = () => {
+    setEditingSubtaskIndex(null);
+    setEditingSubtaskText("");
   };
 
   const handleAddCue = () => {
@@ -570,19 +599,72 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
                   key={idx}
                   className="flex justify-between items-center bg-muted/30 dark:bg-[#131920] border border-border/80 dark:border-[#222A35]/50 px-4 py-3 rounded-2xl text-sm text-foreground shadow-sm transition-all hover:bg-muted/40 dark:hover:bg-[#171E27]"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/60 flex-shrink-0" />
-                    <span className="font-semibold text-foreground/90">
-                      {sub}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveSubtask(idx)}
-                    className="text-destructive/80 hover:text-destructive text-xs font-semibold transition-colors px-1.5 py-0.5"
-                  >
-                    Remove
-                  </button>
+                  {editingSubtaskIndex === idx ? (
+                    <div className="flex items-center gap-2 flex-1">
+                      <Input
+                        value={editingSubtaskText}
+                        onChange={(e) => setEditingSubtaskText(e.target.value)}
+                        className="text-xs h-8 rounded-xl border-border/80 bg-background flex-1"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleSaveEditSubtask(idx);
+                          } else if (e.key === "Escape") {
+                            e.preventDefault();
+                            handleCancelEditSubtask();
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleSaveEditSubtask(idx)}
+                        className="p-1.5 rounded-lg hover:bg-green-500/10 text-green-600 dark:text-green-400 transition-colors"
+                        title="Save changes (Enter)"
+                        aria-label="Save checklist item"
+                      >
+                        <Check className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleCancelEditSubtask}
+                        className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                        title="Cancel (Esc)"
+                        aria-label="Cancel editing"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-3 min-w-0 mr-2">
+                        <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/60 flex-shrink-0" />
+                        <span className="font-semibold text-foreground/90 break-words">
+                          {sub}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleStartEditSubtask(idx)}
+                          className="text-muted-foreground hover:text-foreground p-1 rounded-md hover:bg-muted/80 transition-colors"
+                          title="Edit checklist item"
+                          aria-label={`Edit ${sub}`}
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveSubtask(idx)}
+                          className="text-muted-foreground hover:text-destructive p-1 rounded-md hover:bg-destructive/10 transition-colors"
+                          title="Remove checklist item"
+                          aria-label={`Remove ${sub}`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </li>
               ))}
             </ul>
