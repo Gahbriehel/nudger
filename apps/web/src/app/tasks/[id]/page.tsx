@@ -1159,11 +1159,11 @@ function TaskDetailContent() {
           )}
 
           {/* Actions footer */}
-          <div className="flex justify-between items-center pt-4 border-t border-border">
+          <div className="flex flex-col gap-3 pt-4 border-t border-border sm:flex-row sm:items-center sm:justify-between">
             <span className="text-[10px] text-muted-foreground">
               Created: {format(task.created_at, "PP")}
             </span>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {isEditing ? (
                 <>
                   <Button

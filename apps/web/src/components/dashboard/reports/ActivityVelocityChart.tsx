@@ -81,6 +81,8 @@ export function ActivityVelocityChart({
               const isHovered = hoveredPoint?.date === point.date;
               const hasActivity =
                 point.completedCount > 0 || point.skippedCount > 0;
+              const isNearStart = index < 2;
+              const isNearEnd = index > dailyActivity.length - 3;
 
               return (
                 <div
@@ -91,7 +93,16 @@ export function ActivityVelocityChart({
                 >
                   {/* Tooltip */}
                   {isHovered && (
-                    <div className="absolute -top-14 z-20 px-2.5 py-1.5 rounded-lg bg-foreground text-background text-[11px] font-semibold whitespace-nowrap shadow-lg pointer-events-none animate-in fade-in zoom-in-95 duration-150">
+                    <div
+                      className={cn(
+                        "absolute -top-14 z-20 px-2.5 py-1.5 rounded-lg bg-foreground text-background text-[11px] font-semibold whitespace-nowrap shadow-lg pointer-events-none animate-in fade-in zoom-in-95 duration-150",
+                        isNearStart
+                          ? "left-0"
+                          : isNearEnd
+                            ? "right-0"
+                            : "left-1/2 -translate-x-1/2",
+                      )}
+                    >
                       <div className="font-bold">{point.fullDateLabel}</div>
                       <div className="text-[10px] opacity-90">
                         {point.completedCount} completed
