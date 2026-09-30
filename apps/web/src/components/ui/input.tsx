@@ -11,14 +11,22 @@ const isIOS =
     (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1));
 
 const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
-  ({ className, type, onTouchStart, onTouchMove, onTouchEnd, ...props }, ref) => {
-    const dragRef = React.useRef<{ x: number; scrollLeft: number } | null>(null);
+  (
+    { className, type, onTouchStart, onTouchMove, onTouchEnd, ...props },
+    ref,
+  ) => {
+    const dragRef = React.useRef<{ x: number; scrollLeft: number } | null>(
+      null,
+    );
 
     const handleTouchStart = (e: React.TouchEvent<HTMLInputElement>) => {
       if (isIOS) {
         const el = e.currentTarget;
         if (el.scrollWidth > el.clientWidth) {
-          dragRef.current = { x: e.touches[0].clientX, scrollLeft: el.scrollLeft };
+          dragRef.current = {
+            x: e.touches[0].clientX,
+            scrollLeft: el.scrollLeft,
+          };
         }
       }
       onTouchStart?.(e);
