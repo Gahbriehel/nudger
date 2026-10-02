@@ -882,7 +882,7 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
             placeholder="Search title, tags, notes..."
             value={filters.search}
             onChange={(e) => setFilters({ search: e.target.value })}
-            className="text-xs h-10 pl-9 pr-3"
+            className="text-base md:text-xs h-10 pl-9 pr-3"
           />
         </div>
 
@@ -1259,7 +1259,7 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
                             id={`edit-title-${task.id}`}
                             value={editTitle}
                             onChange={(e) => setEditTitle(e.target.value)}
-                            className="text-xs h-9 rounded-xl border-border/80 bg-background"
+                            className="text-base md:text-xs h-9 rounded-xl border-border/80 bg-background"
                             placeholder="Task title"
                           />
                         </div>
@@ -1279,7 +1279,7 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
                               onChange={(e) =>
                                 setEditDescription(e.target.value)
                               }
-                              className="text-xs rounded-xl min-h-[70px] border-border/80 bg-background"
+                              className="text-base md:text-xs rounded-xl min-h-[70px] border-border/80 bg-background"
                               placeholder="Task description"
                             />
                           </div>
@@ -1294,7 +1294,7 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
                               id={`edit-notes-${task.id}`}
                               value={editNotes}
                               onChange={(e) => setEditNotes(e.target.value)}
-                              className="text-xs rounded-xl min-h-[70px] border-border/80 bg-background"
+                              className="text-base md:text-xs rounded-xl min-h-[70px] border-border/80 bg-background"
                               placeholder="Reference notes"
                             />
                           </div>
@@ -1313,7 +1313,7 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
                               id={`edit-type-${task.id}`}
                               value={editTaskType}
                               onChange={(e) => setEditTaskType(e.target.value)}
-                              className="bg-background border border-border/80 text-foreground rounded-xl p-2 text-xs h-9 focus:outline-none focus:ring-2 focus:ring-ring"
+                              className="bg-background border border-border/80 text-foreground rounded-xl p-2 text-base md:text-xs h-9 focus:outline-none focus:ring-2 focus:ring-ring"
                             >
                               <option value="flexible">Flexible</option>
                               <option value="scheduled">Scheduled</option>
@@ -1338,7 +1338,7 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
                                   onChange={(e) =>
                                     setEditDueDate(e.target.value)
                                   }
-                                  className="text-xs h-9 rounded-xl border-border/80 bg-background"
+                                  className="text-base md:text-xs h-9 rounded-xl border-border/80 bg-background"
                                 />
                               </div>
                               <div className="grid gap-1">
@@ -1356,7 +1356,7 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
                                   onChange={(e) =>
                                     setEditReminderAt(e.target.value)
                                   }
-                                  className="text-xs h-9 rounded-xl border-border/80 bg-background"
+                                  className="text-base md:text-xs h-9 rounded-xl border-border/80 bg-background"
                                 />
                               </div>
                             </>
@@ -1417,7 +1417,7 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
                                     onChange={(e) =>
                                       setEditRecurrenceType(e.target.value)
                                     }
-                                    className="bg-background border border-border/80 text-foreground rounded-xl p-2 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
+                                    className="bg-background border border-border/80 text-foreground rounded-xl p-2 text-base md:text-xs focus:outline-none focus:ring-2 focus:ring-ring"
                                   >
                                     <option value="daily">Daily</option>
                                     <option value="weekly">Weekly</option>
@@ -1440,7 +1440,7 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
                                     onChange={(e) =>
                                       setEditRecurrenceInterval(e.target.value)
                                     }
-                                    className="text-xs h-9 rounded-xl border-border/80 bg-background"
+                                    className="text-base md:text-xs h-9 rounded-xl border-border/80 bg-background"
                                   />
                                 </div>
                               </div>
@@ -1505,7 +1505,7 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
                                   handleAddEditTag();
                                 }
                               }}
-                              className="text-xs h-9 rounded-xl border-border/80 bg-background"
+                              className="text-base md:text-xs h-9 rounded-xl border-border/80 bg-background"
                             />
                             <Button
                               type="button"
@@ -1608,7 +1608,7 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
                               [task.id]: e.target.value,
                             })
                           }
-                          className="text-xs h-9 rounded-xl border-border/80 bg-background"
+                          className="text-base md:text-xs h-9 rounded-xl border-border/80 bg-background"
                           onKeyDown={(e) => {
                             if (e.key === "Enter") {
                               e.preventDefault();
@@ -1652,7 +1652,7 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
                                       onChange={(e) =>
                                         setEditingSubtaskTitle(e.target.value)
                                       }
-                                      className="text-xs h-8 rounded-xl border-border/80 bg-background flex-1"
+                                      className="text-base md:text-xs h-8 rounded-xl border-border/80 bg-background flex-1"
                                       autoFocus
                                       onKeyDown={(e) => {
                                         if (e.key === "Enter") {
@@ -1782,7 +1782,7 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
                                 [task.id]: e.target.value,
                               })
                             }
-                            className="text-xs h-9 rounded-xl border-border/80 bg-background"
+                            className="text-base md:text-xs h-9 rounded-xl border-border/80 bg-background"
                             onKeyDown={(e) => {
                               if (e.key === "Enter") {
                                 e.preventDefault();

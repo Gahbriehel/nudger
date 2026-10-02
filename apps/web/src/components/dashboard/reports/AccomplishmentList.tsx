@@ -77,14 +77,14 @@ export function AccomplishmentList({ items }: AccomplishmentListProps) {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search completions..."
-              className="pl-8 h-8 text-xs rounded-xl"
+              className="pl-8 h-8 text-base md:text-xs rounded-xl"
             />
           </div>
 
           <select
             value={selectedItemCategory}
             onChange={(e) => setSelectedItemCategory(e.target.value)}
-            className="h-8 w-full rounded-xl border border-input bg-background px-2.5 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring font-medium sm:w-auto"
+            className="h-8 w-full rounded-xl border border-input bg-background px-2.5 py-1 text-base md:text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring font-medium sm:w-auto"
           >
             <option value="all">All Items</option>
             <option value="task">Tasks Only</option>
@@ -94,7 +94,7 @@ export function AccomplishmentList({ items }: AccomplishmentListProps) {
           <select
             value={selectedType}
             onChange={(e) => setSelectedType(e.target.value)}
-            className="h-8 w-full rounded-xl border border-input bg-background px-2.5 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring font-medium sm:w-auto"
+            className="h-8 w-full rounded-xl border border-input bg-background px-2.5 py-1 text-base md:text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring font-medium sm:w-auto"
           >
             <option value="all">All Types</option>
             <option value="flexible">Flexible</option>

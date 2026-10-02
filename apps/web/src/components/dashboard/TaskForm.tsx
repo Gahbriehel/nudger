@@ -367,7 +367,7 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
           <select
             id="task_type"
             {...register("task_type")}
-            className="bg-background border border-input text-foreground rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            className="bg-background border border-input text-foreground rounded-md p-2 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           >
             <option value="flexible">Flexible (No deadline)</option>
             <option value="scheduled">Scheduled (Specific deadline)</option>
@@ -497,7 +497,7 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
                   <select
                     id="recurrence_type"
                     {...register("recurrence_type")}
-                    className="bg-background border border-input text-foreground rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="bg-background border border-input text-foreground rounded-md p-2 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                   >
                     <option value="daily">Daily</option>
                     <option value="weekly">Weekly</option>
@@ -581,7 +581,7 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
                   handleAddSubtask();
                 }
               }}
-              className="rounded-xl h-10 text-sm"
+              className="rounded-xl h-10 text-base md:text-sm"
             />
             <Button
               type="button"
@@ -604,7 +604,7 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
                       <Input
                         value={editingSubtaskText}
                         onChange={(e) => setEditingSubtaskText(e.target.value)}
-                        className="text-xs h-8 rounded-xl border-border/80 bg-background flex-1"
+                        className="text-base md:text-xs h-8 rounded-xl border-border/80 bg-background flex-1"
                         autoFocus
                         onKeyDown={(e) => {
                           if (e.key === "Enter") {
@@ -696,7 +696,7 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
                   handleAddCue();
                 }
               }}
-              className="rounded-xl h-10 text-sm"
+              className="rounded-xl h-10 text-base md:text-sm"
             />
             <Button
               type="button"
@@ -758,7 +758,7 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
                   handleAddTag();
                 }
               }}
-              className="rounded-xl h-10 text-sm"
+              className="rounded-xl h-10 text-base md:text-sm"
             />
             <Button
               type="button"

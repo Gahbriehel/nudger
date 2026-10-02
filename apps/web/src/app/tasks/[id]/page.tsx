@@ -621,7 +621,7 @@ function TaskDetailContent() {
                   id="edit-title"
                   value={editTitle}
                   onChange={(e) => setEditTitle(e.target.value)}
-                  className="text-xs h-9 rounded-xl border-border/80 bg-background"
+                  className="text-base md:text-xs h-9 rounded-xl border-border/80 bg-background"
                   placeholder="Task title"
                 />
               </div>
@@ -639,7 +639,7 @@ function TaskDetailContent() {
                     id="edit-desc"
                     value={editDescription}
                     onChange={(e) => setEditDescription(e.target.value)}
-                    className="text-xs rounded-xl min-h-[70px] border-border/80 bg-background"
+                    className="text-base md:text-xs rounded-xl min-h-[70px] border-border/80 bg-background"
                     placeholder="Task description"
                   />
                 </div>
@@ -654,7 +654,7 @@ function TaskDetailContent() {
                     id="edit-notes"
                     value={editNotes}
                     onChange={(e) => setEditNotes(e.target.value)}
-                    className="text-xs rounded-xl min-h-[70px] border-border/80 bg-background"
+                    className="text-base md:text-xs rounded-xl min-h-[70px] border-border/80 bg-background"
                     placeholder="Reference notes"
                   />
                 </div>
@@ -675,7 +675,7 @@ function TaskDetailContent() {
                     onChange={(e) =>
                       setEditTaskType(e.target.value as TaskType)
                     }
-                    className="bg-background border border-border/80 text-foreground rounded-xl p-2 text-xs h-9 focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="bg-background border border-border/80 text-foreground rounded-xl p-2 text-base md:text-xs h-9 focus:outline-none focus:ring-2 focus:ring-ring"
                   >
                     <option value="flexible">Flexible</option>
                     <option value="scheduled">Scheduled</option>
@@ -697,7 +697,7 @@ function TaskDetailContent() {
                         type="datetime-local"
                         value={editDueDate}
                         onChange={(e) => setEditDueDate(e.target.value)}
-                        className="text-xs h-9 rounded-xl border-border/80 bg-background"
+                        className="text-base md:text-xs h-9 rounded-xl border-border/80 bg-background"
                       />
                     </div>
                     <div className="grid gap-1">
@@ -712,7 +712,7 @@ function TaskDetailContent() {
                         type="datetime-local"
                         value={editReminderAt}
                         onChange={(e) => setEditReminderAt(e.target.value)}
-                        className="text-xs h-9 rounded-xl border-border/80 bg-background"
+                        className="text-base md:text-xs h-9 rounded-xl border-border/80 bg-background"
                       />
                     </div>
                   </>
@@ -735,7 +735,7 @@ function TaskDetailContent() {
                       onChange={(e) =>
                         setEditRecurrenceType(e.target.value as RecurrenceType)
                       }
-                      className="bg-background border border-border/80 text-foreground rounded-xl p-2 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
+                      className="bg-background border border-border/80 text-foreground rounded-xl p-2 text-base md:text-xs focus:outline-none focus:ring-2 focus:ring-ring"
                     >
                       <option value="daily">Daily</option>
                       <option value="weekly">Weekly</option>
@@ -758,7 +758,7 @@ function TaskDetailContent() {
                       onChange={(e) =>
                         setEditRecurrenceInterval(e.target.value)
                       }
-                      className="text-xs h-9 rounded-xl border-border/80 bg-background"
+                      className="text-base md:text-xs h-9 rounded-xl border-border/80 bg-background"
                     />
                   </div>
                 </div>
@@ -849,7 +849,7 @@ function TaskDetailContent() {
                 placeholder="Add subtask item..."
                 value={newSubtask}
                 onChange={(e) => setNewSubtask(e.target.value)}
-                className="text-xs h-9 rounded-xl border-border/80 bg-background"
+                className="text-base md:text-xs h-9 rounded-xl border-border/80 bg-background"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
@@ -892,7 +892,7 @@ function TaskDetailContent() {
                             onChange={(e) =>
                               setEditingSubtaskTitle(e.target.value)
                             }
-                            className="text-xs h-8 rounded-xl border-border/80 bg-background flex-1"
+                            className="text-base md:text-xs h-8 rounded-xl border-border/80 bg-background flex-1"
                             autoFocus
                             onKeyDown={(e) => {
                               if (e.key === "Enter") {
@@ -1010,7 +1010,7 @@ function TaskDetailContent() {
                   placeholder="e.g. Place server logs spreadsheet on secondary monitor, post-it on screen..."
                   value={newCue}
                   onChange={(e) => setNewCue(e.target.value)}
-                  className="text-xs h-9 rounded-xl border-border/80 bg-background"
+                  className="text-base md:text-xs h-9 rounded-xl border-border/80 bg-background"
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
@@ -1088,7 +1088,7 @@ function TaskDetailContent() {
                       handleAddEditTag();
                     }
                   }}
-                  className="text-xs h-9 rounded-xl border-border/80 bg-background"
+                  className="text-base md:text-xs h-9 rounded-xl border-border/80 bg-background"
                 />
                 <Button
                   type="button"

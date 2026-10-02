@@ -315,7 +315,7 @@ export function SettingsView() {
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 placeholder="Your name"
-                className="bg-background border-border text-sm h-10 rounded-xl"
+                className="bg-background border-border text-base md:text-sm h-10 rounded-xl"
               />
             </div>
 
@@ -476,7 +476,7 @@ export function SettingsView() {
                     max_flexible_nudges_per_day: val,
                   });
                 }}
-                className="shrink-0 bg-background border border-border text-foreground text-xs font-semibold rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+                className="shrink-0 bg-background border border-border text-foreground text-base md:text-xs font-semibold rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
               >
                 <option value={1}>1 / day (Minimal)</option>
                 <option value={2}>2 / day (Balanced)</option>
@@ -540,7 +540,7 @@ export function SettingsView() {
                           quiet_hours_start: quietHoursStart,
                         })
                       }
-                      className="bg-background border-border text-xs h-8 rounded-lg"
+                      className="bg-background border-border text-base md:text-xs h-8 rounded-lg"
                     />
                   </div>
                   <span className="text-xs text-muted-foreground self-end mb-1.5">
@@ -563,7 +563,7 @@ export function SettingsView() {
                           quiet_hours_end: quietHoursEnd,
                         })
                       }
-                      className="bg-background border-border text-xs h-8 rounded-lg"
+                      className="bg-background border-border text-base md:text-xs h-8 rounded-lg"
                     />
                   </div>
                 </div>
@@ -735,7 +735,7 @@ export function SettingsView() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Minimum 6 characters"
-                className="bg-background border-border text-sm h-10 rounded-xl"
+                className="bg-background border-border text-base md:text-sm h-10 rounded-xl"
               />
             </div>
 
@@ -758,7 +758,7 @@ export function SettingsView() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Repeat your password"
-                className="bg-background border-border text-sm h-10 rounded-xl"
+                className="bg-background border-border text-base md:text-sm h-10 rounded-xl"
               />
             </div>
 

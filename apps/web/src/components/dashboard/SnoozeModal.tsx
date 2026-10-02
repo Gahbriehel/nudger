@@ -220,7 +220,7 @@ export function SnoozeModal({
                   required
                   value={customValue}
                   onChange={(e) => setCustomValue(e.target.value)}
-                  className="w-full h-10 px-3.5 rounded-xl border border-border bg-card text-foreground text-sm font-medium focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary placeholder:text-muted-foreground"
+                  className="w-full h-10 px-3.5 rounded-xl border border-border bg-card text-foreground text-base md:text-sm font-medium focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary placeholder:text-muted-foreground"
                   placeholder="e.g. 3"
                 />
               </div>
@@ -238,7 +238,7 @@ export function SnoozeModal({
                   onChange={(e) =>
                     setCustomUnit(e.target.value as "hours" | "days")
                   }
-                  className="w-full h-10 px-3 rounded-xl border border-border bg-card text-foreground text-sm font-semibold focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary select-none cursor-pointer"
+                  className="w-full h-10 px-3 rounded-xl border border-border bg-card text-foreground text-base md:text-sm font-semibold focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary select-none cursor-pointer"
                 >
                   <option value="hours">Hours</option>
                   <option value="days">Days</option>
