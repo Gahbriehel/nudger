@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/useToast";
 import { cn } from "@/lib/utils";
@@ -565,10 +566,10 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
               <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
                 optional
               </span>
+              <InfoTooltip>
+                Break this task into smaller steps you can check off.
+              </InfoTooltip>
             </Label>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
-              Break this task into smaller steps you can check off.
-            </p>
           </div>
           <div className="flex gap-2">
             <Input
@@ -679,11 +680,11 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
               <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
                 optional
               </span>
+              <InfoTooltip>
+                Environmental triggers to help you remember — e.g. &ldquo;Place
+                server logs spreadsheet on secondary monitor&rdquo;.
+              </InfoTooltip>
             </Label>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
-              Environmental triggers to help you remember — e.g. &ldquo;Place
-              server logs spreadsheet on secondary monitor&rdquo;.
-            </p>
           </div>
           <div className="flex gap-2">
             <Input
@@ -741,11 +742,12 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
               <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
                 optional
               </span>
+              <InfoTooltip>
+                Labels to group and filter tasks — e.g.
+                &ldquo;engineering&rdquo;, &ldquo;finance&rdquo;,
+                &ldquo;operations&rdquo;.
+              </InfoTooltip>
             </Label>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
-              Labels to group and filter tasks — e.g. &ldquo;engineering&rdquo;,
-              &ldquo;finance&rdquo;, &ldquo;operations&rdquo;.
-            </p>
           </div>
           <div className="flex gap-2">
             <Input
