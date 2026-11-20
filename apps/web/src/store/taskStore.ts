@@ -2,6 +2,7 @@
 import { create } from "@/lib/zustand";
 import { Task, Subtask, MemoryCue } from "@/types/database.types";
 import { taskService } from "@/services/task.service";
+import { applyPendingOverlays } from "@/lib/deferredCommit";
 
 export interface TaskFilters {
   search: string;
@@ -77,7 +78,8 @@ export const useTaskStore = create<TaskState>((set, get) => ({
 
     inFlight = (async () => {
       try {
-        const tasks = await taskService.getTasks();
+        // Keep undoable actions (complete/delete) visible until they commit
+        const tasks = applyPendingOverlays(await taskService.getTasks());
         set({ tasks, loading: false, refreshing: false, hasLoaded: true });
       } catch (err: any) {
         set({

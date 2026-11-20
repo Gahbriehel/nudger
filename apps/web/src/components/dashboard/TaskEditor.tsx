@@ -16,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { TASK_TYPE_LABEL } from "@/lib/taskFormat";
 
 import { Spinner } from "@/components/ui/spinner";
 import { Lightbulb, Pencil, Trash2, Check, X } from "lucide-react";
@@ -43,8 +44,21 @@ const taskSchema = z.object({
 
 type TaskFormInput = zInfer<typeof taskSchema>;
 
+type RepeatMode = "none" | "interval" | "specific_days";
+
+function inferTaskType(repeat: RepeatMode, hasDate: boolean): TaskType {
+  if (repeat !== "none") return "recurring";
+  return hasDate ? "scheduled" : "flexible";
+}
+
+const TYPE_HINT: Record<TaskType, string> = {
+  flexible: "No deadline — Nudger checks in now and then.",
+  scheduled: "Has a due date and/or reminder.",
+  recurring: "Repeats on a schedule.",
+};
+
 /** Format an ISO date for a `datetime-local` input (local time). */
-function toInputDateTime(iso?: string | null): string {
+export function toInputDateTime(iso?: string | null): string {
   if (!iso) return "";
   const d = new Date(iso);
   if (isNaN(d.getTime())) return "";
@@ -55,6 +69,8 @@ function toInputDateTime(iso?: string | null): string {
 interface TaskEditorProps {
   /** Omit to create a new task; pass a task to edit it. */
   task?: Task;
+  /** Starting values when creating (e.g. carried over from quick add). */
+  draft?: { title?: string; due_date?: string };
   /** Receives the saved task. Editing a single recurring occurrence creates a
    * new task, so callers should navigate to the returned id. */
   onSuccess: (task: Task) => void;
@@ -70,6 +86,7 @@ interface TaskEditorProps {
  */
 export function TaskEditor({
   task,
+  draft,
   onSuccess,
   onCancel,
   onDirtyChange,
@@ -83,9 +100,14 @@ export function TaskEditor({
     useState<TaskFormInput | null>(null);
   const [isSavingScope, setIsSavingScope] = useState(false);
 
-  const [recurrencePattern, setRecurrencePattern] = useState<
-    "interval" | "specific_days"
-  >(task?.recurrence_days?.length ? "specific_days" : "interval");
+  // How (if at all) the task repeats. Recurring-ness is driven by this.
+  const [repeat, setRepeat] = useState<RepeatMode>(
+    task?.task_type !== "recurring"
+      ? "none"
+      : task.recurrence_days?.length
+        ? "specific_days"
+        : "interval",
+  );
   const [selectedDays, setSelectedDays] = useState<number[]>(
     task?.recurrence_days ?? [],
   );
@@ -130,10 +152,10 @@ export function TaskEditor({
     formState: { errors, isSubmitting },
   } = useForm<TaskFormInput>({
     defaultValues: {
-      title: task?.title ?? "",
+      title: task?.title ?? draft?.title ?? "",
       description: task?.description ?? "",
       task_type: task?.task_type ?? "flexible",
-      due_date: toInputDateTime(task?.due_date),
+      due_date: task ? toInputDateTime(task.due_date) : (draft?.due_date ?? ""),
       reminder_at: toInputDateTime(task?.reminder_at),
       recurrence_type: task?.recurrence_type ?? "daily",
       recurrence_interval: String(task?.recurrence_interval ?? 1),
@@ -142,7 +164,39 @@ export function TaskEditor({
     resolver: zodResolver(taskSchema),
   });
 
-  const taskType = values.task_type;
+  // Task type is inferred from what the user filled in (repeat → recurring,
+  // a date → scheduled, neither → flexible) unless they pick one manually.
+  const inferredType = inferTaskType(
+    repeat,
+    !!(values.due_date || values.reminder_at),
+  );
+  const [typeOverride, setTypeOverride] = useState<TaskType | null>(() => {
+    if (!task) return null;
+    const fromTask = inferTaskType(
+      task.task_type !== "recurring"
+        ? "none"
+        : task.recurrence_days?.length
+          ? "specific_days"
+          : "interval",
+      !!(task.due_date || task.reminder_at),
+    );
+    return fromTask === task.task_type ? null : task.task_type;
+  });
+  const effectiveType: TaskType = typeOverride ?? inferredType;
+  const showWhen = effectiveType !== "flexible";
+  const showRepeat = typeOverride === null || typeOverride === "recurring";
+  // A manual "Recurring" with nothing chosen yet repeats on an interval
+  const effectiveRepeat: RepeatMode =
+    effectiveType === "recurring"
+      ? repeat === "none"
+        ? "interval"
+        : repeat
+      : "none";
+
+  const chooseType = (type: TaskType | null) => {
+    setTypeOverride(type);
+    if (type === "recurring" && repeat === "none") setRepeat("interval");
+  };
 
   useEffect(() => {
     // Load existing tags
@@ -224,7 +278,7 @@ export function TaskEditor({
       ? values.title !== (task?.title ?? "") ||
         values.description !== (task?.description ?? "") ||
         values.notes !== (task?.notes ?? "") ||
-        values.task_type !== task?.task_type ||
+        effectiveType !== task?.task_type ||
         values.due_date !== initialDue ||
         values.reminder_at !== initialReminder
       : !!(values.title || values.description || values.notes) ||
@@ -238,7 +292,7 @@ export function TaskEditor({
   /** Validation + recurring scope question, then save. */
   const onSubmit = async (data: TaskFormInput) => {
     setError(null);
-    const timed = data.task_type !== "flexible";
+    const timed = effectiveType !== "flexible";
 
     // Only dates the user actually set/changed must be in the future, so an
     // overdue task can still be renamed without being forced to reschedule.
@@ -272,11 +326,7 @@ export function TaskEditor({
       toast.error("Reminder cannot be after the due date.");
       return;
     }
-    if (
-      data.task_type === "recurring" &&
-      recurrencePattern === "specific_days" &&
-      selectedDays.length === 0
-    ) {
+    if (effectiveRepeat === "specific_days" && selectedDays.length === 0) {
       toast.error("Please select at least one day of the week.");
       return;
     }
@@ -315,9 +365,9 @@ export function TaskEditor({
         ? [...selectedTags, pendingTag]
         : selectedTags;
 
-    const timed = data.task_type !== "flexible";
-    const recurring = data.task_type === "recurring";
-    const specificDays = recurring && recurrencePattern === "specific_days";
+    const timed = effectiveType !== "flexible";
+    const recurring = effectiveType === "recurring";
+    const specificDays = effectiveRepeat === "specific_days";
     const interval = parseInt(data.recurrence_interval || "1", 10) || 1;
 
     let dueDate =
@@ -329,7 +379,7 @@ export function TaskEditor({
     const payload = {
       title: data.title.trim(),
       description: data.description?.trim() || null,
-      task_type: data.task_type as TaskType,
+      task_type: effectiveType,
       due_date: dueDate,
       reminder_at:
         timed && data.reminder_at
@@ -439,209 +489,181 @@ export function TaskEditor({
           />
         </div>
 
-        {/* Task Type Select */}
-        <div className="grid gap-2">
-          <Label
-            htmlFor="task_type"
-            className="text-sm font-semibold flex items-center gap-1.5"
-          >
-            Task Type
-            <span className="text-destructive text-xs" aria-label="required">
-              *
-            </span>
-          </Label>
-          <select
-            id="task_type"
-            {...register("task_type")}
-            className="bg-background border border-input text-foreground rounded-md p-2 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            <option value="flexible">Flexible (No deadline)</option>
-            <option value="scheduled">Scheduled (Specific deadline)</option>
-            <option value="recurring">Recurring (Repeats on interval)</option>
-          </select>
-        </div>
-
-        {/* Conditional Fields based on Task Type */}
-        {taskType === "scheduled" && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border border-border bg-muted/20 p-4 rounded-lg">
+        {/* When */}
+        {showWhen ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label
-                htmlFor="due_date"
-                className="text-sm font-semibold flex items-center gap-1.5"
-              >
-                Due Date
-                <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                  optional
-                </span>
+              <Label htmlFor="due_date" className="text-sm font-semibold">
+                {effectiveType === "recurring" ? "First due" : "Due"}
               </Label>
               <Input
                 id="due_date"
                 type="datetime-local"
                 min={isEdit ? undefined : minDateTime}
                 {...register("due_date")}
+                className="h-11 text-base md:text-sm"
               />
             </div>
             <div className="grid gap-2">
-              <Label
-                htmlFor="reminder_at"
-                className="text-sm font-semibold flex items-center gap-1.5"
-              >
-                Reminder
-                <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                  optional
-                </span>
+              <Label htmlFor="reminder_at" className="text-sm font-semibold">
+                Remind me
               </Label>
               <Input
                 id="reminder_at"
                 type="datetime-local"
                 min={isEdit ? undefined : minDateTime}
                 {...register("reminder_at")}
+                className="h-11 text-base md:text-sm"
               />
             </div>
           </div>
+        ) : (
+          <p className="text-xs text-muted-foreground bg-muted/40 border border-border rounded-xl p-3">
+            Flexible tasks have no due date. Choose{" "}
+            <button
+              type="button"
+              onClick={() => chooseType(null)}
+              className="font-semibold text-foreground underline underline-offset-2"
+            >
+              Auto
+            </button>{" "}
+            to add one.
+          </p>
         )}
 
-        {taskType === "recurring" && (
-          <div className="space-y-4 border border-border bg-muted/20 p-4 rounded-lg">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label
-                  htmlFor="due_date"
-                  className="text-sm font-semibold flex items-center gap-1.5"
-                >
-                  Initial Due Date
-                  <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                    optional
-                  </span>
-                </Label>
-                <Input
-                  id="due_date"
-                  type="datetime-local"
-                  min={isEdit ? undefined : minDateTime}
-                  {...register("due_date")}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label
-                  htmlFor="reminder_at"
-                  className="text-sm font-semibold flex items-center gap-1.5"
-                >
-                  Reminder
-                  <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                    optional
-                  </span>
-                </Label>
-                <Input
-                  id="reminder_at"
-                  type="datetime-local"
-                  min={isEdit ? undefined : minDateTime}
-                  {...register("reminder_at")}
-                />
-              </div>
-            </div>
-            <div className="grid gap-2">
-              <Label className="text-sm font-semibold">
-                Recurrence Pattern
-              </Label>
-              <div className="flex gap-2 p-1 bg-muted/50 rounded-lg max-w-md">
-                <button
-                  type="button"
-                  onClick={() => setRecurrencePattern("interval")}
-                  className={cn(
-                    "flex-1 py-1.5 px-3 rounded-md text-xs font-semibold transition-all duration-150 active:scale-[0.98]",
-                    recurrencePattern === "interval"
-                      ? "bg-card text-foreground shadow-sm border border-border/50"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  Regular Interval
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRecurrencePattern("specific_days")}
-                  className={cn(
-                    "flex-1 py-1.5 px-3 rounded-md text-xs font-semibold transition-all duration-150 active:scale-[0.98]",
-                    recurrencePattern === "specific_days"
-                      ? "bg-card text-foreground shadow-sm border border-border/50"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  Specific Days of Week
-                </button>
-              </div>
+        {/* Repeat */}
+        {showRepeat && (
+          <div className="space-y-3">
+            <Label className="text-sm font-semibold">Repeat</Label>
+            <div className="flex gap-1 p-1 bg-muted/60 rounded-xl">
+              {(
+                [
+                  ["none", "Doesn't repeat"],
+                  ["interval", "Every…"],
+                  ["specific_days", "On days"],
+                ] as const
+              )
+                // A manual "Recurring" must repeat somehow
+                .filter(
+                  ([mode]) =>
+                    !(typeOverride === "recurring" && mode === "none"),
+                )
+                .map(([mode, label]) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setRepeat(mode)}
+                    aria-pressed={effectiveRepeat === mode}
+                    className={cn(
+                      "flex-1 h-9 px-2 rounded-lg text-xs font-semibold transition-colors",
+                      effectiveRepeat === mode
+                        ? "bg-card text-foreground shadow-sm border border-border/50"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
             </div>
 
-            {recurrencePattern === "interval" ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label
-                    htmlFor="recurrence_type"
-                    className="text-sm font-semibold"
-                  >
-                    Recurrence Interval
-                  </Label>
-                  <select
-                    id="recurrence_type"
-                    {...register("recurrence_type")}
-                    className="bg-background border border-input text-foreground rounded-md p-2 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                  >
-                    <option value="daily">Daily</option>
-                    <option value="weekly">Weekly</option>
-                    <option value="monthly">Monthly</option>
-                    <option value="yearly">Yearly</option>
-                  </select>
-                </div>
-                <div className="grid gap-2">
-                  <Label
-                    htmlFor="recurrence_interval"
-                    className="text-sm font-semibold"
-                  >
-                    Repeat Every
-                  </Label>
-                  <Input
-                    id="recurrence_interval"
-                    type="number"
-                    min="1"
-                    {...register("recurrence_interval")}
-                  />
-                </div>
+            {effectiveRepeat === "interval" && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Every</span>
+                <Input
+                  id="recurrence_interval"
+                  type="number"
+                  min="1"
+                  inputMode="numeric"
+                  aria-label="Repeat every"
+                  {...register("recurrence_interval")}
+                  className="h-11 w-20 text-base md:text-sm"
+                />
+                <select
+                  id="recurrence_type"
+                  aria-label="Repeat unit"
+                  {...register("recurrence_type")}
+                  className="h-11 flex-1 bg-background border border-input text-foreground rounded-md px-3 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="daily">day(s)</option>
+                  <option value="weekly">week(s)</option>
+                  <option value="monthly">month(s)</option>
+                  <option value="yearly">year(s)</option>
+                </select>
               </div>
-            ) : (
-              <div className="grid gap-3 pt-1">
-                <Label className="text-sm font-semibold">Repeat On</Label>
-                <div className="flex flex-wrap gap-2">
-                  {DAYS_OF_WEEK.map((day) => {
-                    const isSelected = selectedDays.includes(day.value);
-                    return (
-                      <button
-                        key={day.value}
-                        type="button"
-                        onClick={() => {
-                          if (isSelected) {
-                            setSelectedDays(
-                              selectedDays.filter((d) => d !== day.value),
-                            );
-                          } else {
-                            setSelectedDays([...selectedDays, day.value]);
-                          }
-                        }}
-                        className={cn(
-                          "w-10 h-10 rounded-full text-xs font-bold border transition-all duration-200 active:scale-90 flex items-center justify-center select-none shadow-sm",
+            )}
+
+            {effectiveRepeat === "specific_days" && (
+              <div className="flex flex-wrap gap-2">
+                {DAYS_OF_WEEK.map((day) => {
+                  const isSelected = selectedDays.includes(day.value);
+                  return (
+                    <button
+                      key={day.value}
+                      type="button"
+                      onClick={() =>
+                        setSelectedDays(
                           isSelected
-                            ? "bg-brand-indigo hover:bg-brand-indigo/90 text-white border-brand-indigo dark:bg-brand-purple dark:border-brand-purple"
-                            : "bg-background border-border text-foreground hover:bg-muted",
-                        )}
-                        title={day.fullName}
-                      >
-                        {day.label}
-                      </button>
-                    );
-                  })}
-                </div>
+                            ? selectedDays.filter((d) => d !== day.value)
+                            : [...selectedDays, day.value],
+                        )
+                      }
+                      aria-pressed={isSelected}
+                      aria-label={day.fullName}
+                      title={day.fullName}
+                      className={cn(
+                        "w-11 h-11 rounded-full text-sm font-bold border transition-all active:scale-90 flex items-center justify-center select-none",
+                        isSelected
+                          ? "bg-brand-indigo text-white border-brand-indigo dark:bg-brand-purple dark:border-brand-purple"
+                          : "bg-background border-border text-foreground hover:bg-muted",
+                      )}
+                    >
+                      {day.label}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
         )}
+
+        {/* Type: inferred, with a manual override */}
+        <div className="space-y-2">
+          <Label className="text-sm font-semibold">Type</Label>
+          <div className="flex flex-wrap gap-1.5">
+            <button
+              type="button"
+              onClick={() => chooseType(null)}
+              aria-pressed={typeOverride === null}
+              className={cn(
+                "h-9 px-3 rounded-full text-xs font-semibold border transition-colors",
+                typeOverride === null
+                  ? "bg-foreground text-background border-foreground"
+                  : "bg-background text-muted-foreground border-border hover:text-foreground",
+              )}
+            >
+              Auto · {TASK_TYPE_LABEL[inferredType]}
+            </button>
+            {(["flexible", "scheduled", "recurring"] as const).map((type) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => chooseType(type)}
+                aria-pressed={typeOverride === type}
+                className={cn(
+                  "h-9 px-3 rounded-full text-xs font-semibold border transition-colors",
+                  typeOverride === type
+                    ? "bg-foreground text-background border-foreground"
+                    : "bg-background text-muted-foreground border-border hover:text-foreground",
+                )}
+              >
+                {TASK_TYPE_LABEL[type]}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {TYPE_HINT[effectiveType]}
+          </p>
+        </div>
 
         {/* Subtasks checklist (create only — edited live on the task page) */}
         {!isEdit && (

@@ -82,7 +82,8 @@ export default function TaskDetailPage() {
   const done = task.status === "completed";
   const overdue = isOverdue(task);
   const repeat = recurrenceLabel(task);
-  const canSnooze = !done && task.task_type !== "flexible";
+  // Snoozing an undated task gives it a time (it becomes scheduled)
+  const canSnooze = !done;
   const canSkip = !done && task.task_type === "recurring";
 
   return (

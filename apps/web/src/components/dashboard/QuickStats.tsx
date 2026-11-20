@@ -1,73 +1,87 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useTaskStore } from "@/store/taskStore";
 import { cn } from "@/lib/utils";
 
-interface QuickStatsProps {
-  /** When false the grid is hidden (used for mobile show/hide). Defaults to true. */
-  visible?: boolean;
-}
+const isSameDay = (iso: string | null | undefined, ref: Date) => {
+  if (!iso) return false;
+  const d = new Date(iso);
+  return (
+    d.getFullYear() === ref.getFullYear() &&
+    d.getMonth() === ref.getMonth() &&
+    d.getDate() === ref.getDate()
+  );
+};
 
-export function QuickStats({ visible = true }: QuickStatsProps) {
+/** Compact "today at a glance" counters. */
+export function QuickStats() {
   const tasks = useTaskStore((s) => s.tasks);
-  const now = new Date();
+  const [now, setNow] = useState<Date | null>(null);
+  useEffect(() => {
+    setNow(new Date());
+    const t = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(t);
+  }, []);
 
-  const overdueCount = tasks.filter(
-    (t) =>
-      t.status !== "completed" &&
-      t.due_date &&
-      new Date(t.due_date).getTime() < now.getTime(),
-  ).length;
-
-  const pendingCount = tasks.filter((t) => t.status === "pending").length;
-  const completedCount = tasks.filter((t) => t.status === "completed").length;
+  const pending = tasks.filter((t) => t.status !== "completed");
+  const overdue = now
+    ? pending.filter(
+        (t) => t.due_date && new Date(t.due_date).getTime() < now.getTime(),
+      ).length
+    : 0;
+  const dueToday = now
+    ? pending.filter(
+        (t) =>
+          isSameDay(t.due_date, now) &&
+          new Date(t.due_date!).getTime() >= now.getTime(),
+      ).length
+    : 0;
+  const doneToday = now
+    ? tasks.filter(
+        (t) =>
+          isSameDay(t.completed_at, now) || isSameDay(t.last_completed_at, now),
+      ).length
+    : 0;
 
   const stats = [
     {
-      title: "Overdue Tasks",
-      value: overdueCount,
-      color: "text-red-600 dark:text-red-400",
-      bg: "bg-red-500/10 border-red-500/20",
-      description: "Require immediate attention",
+      label: "Overdue",
+      value: overdue,
+      color: overdue
+        ? "text-red-600 dark:text-red-400"
+        : "text-muted-foreground",
+      bg: overdue ? "bg-red-500/10 border-red-500/20" : "bg-card border-border",
     },
     {
-      title: "Active Tasks",
-      value: pendingCount,
+      label: "Due today",
+      value: dueToday,
       color: "text-amber-600 dark:text-amber-400",
       bg: "bg-amber-500/10 border-amber-500/20",
-      description: "Remaining in checklist",
     },
     {
-      title: "Completed",
-      value: completedCount,
+      label: "Done today",
+      value: doneToday,
       color: "text-green-600 dark:text-green-400",
       bg: "bg-green-500/10 border-green-500/20",
-      description: "Successfully checked off",
     },
   ];
 
-  if (!visible) return null;
-
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      {stats.map((stat, idx) => (
+    <div className="grid grid-cols-3 gap-2.5 sm:gap-4">
+      {stats.map((stat) => (
         <div
-          key={idx}
+          key={stat.label}
           className={cn(
-            "p-5 rounded-xl border backdrop-blur-md transition-all duration-300 hover:scale-[1.02] flex flex-col justify-between shadow-md",
+            "px-3 py-3 sm:p-5 rounded-xl border shadow-sm",
             stat.bg,
           )}
         >
-          <div>
-            <p className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">
-              {stat.title}
-            </p>
-            <p className={cn("text-3xl font-bold mt-2", stat.color)}>
-              {stat.value}
-            </p>
-          </div>
-          <p className="text-xs text-muted-foreground mt-4 leading-normal">
-            {stat.description}
+          <p className={cn("text-2xl sm:text-3xl font-bold", stat.color)}>
+            {now ? stat.value : "–"}
+          </p>
+          <p className="text-xs font-semibold text-muted-foreground mt-0.5">
+            {stat.label}
           </p>
         </div>
       ))}

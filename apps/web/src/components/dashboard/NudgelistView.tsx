@@ -1,22 +1,67 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState, useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { toast } from "sonner";
+import {
+  Check,
+  Moon,
+  MoreVertical,
+  Pencil,
+  SkipForward,
+  Sparkles,
+  ThumbsUp,
+  Trash2,
+  XCircle,
+} from "lucide-react";
 import { useTaskStore } from "@/store/taskStore";
 import { taskService } from "@/services/task.service";
 import { getNudgeBuckets } from "@/lib/nudges";
 import { useTaskActions } from "@/hooks/useTaskActions";
-import { Task } from "@/types/database.types";
-import { format } from "@/lib/date-fns";
+import type { Task } from "@/types/database.types";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
-import { Sparkles, ExternalLink } from "lucide-react";
-import { SkipForward } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
+import { TASK_TYPE_BADGE, TASK_TYPE_LABEL, formatWhen } from "@/lib/taskFormat";
+
+type Kind = "overdue" | "forgotten" | "stale";
+
+const SECTIONS: {
+  kind: Kind;
+  title: string;
+  intro: string;
+  badge: string;
+}[] = [
+  {
+    kind: "overdue",
+    title: "Overdue",
+    intro: "Past their due date. Finish them or snooze to a better time.",
+    badge: "bg-red-500/15 text-red-600 dark:text-red-400",
+  },
+  {
+    kind: "forgotten",
+    title: "Forgotten",
+    intro: "Untouched for over a week. Still relevant?",
+    badge: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
+  },
+  {
+    kind: "stale",
+    title: "Going stale",
+    intro: "Untouched for 3–7 days.",
+    badge: "bg-blue-500/15 text-blue-600 dark:text-blue-400",
+  },
+];
+
+const DAY_MS = 86_400_000;
 
 export function NudgelistView() {
-  const router = useRouter();
   const { tasks, hasLoaded, updateTaskState, fetchTasks } = useTaskStore();
   const actions = useTaskActions();
 
@@ -28,19 +73,13 @@ export function NudgelistView() {
     return () => clearInterval(t);
   }, []);
 
-  const data = useMemo(
-    () =>
-      now === null
-        ? { overdue: [], forgotten: [], stale: [] }
-        : getNudgeBuckets(tasks, now),
+  const buckets = useMemo(
+    () => (now === null ? null : getNudgeBuckets(tasks, now)),
     [tasks, now],
   );
-  const loading = !hasLoaded || now === null;
 
-  const handleComplete = (task: Task) => actions.toggleCompletion(task);
-
-  const handleAcknowledge = async (task: Task) => {
-    // Touching the task updates `updated_at`, resetting its stale timer
+  /** "Still relevant": touching the task resets its staleness timer. */
+  const keep = async (task: Task) => {
     const updated_at = new Date().toISOString();
     const previous = task.updated_at;
     updateTaskState(task.id, { updated_at });
@@ -49,206 +88,206 @@ export function NudgelistView() {
     } catch (err) {
       console.error(err);
       updateTaskState(task.id, { updated_at: previous });
-      toast.error("Failed to update task");
+      toast.error("Couldn't update the task");
       fetchTasks();
     }
   };
 
-  const renderSection = (
-    title: string,
-    tasks: Task[],
-    type: "overdue" | "forgotten" | "stale",
-    badgeColor: string,
-    intro: string,
-  ) => {
-    if (tasks.length === 0) return null;
-
+  if (!hasLoaded || !buckets || now === null) {
     return (
-      <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <h3 className="font-bold text-base text-foreground">{title}</h3>
-          <span
-            className={cn(
-              "text-xs px-2 py-0.5 rounded-full font-bold",
-              badgeColor,
-            )}
-          >
-            {tasks.length}
-          </span>
-        </div>
-        <p className="text-xs text-muted-foreground leading-normal">{intro}</p>
-
-        <div className="space-y-3">
-          {tasks.map((task) => (
-            <div
-              key={task.id}
-              className="border border-border bg-card backdrop-blur-sm p-4 rounded-xl flex flex-col gap-4 shadow-md"
-            >
-              <div className="space-y-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <button
-                    onClick={() => router.push(`/tasks/${task.id}`)}
-                    className="font-bold text-sm text-foreground hover:text-brand-indigo dark:hover:text-brand-blue flex items-center gap-1.5 group text-left transition-colors"
-                    title="View task details in task list"
-                  >
-                    <span>{task.title}</span>
-                    <ExternalLink className="w-3.5 h-3.5 opacity-60 group-hover:opacity-100 transition-opacity text-muted-foreground group-hover:text-brand-indigo dark:group-hover:text-brand-blue" />
-                  </button>
-                  <span className="text-[10px] bg-muted border border-border text-muted-foreground px-2 py-0.5 rounded-full uppercase">
-                    {task.task_type}
-                  </span>
-                </div>
-                {task.description && (
-                  <p className="text-xs text-muted-foreground line-clamp-1">
-                    {task.description}
-                  </p>
-                )}
-                {task.due_date && (
-                  <p className="text-[10px] text-muted-foreground">
-                    Was due: {format(task.due_date, "MMM dd, yyyy HH:mm")}
-                  </p>
-                )}
-                {task.tags && task.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {task.tags.map((t) => (
-                      <span
-                        key={t.id}
-                        className="text-[9px] text-muted-foreground"
-                      >
-                        #{t.name}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Action Buttons - Responsive Grid */}
-              <div className="grid grid-cols-2 md:flex md:flex-wrap gap-2">
-                <Button
-                  onClick={() => router.push(`/tasks/${task.id}`)}
-                  variant="outline"
-                  className="text-xs py-1 h-8 rounded px-3 border-border hover:bg-muted text-foreground flex items-center justify-center gap-1.5 md:w-auto"
-                  title="View task details in task list"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  View
-                </Button>
-
-                <Button
-                  onClick={() => handleComplete(task)}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold py-1 h-8 rounded px-3 flex items-center justify-center md:w-auto"
-                >
-                  Complete
-                </Button>
-
-                {task.task_type === "recurring" && (
-                  <>
-                    <Button
-                      onClick={() => actions.skip(task, "skipped")}
-                      variant="outline"
-                      className="text-xs py-1 h-8 rounded px-3 border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 flex items-center justify-center gap-1.5 md:w-auto"
-                    >
-                      <SkipForward className="w-3.5 h-3.5" />
-                      Skip
-                    </Button>
-                    <Button
-                      onClick={() => actions.skip(task, "missed")}
-                      variant="outline"
-                      className="text-xs py-1 h-8 rounded px-3 border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 flex items-center justify-center gap-1.5 md:w-auto"
-                    >
-                      <svg
-                        className="w-3.5 h-3.5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
-                      Missed
-                    </Button>
-                  </>
-                )}
-
-                {type === "overdue" ? (
-                  <Button
-                    onClick={() => actions.snooze(task)}
-                    variant="outline"
-                    className="text-xs py-1 h-8 rounded px-3 flex items-center justify-center md:w-auto"
-                  >
-                    Snooze
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={() => handleAcknowledge(task)}
-                    variant="outline"
-                    className="text-xs py-1 h-8 rounded px-3 flex items-center justify-center md:w-auto col-span-2 sm:col-span-1"
-                    title="Updates the task's timestamp to keep it off the nudgelist"
-                  >
-                    Acknowledge (Reset Timer)
-                  </Button>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
+      <div className="flex justify-center items-center py-12">
+        <Spinner size="md" label="Checking your tasks..." />
       </div>
     );
-  };
+  }
 
-  const totalNudges =
-    data.overdue.length + data.forgotten.length + data.stale.length;
+  const total =
+    buckets.overdue.length + buckets.forgotten.length + buckets.stale.length;
 
   return (
-    <div className="space-y-6">
-      {loading ? (
-        <div className="flex justify-center items-center py-12">
-          <Spinner size="md" label="Analyzing task timelines..." />
-        </div>
-      ) : totalNudges === 0 ? (
-        <div className="text-center py-12 border border-dashed border-border rounded-2xl bg-muted/20 flex flex-col items-center justify-center p-6 space-y-3">
-          <Sparkles className="w-8 h-8 text-amber-500 animate-pulse" />
-          <p className="font-bold text-sm text-foreground">
-            Your mind is clear!
+    <div className="space-y-8">
+      {total === 0 ? (
+        <div className="text-center py-12 border border-dashed border-border rounded-2xl bg-muted/20 flex flex-col items-center p-6 gap-3">
+          <Sparkles className="w-8 h-8 text-amber-500" />
+          <p className="font-bold text-base text-foreground">
+            Your mind is clear
           </p>
-          <p className="text-xs text-muted-foreground max-w-xs leading-relaxed">
-            All tasks are up-to-date. No overdue, forgotten, or stale items
-            require nudging.
+          <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">
+            Nothing overdue, forgotten, or going stale.
           </p>
         </div>
       ) : (
-        <div className="space-y-8">
-          {renderSection(
-            "Overdue Tasks",
-            data.overdue,
-            "overdue",
-            "bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30",
-            "These tasks have deadlines in the past. Snooze them to reset their deadline or complete them to clear them.",
-          )}
-
-          {renderSection(
-            "Forgotten Tasks",
-            data.forgotten,
-            "forgotten",
-            "bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30",
-            "You haven't interacted with or updated these pending tasks in over a week. Acknowledge them to keep them in your rotation.",
-          )}
-
-          {renderSection(
-            "Stale Tasks",
-            data.stale,
-            "stale",
-            "bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/30",
-            "These pending tasks have had no updates in the past 3 to 7 days. Give them a quick check or touch.",
-          )}
-        </div>
+        SECTIONS.map(({ kind, title, intro, badge }) => {
+          const list = buckets[kind];
+          if (list.length === 0) return null;
+          return (
+            <section key={kind} className="space-y-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="font-bold text-base text-foreground">
+                    {title}
+                  </h2>
+                  <span
+                    className={cn(
+                      "text-xs px-2 py-0.5 rounded-full font-bold",
+                      badge,
+                    )}
+                  >
+                    {list.length}
+                  </span>
+                </div>
+                <p className="text-sm text-muted-foreground mt-0.5">{intro}</p>
+              </div>
+              <ul className="space-y-3">
+                {list.map((task) => (
+                  <NudgeCard
+                    key={task.id}
+                    task={task}
+                    kind={kind}
+                    now={now}
+                    actions={actions}
+                    onKeep={() => keep(task)}
+                  />
+                ))}
+              </ul>
+            </section>
+          );
+        })
       )}
 
       {actions.dialogs}
     </div>
+  );
+}
+
+function NudgeCard({
+  task,
+  kind,
+  now,
+  actions,
+  onKeep,
+}: {
+  task: Task;
+  kind: Kind;
+  now: number;
+  actions: ReturnType<typeof useTaskActions>;
+  onKeep: () => void;
+}) {
+  const idleDays = Math.floor(
+    (now - new Date(task.updated_at || task.created_at).getTime()) / DAY_MS,
+  );
+  const recurring = task.task_type === "recurring";
+
+  return (
+    <li className="border border-border bg-card p-4 rounded-xl shadow-sm space-y-3">
+      <div className="space-y-1">
+        <div className="flex items-start justify-between gap-2">
+          <Link
+            href={`/tasks/${task.id}`}
+            className="font-bold text-base text-foreground leading-snug break-words hover:underline underline-offset-2"
+          >
+            {task.title}
+          </Link>
+          <span
+            className={cn(
+              "text-[11px] px-2.5 py-0.5 rounded-full font-semibold border shrink-0 mt-0.5",
+              TASK_TYPE_BADGE[task.task_type],
+            )}
+          >
+            {TASK_TYPE_LABEL[task.task_type]}
+          </span>
+        </div>
+        <p
+          className={cn(
+            "text-xs",
+            kind === "overdue"
+              ? "text-red-600 dark:text-red-400 font-medium"
+              : "text-muted-foreground",
+          )}
+        >
+          {kind === "overdue" && task.due_date
+            ? `Was due ${formatWhen(task.due_date, new Date(now))}`
+            : `Untouched for ${idleDays} day${idleDays === 1 ? "" : "s"}`}
+        </p>
+      </div>
+
+      {/* One clear primary action, one contextual secondary, rest in ⋯ */}
+      <div className="flex gap-2">
+        <Button
+          onClick={() => actions.toggleCompletion(task)}
+          className="flex-1 h-11 rounded-xl text-sm font-semibold gap-1.5"
+        >
+          <Check className="w-4 h-4" /> Complete
+        </Button>
+        {kind === "overdue" ? (
+          <Button
+            onClick={() => actions.snooze(task)}
+            variant="outline"
+            className="flex-1 h-11 rounded-xl text-sm font-semibold gap-1.5"
+          >
+            <Moon className="w-4 h-4" /> Snooze
+          </Button>
+        ) : (
+          <Button
+            onClick={onKeep}
+            variant="outline"
+            className="flex-1 h-11 rounded-xl text-sm font-semibold gap-1.5"
+            title="Keeps it, and resets its 'untouched' timer"
+          >
+            <ThumbsUp className="w-4 h-4" /> Still relevant
+          </Button>
+        )}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              aria-label="More actions"
+              className="h-11 w-11 shrink-0 rounded-xl p-0"
+            >
+              <MoreVertical className="w-5 h-5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            {kind !== "overdue" && (
+              <DropdownMenuItem
+                onClick={() => actions.snooze(task)}
+                className="gap-2 py-2.5"
+              >
+                <Moon className="w-4 h-4" /> Snooze
+              </DropdownMenuItem>
+            )}
+            {recurring && (
+              <>
+                <DropdownMenuItem
+                  onClick={() => actions.skip(task, "skipped")}
+                  className="gap-2 py-2.5"
+                >
+                  <SkipForward className="w-4 h-4" /> Skip occurrence
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => actions.skip(task, "missed")}
+                  className="gap-2 py-2.5"
+                >
+                  <XCircle className="w-4 h-4" /> Mark missed
+                </DropdownMenuItem>
+              </>
+            )}
+            <DropdownMenuItem
+              onClick={() => actions.edit(task)}
+              className="gap-2 py-2.5"
+            >
+              <Pencil className="w-4 h-4" /> Edit
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => actions.requestDelete(task)}
+              className="gap-2 py-2.5 text-destructive focus:text-destructive"
+            >
+              <Trash2 className="w-4 h-4" /> Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </li>
   );
 }

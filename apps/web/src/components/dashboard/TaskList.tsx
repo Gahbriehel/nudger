@@ -263,7 +263,8 @@ function TaskCard({
   const subs = task.subtasks ?? [];
   const subsDone = subs.filter((s) => s.completed).length;
   const repeat = recurrenceLabel(task);
-  const canSnooze = !done && task.task_type !== "flexible";
+  // Snoozing an undated task gives it a time (it becomes scheduled)
+  const canSnooze = !done;
   const canSkip = !done && task.task_type === "recurring";
   // Inline checklist: tick items without leaving the list
   const [checklistOpen, setChecklistOpen] = useState(false);

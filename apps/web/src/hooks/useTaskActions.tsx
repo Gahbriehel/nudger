@@ -11,6 +11,11 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { SnoozeModal } from "@/components/dashboard/SnoozeModal";
 import { SkipModal } from "@/components/dashboard/SkipModal";
+import {
+  cancelCommit,
+  deferCommit,
+  UNDO_WINDOW_MS,
+} from "@/lib/deferredCommit";
 
 const completedMessage = (task: Task) =>
   task.task_type === "recurring"
@@ -32,10 +37,6 @@ export function useTaskActions() {
   const [pendingSubtasksTask, setPendingSubtasksTask] = useState<Task | null>(
     null,
   );
-  const [deleteTarget, setDeleteTarget] = useState<{
-    task: Task;
-    onDeleted?: () => void;
-  } | null>(null);
   const [snoozeTask, setSnoozeTask] = useState<Task | null>(null);
   const [skipTarget, setSkipTarget] = useState<{
     task: Task;
@@ -56,34 +57,73 @@ export function useTaskActions() {
 
   // ---- Task completion -------------------------------------------------
 
-  const completeTask = async (task: Task, markSubtasks = false) => {
-    const nowStr = new Date().toISOString();
-    if (task.task_type !== "recurring") {
-      store.updateTaskState(task.id, {
-        status: "completed",
-        completed_at: nowStr,
-      });
-    }
-    try {
-      if (markSubtasks) {
-        const pending = (task.subtasks ?? []).filter((s) => !s.completed);
-        pending.forEach((s) => store.toggleSubtaskState(task.id, s.id, true));
-        await Promise.all(
-          pending.map((s) => taskService.toggleSubtask(s.id, true)),
-        );
-      }
-      await taskService.completeTask(task);
-      toast.success(completedMessage(task));
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to complete task");
-    } finally {
-      fetchTasks(); // reconcile (and pick up recurring rollover)
-    }
+  /** Latest copy of a task from the store (callers may hold a stale one). */
+  const latest = (task: Task) =>
+    useTaskStore.getState().tasks.find((t) => t.id === task.id) ?? task;
+
+  /**
+   * Complete immediately in the UI with an Undo toast; the server write
+   * (which also rolls recurring tasks over) happens after the undo window.
+   */
+  const completeTask = (task: Task, markSubtasks = false) => {
+    const snapshot = latest(task);
+    const completedAt = new Date().toISOString();
+    const apply = (t: Task): Task => ({
+      ...t,
+      status: "completed",
+      completed_at: completedAt,
+      subtasks: markSubtasks
+        ? t.subtasks?.map((s) => ({
+            ...s,
+            completed: true,
+            completed_at: s.completed_at ?? completedAt,
+          }))
+        : t.subtasks,
+    });
+
+    store.updateTaskState(task.id, apply(snapshot));
+
+    const handle = deferCommit(`complete:${task.id}`, {
+      overlay: (tasks) => tasks.map((t) => (t.id === task.id ? apply(t) : t)),
+      commit: async () => {
+        try {
+          if (markSubtasks) {
+            const open = (snapshot.subtasks ?? []).filter((s) => !s.completed);
+            await Promise.all(
+              open.map((s) => taskService.toggleSubtask(s.id, true)),
+            );
+          }
+          await taskService.completeTask(snapshot);
+        } catch (err) {
+          console.error(err);
+          toast.error(`Couldn't complete "${snapshot.title}"`);
+        } finally {
+          fetchTasks(); // reconcile (and pick up recurring rollover)
+        }
+      },
+    });
+
+    toast.success(completedMessage(snapshot), {
+      duration: UNDO_WINDOW_MS,
+      action: {
+        label: "Undo",
+        onClick: () => {
+          if (!handle.cancel()) return;
+          store.updateTaskState(task.id, {
+            status: snapshot.status,
+            completed_at: snapshot.completed_at,
+            subtasks: snapshot.subtasks,
+          });
+        },
+      },
+    });
   };
 
   const reopenTask = async (task: Task) => {
     store.updateTaskState(task.id, { status: "pending", completed_at: null });
+    // Unticked within the undo window: the completion never reached the
+    // server, so cancelling it is all that's needed.
+    if (cancelCommit(`complete:${task.id}`)) return;
     try {
       await taskService.updateTask(task.id, {
         status: "pending",
@@ -228,23 +268,42 @@ export function useTaskActions() {
 
   // ---- Delete ----------------------------------------------------------
 
-  const confirmDelete = async () => {
-    if (!deleteTarget) return;
-    const { task, onDeleted } = deleteTarget;
-    setBusy(true);
+  /** Delete immediately in the UI with an Undo toast (no confirm dialog). */
+  const deleteTask = (task: Task, onDeleted?: () => void) => {
+    const snapshot = latest(task);
+    const index = useTaskStore
+      .getState()
+      .tasks.findIndex((t) => t.id === task.id);
     store.deleteTaskState(task.id);
-    try {
-      await taskService.deleteTask(task.id);
-      toast.success("Task deleted");
-      onDeleted?.();
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to delete task");
-      fetchTasks();
-    } finally {
-      setBusy(false);
-      setDeleteTarget(null);
-    }
+    onDeleted?.();
+
+    const handle = deferCommit(`delete:${task.id}`, {
+      overlay: (tasks) => tasks.filter((t) => t.id !== task.id),
+      commit: async () => {
+        try {
+          await taskService.deleteTask(task.id);
+        } catch (err) {
+          console.error(err);
+          toast.error(`Couldn't delete "${snapshot.title}"`);
+          fetchTasks();
+        }
+      },
+    });
+
+    toast("Task deleted", {
+      duration: UNDO_WINDOW_MS,
+      action: {
+        label: "Undo",
+        onClick: () => {
+          if (!handle.cancel()) return;
+          useTaskStore.setState((state) => {
+            const tasks = [...state.tasks];
+            tasks.splice(Math.max(0, index), 0, snapshot);
+            return { tasks };
+          });
+        },
+      },
+    });
   };
 
   const runBusy = async (fn: () => Promise<void>) => {
@@ -342,18 +401,6 @@ export function useTaskActions() {
         }
       />
 
-      <Modal
-        isOpen={!!deleteTarget}
-        onClose={() => setDeleteTarget(null)}
-        title="Delete task?"
-        description="This can't be undone."
-        variant="destructive"
-        confirmText="Delete"
-        cancelText="Cancel"
-        onConfirm={confirmDelete}
-        isLoading={busy}
-      />
-
       <SnoozeModal
         isOpen={!!snoozeTask}
         onClose={() => setSnoozeTask(null)}
@@ -380,8 +427,7 @@ export function useTaskActions() {
     addCue,
     deleteCue,
     edit: (task: Task) => openEditTask(task.id),
-    requestDelete: (task: Task, onDeleted?: () => void) =>
-      setDeleteTarget({ task, onDeleted }),
+    requestDelete: deleteTask,
     snooze: (task: Task) => setSnoozeTask(task),
     skip: (task: Task, type: "skipped" | "missed") =>
       setSkipTarget({ task, type }),

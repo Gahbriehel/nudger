@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { X, ClipboardCheck, Pencil } from "lucide-react";
 import { useUiStore } from "@/store/uiStore";
 import { useTaskStore } from "@/store/taskStore";
 import { TaskEditor } from "./TaskEditor";
+import { QuickAdd } from "./QuickAdd";
 import type { Task } from "@/types/database.types";
 
 /**
@@ -22,6 +23,15 @@ export function TaskEditorModal() {
       : undefined,
   );
   const dirtyRef = useRef(false);
+  // Creating starts with quick add; "More options" switches to the full
+  // editor, carrying the typed input over as a draft.
+  const [draft, setDraft] = useState<{
+    title: string;
+    due_date: string;
+  } | null>(null);
+  useEffect(() => {
+    if (!editor) setDraft(null);
+  }, [editor]);
 
   const requestClose = useCallback(() => {
     if (dirtyRef.current && !window.confirm("Discard your unsaved changes?")) {
@@ -64,6 +74,7 @@ export function TaskEditorModal() {
   if (editor.mode === "edit" && !task) return null;
 
   const isEdit = editor.mode === "edit";
+  const isQuick = !isEdit && !draft;
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sm:p-4">
@@ -93,11 +104,13 @@ export function TaskEditorModal() {
               >
                 {isEdit ? "Edit Task" : "New Task"}
               </h2>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {isEdit
-                  ? "Checklist and memory cues are edited on the task page."
-                  : "Offload details, schedules, and cues to the system."}
-              </p>
+              {!isQuick && (
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {isEdit
+                    ? "Checklist and memory cues are edited on the task page."
+                    : "Add a checklist, memory cues, tags, and more."}
+                </p>
+              )}
             </div>
           </div>
           <button
@@ -109,14 +122,26 @@ export function TaskEditorModal() {
           </button>
         </div>
         <div className="overflow-y-auto overscroll-contain -mx-1 px-1 pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] sm:pb-0">
-          <TaskEditor
-            // Remount per target so defaults re-initialise
-            key={isEdit ? `edit-${task!.id}` : "create"}
-            task={task}
-            onSuccess={handleSuccess}
-            onCancel={requestClose}
-            onDirtyChange={handleDirtyChange}
-          />
+          {isQuick ? (
+            <QuickAdd
+              onSaved={() => {
+                dirtyRef.current = false;
+                closeEditor();
+              }}
+              onMoreOptions={setDraft}
+              onDirtyChange={handleDirtyChange}
+            />
+          ) : (
+            <TaskEditor
+              // Remount per target so defaults re-initialise
+              key={isEdit ? `edit-${task!.id}` : "create"}
+              task={task}
+              draft={draft ?? undefined}
+              onSuccess={handleSuccess}
+              onCancel={requestClose}
+              onDirtyChange={handleDirtyChange}
+            />
+          )}
         </div>
       </div>
     </div>

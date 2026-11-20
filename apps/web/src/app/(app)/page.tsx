@@ -1,354 +1,346 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import {
+  ArrowRight,
+  BarChart3,
+  Check,
+  ChevronRight,
+  Coffee,
+  Plus,
+  Repeat,
+} from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { useTaskStore } from "@/store/taskStore";
 import { useUiStore } from "@/store/uiStore";
+import { useTaskActions } from "@/hooks/useTaskActions";
 import { QuickStats } from "@/components/dashboard/QuickStats";
 import { Button } from "@/components/ui/button";
-import { format } from "@/lib/date-fns";
+import { Spinner } from "@/components/ui/spinner";
+import { getNudgeBuckets } from "@/lib/nudges";
+import { formatWhen, recurrenceLabel } from "@/lib/taskFormat";
 import { cn } from "@/lib/utils";
-import { Task } from "@/types/database.types";
+import type { Task } from "@/types/database.types";
+
+const DAY_MS = 86_400_000;
+const endOfToday = (now: Date) =>
+  new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime();
+
+function greeting(now: Date) {
+  const h = now.getHours();
+  if (h < 5) return "Good evening";
+  if (h < 12) return "Good morning";
+  if (h < 18) return "Good afternoon";
+  return "Good evening";
+}
+
+/** Splits pending tasks into what matters now. */
+function useAgenda(tasks: Task[], now: Date | null) {
+  return useMemo(() => {
+    if (!now) return null;
+    const nowMs = now.getTime();
+    const todayEnd = endOfToday(now);
+    const weekEnd = nowMs + 7 * DAY_MS;
+    const pending = tasks.filter((t) => t.status !== "completed");
+    const byDue = (a: Task, b: Task) =>
+      new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime();
+    const dueAt = (t: Task) => new Date(t.due_date!).getTime();
+
+    const dated = pending.filter((t) => t.due_date);
+    const overdue = dated.filter((t) => dueAt(t) < nowMs).sort(byDue);
+    const today = dated
+      .filter((t) => dueAt(t) >= nowMs && dueAt(t) < todayEnd)
+      .sort(byDue);
+    const upNext = dated
+      .filter((t) => dueAt(t) >= todayEnd && dueAt(t) < weekEnd)
+      .sort(byDue)
+      .slice(0, 5);
+    // Undated tasks, least recently touched first — good "pick one" candidates
+    const anytime = pending
+      .filter((t) => !t.due_date)
+      .sort(
+        (a, b) =>
+          new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime(),
+      )
+      .slice(0, 3);
+
+    const buckets = getNudgeBuckets(tasks, nowMs);
+    const needsLook = buckets.forgotten.length + buckets.stale.length;
+
+    return { overdue, today, upNext, anytime, needsLook };
+  }, [tasks, now]);
+}
 
 export default function HomePage() {
-  const { user } = useAuthStore();
-  const { tasks, fetchTasks, loading, refreshing } = useTaskStore();
-  const tasksLoading = loading || refreshing;
+  const user = useAuthStore((s) => s.user);
+  const { tasks, hasLoaded } = useTaskStore();
   const openCreateTask = useUiStore((s) => s.openCreateTask);
-  const [currentTime, setCurrentTime] = useState<Date | null>(null);
-  // Stats are shown by default on md+ screens; hidden on mobile
-  const [showStats, setShowStats] = useState(false);
+  const actions = useTaskActions();
 
+  const [now, setNow] = useState<Date | null>(null);
   useEffect(() => {
-    setCurrentTime(new Date());
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 60000);
-
-    return () => clearInterval(timer);
+    setNow(new Date());
+    const t = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(t);
   }, []);
 
-  // Get top 3 urgent tasks for summary
-  const nowTime = currentTime ? currentTime.getTime() : null;
-  const urgentTasks =
-    nowTime === null
-      ? []
-      : tasks
-          .filter((t: Task) => t.status !== "completed")
-          .filter((t: Task) => {
-            const isOverdue =
-              t.due_date && new Date(t.due_date).getTime() < nowTime;
-            const lastUpdatedTime = new Date(
-              t.updated_at || t.created_at,
-            ).getTime();
-            const daysSinceInteraction =
-              (nowTime - lastUpdatedTime) / (24 * 60 * 60 * 1000);
-            return isOverdue || daysSinceInteraction >= 3;
-          })
-          .slice(0, 3);
-
-  // Get 3 recently updated tasks
-  const recentTasks = [...tasks]
-    .sort(
-      (a: Task, b: Task) =>
-        new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
-    )
-    .slice(0, 3);
+  const agenda = useAgenda(tasks, now);
+  const name =
+    user?.user_metadata?.name || user?.email?.split("@")[0] || "there";
+  const nothingDated =
+    agenda &&
+    agenda.overdue.length + agenda.today.length + agenda.upNext.length === 0;
 
   return (
-    <>
-      {" "}
-      <div className="space-y-8">
-        {/* Welcoming and Digital Clock banner */}
-        <div className="relative overflow-hidden border border-border bg-card/85 backdrop-blur-md p-6 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-lg before:absolute before:top-0 before:left-0 before:right-0 before:h-[3px] before:bg-gradient-to-r before:from-brand-indigo before:to-brand-blue">
-          <div className="space-y-1">
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
-              Hello,{" "}
-              {user?.user_metadata?.name ||
-                user?.email?.split("@")[0] ||
-                "User"}
-            </h1>
-            <p className="text-xs text-muted-foreground leading-normal max-w-md">
-              Keep your mind clear. Offload temporary details, schedules, and
-              cues to the system.
-            </p>
-          </div>
-
-          {currentTime && (
-            <div className="text-right flex flex-col md:items-end justify-center">
-              <span className="text-2xl font-bold tracking-wider text-foreground">
-                {format(currentTime, "HH:mm")}
-              </span>
-              <span className="text-xs text-muted-foreground font-semibold mt-1">
-                {format(currentTime, "MMMM dd, yyyy")}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Quick Stats Grid */}
-        {/* Mobile: toggle show/hide. On md+ always show via CSS */}
+    <div className="space-y-6">
+      {/* Greeting */}
+      <div className="relative overflow-hidden border border-border bg-card/85 backdrop-blur-md px-5 py-4 sm:p-6 rounded-2xl flex items-center justify-between gap-4 shadow-sm before:absolute before:top-0 before:left-0 before:right-0 before:h-[3px] before:bg-gradient-to-r before:from-brand-indigo before:to-brand-blue">
         <div>
-          {/* Toggle button – visible only on mobile */}
-          <button
-            id="toggle-stats-btn"
-            onClick={() => setShowStats((prev) => !prev)}
-            className={cn(
-              "md:hidden w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl border text-xs font-semibold transition-all duration-200 mb-3 shadow-sm",
-              showStats
-                ? "bg-muted border-border text-foreground"
-                : "bg-card border-border text-muted-foreground hover:text-foreground hover:border-foreground/20 hover:bg-muted/50",
-            )}
-          >
-            <div className="flex items-center gap-2.5">
-              {/* Bar chart icon */}
-              <svg
-                className={cn(
-                  "w-4 h-4 flex-shrink-0",
-                  showStats ? "text-foreground" : "text-muted-foreground",
-                )}
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                />
-              </svg>
-              <span>{showStats ? "Hide Stats" : "View Stats"}</span>
-            </div>
-            <svg
-              className={cn(
-                "w-4 h-4 flex-shrink-0 transition-transform duration-300",
-                showStats ? "rotate-180" : "",
-              )}
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M19 9l-7 7-7-7"
-              />
-            </svg>
-          </button>
-
-          {/* Stats grid: hidden on mobile unless showStats, always visible md+ */}
-          <div className={cn("md:block", showStats ? "block" : "hidden")}>
-            <QuickStats />
-          </div>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
+            {now ? greeting(now) : "Hello"}, {name}
+          </h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {now
+              ? now.toLocaleDateString(undefined, {
+                  weekday: "long",
+                  day: "numeric",
+                  month: "long",
+                })
+              : " "}
+          </p>
         </div>
-
-        {/* Action buttons */}
-        <div className="flex gap-3 items-center flex-wrap">
-          <Button
-            onClick={openCreateTask}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold h-10 px-5 rounded-lg text-xs"
-          >
-            + Create New Task
-          </Button>
-          <Link href="/nudgelist">
-            <Button
-              variant="outline"
-              className="font-semibold h-10 px-5 rounded-lg text-xs"
-            >
-              Review Nudgelist
-            </Button>
-          </Link>
-          <Link href="/reports">
-            <Button
-              variant="outline"
-              className="font-semibold h-10 px-5 rounded-lg text-xs flex items-center gap-1.5"
-            >
-              <svg
-                className="w-3.5 h-3.5 text-brand-indigo"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                />
-              </svg>
-              Weekly & Monthly Reports
-            </Button>
-          </Link>
-          <button
-            id="dashboard-refresh-btn"
-            onClick={() => fetchTasks()}
-            disabled={tasksLoading}
-            title="Refresh tasks"
-            className="ml-auto h-10 w-10 flex items-center justify-center rounded-lg border border-border bg-card hover:bg-muted text-muted-foreground hover:text-foreground transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-          >
-            <svg
-              className={cn("w-4 h-4", tasksLoading && "animate-spin")}
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-              />
-            </svg>
-          </button>
-        </div>
-
-        {/* Dashboard Sections Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Urgent Action / Nudges Summary */}
-          <div className="border border-border bg-card backdrop-blur-md p-5 rounded-2xl shadow-md space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold tracking-wider uppercase text-muted-foreground">
-                Urgent Nudges
-              </h2>
-              <Link
-                href="/nudgelist"
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >
-                View All
-              </Link>
-            </div>
-
-            {urgentTasks.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground text-xs bg-muted/30 rounded-xl border border-border border-dashed">
-                No urgent tasks to display.
-              </div>
-            ) : (
-              <div className="space-y-2.5">
-                {urgentTasks.map((t: Task) => (
-                  <Link
-                    key={t.id}
-                    href={`/tasks/${t.id}`}
-                    className="bg-muted/40 border border-border hover:border-foreground/20 p-3.5 rounded-xl flex items-center justify-between gap-3 cursor-pointer transition-all duration-200"
-                  >
-                    <div className="space-y-0.5 truncate">
-                      <p className="font-bold text-xs text-foreground truncate">
-                        {t.title}
-                      </p>
-                      {t.due_date && (
-                        <p className="text-[10px] text-red-500 dark:text-red-400">
-                          Due: {format(t.due_date, "PP")}
-                        </p>
-                      )}
-                    </div>
-                    <span className="text-[10px] bg-red-500/10 text-red-500 dark:text-red-400 border border-red-500/20 px-2 py-0.5 rounded-full uppercase font-medium">
-                      Nudge
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Recent Activities */}
-          <div className="border border-border bg-card backdrop-blur-md p-5 rounded-2xl shadow-md space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold tracking-wider uppercase text-muted-foreground">
-                Recently Updated
-              </h2>
-              <Link
-                href="/tasks"
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >
-                View All
-              </Link>
-            </div>
-
-            {recentTasks.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground text-xs bg-muted/30 rounded-xl border border-border border-dashed">
-                No tasks yet.{" "}
-                <button
-                  onClick={openCreateTask}
-                  className="font-semibold text-foreground underline underline-offset-2"
-                >
-                  Add your first one
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-2.5">
-                {recentTasks.map((t: Task) => (
-                  <Link
-                    key={t.id}
-                    href={`/tasks/${t.id}`}
-                    className="bg-muted/40 border border-border hover:border-foreground/20 p-3.5 rounded-xl flex items-center justify-between gap-3 cursor-pointer transition-all duration-200"
-                  >
-                    <div className="space-y-0.5 truncate">
-                      <p className="font-bold text-xs text-foreground truncate">
-                        {t.title}
-                      </p>
-                      <p className="text-[10px] text-muted-foreground">
-                        Updated: {format(t.updated_at, "PP")}
-                      </p>
-                    </div>
-                    <span
-                      className={cn(
-                        "text-[10px] px-2 py-0.5 rounded-full uppercase font-medium",
-                        t.status === "completed"
-                          ? "bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20"
-                          : "bg-muted text-muted-foreground border border-border",
-                      )}
-                    >
-                      {t.status}
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Weekly & Monthly Reports Teaser */}
-        <div className="border border-border/80 bg-gradient-to-r from-brand-indigo/10 via-card to-brand-blue/10 p-5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
-          <div className="flex items-center gap-3.5">
-            <div className="p-3 rounded-2xl bg-brand-indigo/15 text-brand-indigo shrink-0">
-              <svg
-                className="w-6 h-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                />
-              </svg>
-            </div>
-            <div className="space-y-0.5">
-              <h3 className="text-sm font-bold text-foreground">
-                Weekly & Monthly Productivity Reports
-              </h3>
-              <p className="text-xs text-muted-foreground">
-                Track completion velocity, routine adherence, and cognitive cue
-                impact with exportable summaries.
-              </p>
-            </div>
-          </div>
-
-          <Link href="/reports" className="shrink-0">
-            <Button
-              variant="outline"
-              className="w-full sm:w-auto text-xs font-semibold h-9 rounded-xl gap-2 border-brand-indigo/30 hover:bg-brand-indigo/10 text-brand-indigo"
-            >
-              <span>View Analytics</span>
-              <span>&rarr;</span>
-            </Button>
-          </Link>
-        </div>
+        {/* On phones the floating + button handles this */}
+        <Button
+          onClick={openCreateTask}
+          className="hidden md:inline-flex h-10 px-4 rounded-lg font-semibold gap-1.5"
+        >
+          <Plus className="w-4 h-4" /> New task
+        </Button>
       </div>
-    </>
+
+      <QuickStats />
+
+      {/* Now */}
+      <section className="border border-border bg-card p-4 sm:p-5 rounded-2xl shadow-sm space-y-5">
+        {!hasLoaded || !agenda ? (
+          <div className="flex justify-center py-8">
+            <Spinner size="md" label="Loading your day..." />
+          </div>
+        ) : tasks.length === 0 ? (
+          <div className="text-center py-8 space-y-3">
+            <p className="font-bold text-foreground">
+              Nothing on your mind yet
+            </p>
+            <p className="text-sm text-muted-foreground max-w-xs mx-auto">
+              Add the first thing you don&apos;t want to keep in your head.
+            </p>
+            <Button
+              onClick={openCreateTask}
+              className="h-11 px-5 rounded-xl font-semibold gap-2"
+            >
+              <Plus className="w-4 h-4" /> Add a task
+            </Button>
+          </div>
+        ) : (
+          <>
+            <AgendaGroup
+              title="Overdue"
+              tone="danger"
+              tasks={agenda.overdue}
+              now={now!}
+              actions={actions}
+            />
+            <AgendaGroup
+              title="Today"
+              tasks={agenda.today}
+              now={now!}
+              actions={actions}
+            />
+            <AgendaGroup
+              title="Next 7 days"
+              tasks={agenda.upNext}
+              now={now!}
+              actions={actions}
+            />
+
+            {nothingDated && (
+              <div className="flex items-center gap-3 rounded-xl bg-muted/40 border border-dashed border-border p-4">
+                <Coffee className="w-5 h-5 text-muted-foreground shrink-0" />
+                <p className="text-sm text-muted-foreground">
+                  Nothing due this week.
+                  {agenda.anytime.length > 0 &&
+                    " Maybe pick something from below?"}
+                </p>
+              </div>
+            )}
+
+            {/* Undated tasks, offered when there's room in the day */}
+            {agenda.overdue.length + agenda.today.length < 3 && (
+              <AgendaGroup
+                title="Anytime"
+                tasks={agenda.anytime}
+                now={now!}
+                actions={actions}
+              />
+            )}
+
+            <Link
+              href="/tasks"
+              className="flex items-center justify-center gap-1.5 h-10 text-sm font-semibold text-muted-foreground hover:text-foreground"
+            >
+              All tasks <ArrowRight className="w-4 h-4" />
+            </Link>
+          </>
+        )}
+      </section>
+
+      {/* Stale tasks — same rules as the Nudgelist */}
+      {agenda && agenda.needsLook > 0 && (
+        <Link
+          href="/nudgelist"
+          className="flex items-center gap-3 border border-amber-500/25 bg-amber-500/5 rounded-2xl p-4 active:bg-amber-500/10"
+        >
+          <span className="w-10 h-10 shrink-0 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
+            {agenda.needsLook}
+          </span>
+          <span className="flex-1 min-w-0">
+            <span className="block text-sm font-semibold text-foreground">
+              Needs a look
+            </span>
+            <span className="block text-xs text-muted-foreground">
+              Tasks you haven&apos;t touched in a while
+            </span>
+          </span>
+          <ChevronRight className="w-5 h-5 text-muted-foreground" />
+        </Link>
+      )}
+
+      {/* Reports */}
+      <Link
+        href="/reports"
+        className="flex items-center gap-3 border border-border/80 bg-gradient-to-r from-brand-indigo/10 via-card to-brand-blue/10 p-4 sm:p-5 rounded-2xl shadow-sm"
+      >
+        <span className="p-2.5 rounded-xl bg-brand-indigo/15 text-brand-indigo shrink-0">
+          <BarChart3 className="w-5 h-5" />
+        </span>
+        <span className="flex-1 min-w-0">
+          <span className="block text-sm font-bold text-foreground">
+            Weekly & monthly reports
+          </span>
+          <span className="block text-xs text-muted-foreground">
+            Completion velocity, routine adherence, and cue impact.
+          </span>
+        </span>
+        <ChevronRight className="w-5 h-5 text-muted-foreground" />
+      </Link>
+
+      {actions.dialogs}
+    </div>
+  );
+}
+
+function AgendaGroup({
+  title,
+  tasks,
+  now,
+  actions,
+  tone,
+}: {
+  title: string;
+  tasks: Task[];
+  now: Date;
+  actions: ReturnType<typeof useTaskActions>;
+  tone?: "danger";
+}) {
+  if (tasks.length === 0) return null;
+  return (
+    <div className="space-y-1">
+      <h2
+        className={cn(
+          "text-xs font-bold uppercase tracking-wider",
+          tone === "danger"
+            ? "text-red-600 dark:text-red-400"
+            : "text-muted-foreground",
+        )}
+      >
+        {title} · {tasks.length}
+      </h2>
+      <ul className="-mx-2">
+        {tasks.map((task) => (
+          <AgendaRow key={task.id} task={task} now={now} actions={actions} />
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function AgendaRow({
+  task,
+  now,
+  actions,
+}: {
+  task: Task;
+  now: Date;
+  actions: ReturnType<typeof useTaskActions>;
+}) {
+  const done = task.status === "completed";
+  const overdue =
+    !done &&
+    !!task.due_date &&
+    new Date(task.due_date).getTime() < now.getTime();
+  const repeat = recurrenceLabel(task);
+  const subs = task.subtasks ?? [];
+  const subsDone = subs.filter((s) => s.completed).length;
+
+  return (
+    <li className="flex items-center rounded-xl hover:bg-muted/50">
+      <button
+        onClick={() => actions.toggleCompletion(task)}
+        aria-label={done ? "Mark not done" : `Complete "${task.title}"`}
+        className="h-11 w-11 shrink-0 flex items-center justify-center"
+      >
+        <span
+          className={cn(
+            "w-[22px] h-[22px] rounded-full border-2 flex items-center justify-center transition-colors",
+            done
+              ? "bg-foreground border-foreground text-background"
+              : overdue
+                ? "border-red-500/70"
+                : "border-muted-foreground/60",
+          )}
+        >
+          {done && <Check className="w-3.5 h-3.5" strokeWidth={3.5} />}
+        </span>
+      </button>
+      <Link href={`/tasks/${task.id}`} className="flex-1 min-w-0 py-2.5 pr-2">
+        <span
+          className={cn(
+            "block text-sm font-semibold text-foreground truncate",
+            done && "line-through text-muted-foreground",
+          )}
+        >
+          {task.title}
+        </span>
+        <span className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+          {task.due_date && (
+            <span className={cn(overdue && "text-red-600 dark:text-red-400")}>
+              {formatWhen(task.due_date, now)}
+            </span>
+          )}
+          {repeat && (
+            <span className="flex items-center gap-1">
+              <Repeat className="w-3 h-3" />
+              {repeat}
+            </span>
+          )}
+          {subs.length > 0 && (
+            <span>
+              {subsDone}/{subs.length} checklist
+            </span>
+          )}
+        </span>
+      </Link>
+    </li>
   );
 }
