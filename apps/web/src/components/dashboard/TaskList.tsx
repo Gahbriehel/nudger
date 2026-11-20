@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   CalendarClock,
   Check,
+  ChevronDown,
   ClipboardList,
   Moon,
   MoreVertical,
@@ -264,6 +265,8 @@ function TaskCard({
   const repeat = recurrenceLabel(task);
   const canSnooze = !done && task.task_type !== "flexible";
   const canSkip = !done && task.task_type === "recurring";
+  // Inline checklist: tick items without leaving the list
+  const [checklistOpen, setChecklistOpen] = useState(false);
 
   return (
     <li
@@ -350,16 +353,74 @@ function TaskCard({
           )}
 
           {subs.length > 0 && (
-            <div className="flex items-center gap-2.5">
-              <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden max-w-[140px]">
-                <div
-                  className="h-full bg-foreground rounded-full transition-all duration-300"
-                  style={{ width: `${(subsDone / subs.length) * 100}%` }}
+            <div>
+              {/* Progress doubles as the checklist toggle. `relative z-10`
+                  lifts it above the card's stretched link. */}
+              <button
+                onClick={() => setChecklistOpen((o) => !o)}
+                aria-expanded={checklistOpen}
+                aria-controls={`checklist-${task.id}`}
+                className="relative z-10 -ml-2 flex items-center gap-2.5 h-9 px-2 rounded-lg hover:bg-muted text-left"
+              >
+                <span className="w-[120px] h-1.5 bg-muted rounded-full overflow-hidden">
+                  <span
+                    className="block h-full bg-foreground rounded-full transition-all duration-300"
+                    style={{ width: `${(subsDone / subs.length) * 100}%` }}
+                  />
+                </span>
+                <span className="text-xs font-semibold text-muted-foreground">
+                  {subsDone}/{subs.length} checklist
+                </span>
+                <ChevronDown
+                  className={cn(
+                    "w-4 h-4 text-muted-foreground transition-transform duration-200",
+                    checklistOpen && "rotate-180",
+                  )}
                 />
-              </div>
-              <span className="text-xs font-medium text-muted-foreground">
-                {subsDone}/{subs.length}
-              </span>
+              </button>
+
+              {checklistOpen && (
+                <ul
+                  id={`checklist-${task.id}`}
+                  className="relative z-10 mt-1 -ml-2 divide-y divide-border/50"
+                >
+                  {subs.map((sub) => {
+                    const saving = sub.id.startsWith("temp-");
+                    return (
+                      <li key={sub.id}>
+                        <button
+                          onClick={() => actions.toggleSubtask(task, sub)}
+                          disabled={saving}
+                          aria-pressed={sub.completed}
+                          className="w-full flex items-center gap-3 min-h-11 px-2 py-1.5 rounded-lg text-left hover:bg-muted/60 disabled:opacity-60"
+                        >
+                          <span
+                            className={cn(
+                              "w-5 h-5 shrink-0 rounded-md border-2 flex items-center justify-center transition-colors",
+                              sub.completed
+                                ? "bg-foreground border-foreground text-background"
+                                : "border-muted-foreground/60",
+                            )}
+                          >
+                            {sub.completed && (
+                              <Check className="w-3 h-3" strokeWidth={3.5} />
+                            )}
+                          </span>
+                          <span
+                            className={cn(
+                              "text-sm break-words min-w-0",
+                              sub.completed &&
+                                "line-through text-muted-foreground",
+                            )}
+                          >
+                            {sub.title}
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
             </div>
           )}
 
