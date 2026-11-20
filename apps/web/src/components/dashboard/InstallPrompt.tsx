@@ -1,171 +1,170 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { X, Share2, PlusSquare, Smartphone, Download } from "lucide-react";
+import { X, Share, PlusSquare, Smartphone, Download } from "lucide-react";
+import { isIOSDevice, isStandaloneDisplay } from "@/lib/platform";
+import { canAsk, recordDismissal, recordDone } from "@/lib/promptCooldown";
+import { usePromptStore } from "@/store/promptStore";
+import { useTaskStore } from "@/store/taskStore";
 
-interface BeforeInstallPromptEvent extends Event {
-  prompt(): Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+const SHOW_DELAY_MS = 8000;
+
+/** Step-by-step "Add to Home Screen" guide for iOS (no install API there). */
+export function IosInstallSteps() {
+  return (
+    <ol className="space-y-2.5 text-xs text-foreground/85">
+      <li className="flex items-center gap-2.5">
+        <span className="w-6 h-6 shrink-0 rounded-full bg-foreground/5 dark:bg-foreground/10 flex items-center justify-center font-semibold">
+          1
+        </span>
+        <span>
+          Tap{" "}
+          <span className="inline-flex items-center gap-0.5 align-middle font-semibold text-primary">
+            <Share size={13} /> Share
+          </span>{" "}
+          in Safari&apos;s toolbar.
+        </span>
+      </li>
+      <li className="flex items-center gap-2.5">
+        <span className="w-6 h-6 shrink-0 rounded-full bg-foreground/5 dark:bg-foreground/10 flex items-center justify-center font-semibold">
+          2
+        </span>
+        <span>
+          Choose{" "}
+          <span className="inline-flex items-center gap-0.5 align-middle font-semibold text-primary">
+            <PlusSquare size={13} /> Add to Home Screen
+          </span>
+          .
+        </span>
+      </li>
+      <li className="flex items-center gap-2.5">
+        <span className="w-6 h-6 shrink-0 rounded-full bg-foreground/5 dark:bg-foreground/10 flex items-center justify-center font-semibold">
+          3
+        </span>
+        <span>Open Nudger from your Home Screen.</span>
+      </li>
+    </ol>
+  );
 }
 
-export function PwaInstallBanner() {
-  const [showBanner, setShowBanner] = useState(false);
+/**
+ * Bottom-sheet install suggestion. Only shown when installing is actually
+ * possible (Chromium install prompt available, or iOS where it's the only way
+ * to get push notifications), to users who already have tasks, and only when
+ * the prompt coordinator says nothing else is on screen.
+ */
+export function InstallPrompt() {
+  const [show, setShow] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
-  const [deferredPrompt, setDeferredPrompt] =
-    useState<BeforeInstallPromptEvent | null>(null);
+  const hasLoaded = useTaskStore((s) => s.hasLoaded);
+  const { deferredInstall, setDeferredInstall, tryAcquire, release } =
+    usePromptStore();
+  const scheduledRef = useRef(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    },
+    [],
+  );
 
   useEffect(() => {
-    // 1. Check if running in standalone (installed) mode
-    const isStandalone =
-      window.matchMedia("(display-mode: standalone)").matches ||
-      (navigator as Navigator & { standalone?: boolean }).standalone === true;
+    if (!hasLoaded || scheduledRef.current) return;
+    if (isStandaloneDisplay() || !canAsk("install")) return;
 
-    // Check if user previously dismissed the banner
-    const isDismissed =
-      localStorage.getItem("nudger_pwa_banner_dismissed") === "true";
+    const ios = isIOSDevice();
+    // Desktop/Android without an install prompt: nothing actionable to offer
+    if (!ios && !deferredInstall) return;
+    if (useTaskStore.getState().tasks.length === 0) return;
 
-    if (isStandalone || isDismissed) {
-      return; // Do not show the banner
-    }
+    scheduledRef.current = true;
+    setIsIOS(ios);
+    timerRef.current = setTimeout(() => {
+      if (tryAcquire("install")) setShow(true);
+    }, SHOW_DELAY_MS);
+  }, [hasLoaded, deferredInstall, tryAcquire]);
 
-    // 2. Detect iOS device
-    const userAgent = window.navigator.userAgent.toLowerCase();
-    const iosDetected =
-      /iphone|ipad|ipod/.test(userAgent) ||
-      (navigator.maxTouchPoints > 0 && /macintosh/.test(userAgent)); // iPadOS 13+
-    setIsIOS(iosDetected);
-
-    // 3. Listen for Android/Chrome install prompt
-    const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
-      setShowBanner(true);
-    };
-
-    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
-
-    // If it is iOS Safari, show the banner since it does not fire beforeinstallprompt
-    if (iosDetected) {
-      setShowBanner(true);
-    }
-
-    // Fallback: If not standalone and not dismissed, show it anyway to give general PWA support
-    if (!iosDetected && !deferredPrompt) {
-      // We can show it after a delay or just enable it for testing
-      setShowBanner(true);
-    }
-
-    return () => {
-      window.removeEventListener(
-        "beforeinstallprompt",
-        handleBeforeInstallPrompt,
-      );
-    };
-  }, [deferredPrompt]);
-
-  const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
-
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    console.log(`User response to install prompt: ${outcome}`);
-
-    setDeferredPrompt(null);
-    setShowBanner(false);
+  const close = () => {
+    setShow(false);
+    release("install");
   };
 
   const handleDismiss = () => {
-    localStorage.setItem("nudger_pwa_banner_dismissed", "true");
-    setShowBanner(false);
+    recordDismissal("install");
+    close();
   };
 
-  if (!showBanner) return null;
+  const handleInstall = async () => {
+    if (!deferredInstall) return;
+    await deferredInstall.prompt();
+    const { outcome } = await deferredInstall.userChoice;
+    setDeferredInstall(null); // the event can only be used once
+    if (outcome === "accepted") recordDone("install");
+    else recordDismissal("install");
+    close();
+  };
+
+  if (!show) return null;
 
   return (
-    <div className="relative border border-brand-indigo/35 bg-gradient-to-r from-brand-indigo/10 to-brand-blue/10 dark:from-brand-indigo/5 dark:to-brand-blue/5 backdrop-blur-md p-5 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-5 shadow-lg overflow-hidden transition-all duration-300 before:absolute before:top-0 before:left-0 before:bottom-0 before:w-[4px] before:bg-gradient-to-b before:from-brand-indigo before:to-brand-blue">
-      {/* Dismiss button */}
-      <button
-        onClick={handleDismiss}
-        className="absolute top-3 right-3 text-muted-foreground hover:text-foreground hover:bg-muted/40 p-1.5 rounded-full transition-colors"
-        aria-label="Dismiss banner"
-      >
-        <X size="15" />
-      </button>
+    <div
+      role="dialog"
+      aria-labelledby="install-prompt-title"
+      className="fixed inset-x-0 bottom-0 z-[90] flex justify-center px-4 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] pointer-events-none"
+    >
+      <div className="pointer-events-auto relative w-full max-w-md border border-border bg-card/95 backdrop-blur-md rounded-2xl shadow-2xl p-5 animate-in fade-in slide-in-from-bottom-4 duration-300">
+        <button
+          onClick={handleDismiss}
+          aria-label="Not now"
+          className="absolute top-2.5 right-2.5 text-muted-foreground hover:text-foreground hover:bg-muted/50 p-2 rounded-full transition-colors"
+        >
+          <X size={16} />
+        </button>
 
-      <div className="flex items-start gap-3.5 pr-6">
-        <div className="p-3 bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-foreground rounded-xl flex-shrink-0">
-          <Smartphone size="20" />
+        <div className="flex items-start gap-3.5 pr-6">
+          <div className="p-2.5 bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-foreground rounded-xl shrink-0">
+            <Smartphone size={20} />
+          </div>
+          <div className="space-y-1">
+            <h3
+              id="install-prompt-title"
+              className="font-bold text-sm text-foreground"
+            >
+              {isIOS ? "Add Nudger to your Home Screen" : "Install Nudger"}
+            </h3>
+            <p className="text-xs text-muted-foreground leading-normal">
+              {isIOS
+                ? "On iPhone, reminders only arrive once Nudger is installed."
+                : "Open it like an app and get reminders even when the browser is closed."}
+            </p>
+          </div>
         </div>
-        <div className="space-y-1">
-          <h3 className="font-bold text-sm text-foreground flex items-center gap-1.5">
-            Install Nudger App
-          </h3>
-          <p className="text-xs text-muted-foreground leading-normal max-w-xl">
-            Get instant task notifications, better performance, and mobile app
-            layout by adding Nudger to your home screen. No App Store download
-            required!
-          </p>
 
-          {/* iOS Safari Guide */}
-          {isIOS && (
-            <div className="mt-3.5 pt-3.5 border-t border-border/50 space-y-2 text-[11px] text-foreground/80">
-              <p className="font-semibold text-muted-foreground uppercase tracking-wider text-[10px]">
-                iOS PWA Setup Instructions:
-              </p>
-              <ol className="list-none space-y-2.5 pl-0">
-                <li className="flex items-center gap-2">
-                  <span className="bg-foreground/5 dark:bg-foreground/10 px-2 py-0.5 rounded font-mono font-semibold">
-                    1
-                  </span>
-                  <span>
-                    Tap Safari&apos;s{" "}
-                    <span className="inline-flex items-center align-middle font-semibold text-primary">
-                      <Share2 size="13" className="inline mr-0.5" /> Share
-                    </span>{" "}
-                    button (bottom bar on iPhone, top on iPad).
-                  </span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="bg-foreground/5 dark:bg-foreground/10 px-2 py-0.5 rounded font-mono font-semibold">
-                    2
-                  </span>
-                  <span>
-                    Scroll down and select{" "}
-                    <span className="font-semibold text-primary inline-flex items-center align-middle">
-                      <PlusSquare size="13" className="inline mr-0.5" /> Add to
-                      Home Screen
-                    </span>
-                    .
-                  </span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="bg-foreground/5 dark:bg-foreground/10 px-2 py-0.5 rounded font-mono font-semibold">
-                    3
-                  </span>
-                  <span>
-                    Name it <span className="font-bold">Nudger</span> and click{" "}
-                    <span className="font-bold text-primary">Add</span>.
-                  </span>
-                </li>
-              </ol>
-            </div>
-          )}
-        </div>
+        {isIOS ? (
+          <div className="mt-4 pt-4 border-t border-border/60">
+            <IosInstallSteps />
+          </div>
+        ) : (
+          <div className="mt-4 flex gap-2">
+            <Button
+              onClick={handleInstall}
+              className="flex-1 h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-sm rounded-xl gap-2"
+            >
+              <Download size={15} />
+              Install
+            </Button>
+            <Button
+              onClick={handleDismiss}
+              variant="ghost"
+              className="h-11 px-4 text-sm text-muted-foreground"
+            >
+              Not now
+            </Button>
+          </div>
+        )}
       </div>
-
-      {/* Action Button for Android/Chrome */}
-      {!isIOS && deferredPrompt && (
-        <div className="flex-shrink-0 flex items-center pr-2">
-          <Button
-            onClick={handleInstallClick}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs h-10 px-5 rounded-xl shadow-md flex items-center gap-2"
-          >
-            <Download size="14" />
-            Install App
-          </Button>
-        </div>
-      )}
     </div>
   );
 }

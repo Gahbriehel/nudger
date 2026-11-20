@@ -6,7 +6,7 @@ import { useTaskStore } from "@/store/taskStore";
 import { useUiStore } from "@/store/uiStore";
 import { authService } from "@/services/auth.service";
 import { DashboardHeader } from "./DashboardHeader";
-import { PwaInstallBanner } from "./PwaInstallBanner";
+import { InstallPrompt } from "./InstallPrompt";
 import { NotificationPromptModal } from "./NotificationPromptModal";
 import { useNotificationChecker } from "@/hooks/useNotificationChecker";
 import { useActivityTracker } from "@/hooks/useActivityTracker";
@@ -111,10 +111,12 @@ export function AuthenticatedLayout({
       <DashboardHeader />
 
       <main className="max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 flex-1 mt-8 space-y-8">
-        <PwaInstallBanner />
-        <NotificationPromptModal />
         {children}
       </main>
+
+      {/* Interruptive prompts — coordinated so at most one shows at a time */}
+      <NotificationPromptModal />
+      <InstallPrompt />
 
       {/* Task Creation Modal */}
       {showCreateModal && (

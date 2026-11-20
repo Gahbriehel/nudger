@@ -5,6 +5,8 @@ import { useTaskStore } from "@/store/taskStore";
 import { taskService } from "@/services/task.service";
 import { toast } from "sonner";
 import { getRandomReminderTime } from "@/lib/utils";
+import { getPushSubscription } from "@/lib/pushNotification";
+import { isPushSupported, withTimeout } from "@/lib/platform";
 
 export function useNotificationChecker() {
   const { tasks, updateTaskState, loading } = useTaskStore();
@@ -53,7 +55,23 @@ export function useNotificationChecker() {
   };
 
   useEffect(() => {
+    // When this device receives real push notifications, the server cron is
+    // the single source of reminders (it also applies daily caps and quiet
+    // hours). In-app toasts are only a fallback for devices without push.
+    const isPushActive = async () => {
+      if (!isPushSupported() || Notification.permission !== "granted") {
+        return false;
+      }
+      const sub = await withTimeout(
+        getPushSubscription().catch(() => null),
+        2000,
+        null,
+      );
+      return !!sub;
+    };
+
     const checkReminders = async () => {
+      if (await isPushActive()) return;
       const now = new Date();
       const currentTasks = tasksRef.current;
 

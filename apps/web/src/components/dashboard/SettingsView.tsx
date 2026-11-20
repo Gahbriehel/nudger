@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
+import { InstallAppCard } from "./InstallAppCard";
 import { useRouter } from "next/navigation";
 
 export function SettingsView() {
@@ -410,7 +411,7 @@ export function SettingsView() {
             <div className="bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs rounded-xl p-3.5 leading-normal">
               ⚠️ Push notifications are not supported in your current browser or
               mode. To receive push notifications on iOS, please install Nudger
-              to your Home Screen first (see PWA instructions below).
+              to your Home Screen first (see Nudger App below).
             </div>
           ) : (
             <div className="flex items-center justify-between p-4 bg-muted/40 border border-border rounded-xl">
@@ -708,6 +709,8 @@ export function SettingsView() {
           </div>
         </div>
       </div>
+
+      <InstallAppCard />
 
       {/* Security/Password Settings Card */}
       <div className="border border-border bg-card/85 backdrop-blur-md p-6 rounded-2xl shadow-lg relative overflow-hidden before:absolute before:top-0 before:left-0 before:right-0 before:h-[3px] before:bg-gradient-to-r before:from-brand-indigo before:to-brand-blue">

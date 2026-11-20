@@ -7,6 +7,7 @@ import { z, infer as zInfer } from "@/lib/zod";
 import { taskService } from "@/services/task.service";
 import { tagService } from "@/services/tag.service";
 import { useTaskStore } from "@/store/taskStore";
+import { usePromptStore } from "@/store/promptStore";
 import { Tag, TaskType, RecurrenceType } from "@/types/database.types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -268,6 +269,14 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
 
       addTaskState(newTask);
       onSuccess();
+
+      // Best moment to ask for notifications: the user just told us when
+      // something matters. (No-op if already enabled or recently declined.)
+      if (newTask.due_date || newTask.reminder_at) {
+        usePromptStore
+          .getState()
+          .requestContextualNotificationAsk(newTask.title);
+      }
     } catch (err: any) {
       const msg = err.message || "Failed to create task";
       setError(msg);

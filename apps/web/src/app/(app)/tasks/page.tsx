@@ -1,17 +1,24 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { TaskList } from "@/components/dashboard/TaskList";
 import { Button } from "@/components/ui/button";
 import { useUiStore } from "@/store/uiStore";
 import { useTaskStore } from "@/store/taskStore";
 import { cn } from "@/lib/utils";
-import { Suspense } from "react";
+import { Suspense, useCallback } from "react";
 import { Spinner } from "@/components/ui/spinner";
 
 function TasksPageContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const selectedTaskId = searchParams.get("taskId");
+
+  // Consume the deep link once TaskList has focused the task, so a refresh,
+  // back navigation, or later data update doesn't jump back to it.
+  const handleDeepLinkHandled = useCallback(() => {
+    router.replace("/tasks", { scroll: false });
+  }, [router]);
   const { setShowCreateModal } = useUiStore();
   const { fetchTasks, loading, refreshing } = useTaskStore();
   const tasksLoading = loading || refreshing;
@@ -58,8 +65,8 @@ function TasksPageContent() {
         </div>
       </div>
       <TaskList
-        key={selectedTaskId ?? "default"}
         initialExpandedTaskId={selectedTaskId}
+        onDeepLinkHandled={handleDeepLinkHandled}
       />
     </div>
   );

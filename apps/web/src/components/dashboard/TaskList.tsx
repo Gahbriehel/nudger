@@ -57,10 +57,17 @@ const getRecurrenceDaysLabel = (days: number[]) => {
 };
 
 interface TaskListProps {
+  /** Task to focus once (from a `?taskId=` deep link). */
   initialExpandedTaskId?: string | null;
+  /** Called after the deep-linked task has been focused, so the caller can
+   * consume the deep link (e.g. strip `?taskId=` from the URL). */
+  onDeepLinkHandled?: () => void;
 }
 
-export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
+export function TaskList({
+  initialExpandedTaskId,
+  onDeepLinkHandled,
+}: TaskListProps = {}) {
   const [filterSidebarOpen, setFilterSidebarOpen] = useState(false);
   const {
     tasks,
@@ -77,23 +84,17 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
     addCueState,
     replaceCueState,
     deleteCueState,
+    hasLoaded,
   } = useTaskStore();
 
-  const [expandedTaskId, setExpandedTaskId] = useState<string | null>(
-    initialExpandedTaskId ?? null,
-  );
+  const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
   const [highlightedTaskId, setHighlightedTaskId] = useState<string | null>(
-    initialExpandedTaskId ?? null,
+    null,
   );
-
-  useEffect(() => {
-    if (!initialExpandedTaskId) return;
-    setHighlightedTaskId(initialExpandedTaskId);
-    const timer = setTimeout(() => {
-      setHighlightedTaskId(null);
-    }, 2500);
-    return () => clearTimeout(timer);
-  }, [initialExpandedTaskId]);
+  // Deep links are a one-shot "focus this task" event, not persistent state.
+  // Remember which link we've already handled so later task updates (e.g.
+  // completing another task) never re-expand or scroll back to it.
+  const handledDeepLinkRef = useRef<string | null>(null);
 
   // Local inputs for adding items in expanded view
   const [newSubtaskTexts, setNewSubtaskTexts] = useState<{
@@ -379,29 +380,54 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
     });
   }, [tasks]);
 
-  // Scroll to the initially-expanded task once tasks are loaded and adjust filters if needed
+  // Focus the deep-linked task exactly once, after tasks have loaded.
   useEffect(() => {
-    if (!initialExpandedTaskId || !tasks.length) return;
+    const targetId = initialExpandedTaskId;
+    if (!targetId) {
+      // Link consumed; allow a future link to the same task to focus again
+      handledDeepLinkRef.current = null;
+      return;
+    }
+    if (!hasLoaded) return;
+    if (handledDeepLinkRef.current === targetId) return;
+    handledDeepLinkRef.current = targetId;
 
-    // Check if target task exists and if current filters would hide it
-    const targetTask = tasks.find((t) => t.id === initialExpandedTaskId);
-    if (targetTask) {
-      if (targetTask.status === "completed" && filters.status === "pending") {
-        setFilters({ status: "all" });
-      }
+    const targetTask = tasks.find((t) => t.id === targetId);
+    if (!targetTask) {
+      toast.error("That task no longer exists.");
+      onDeepLinkHandled?.();
+      return;
     }
 
-    setExpandedTaskId(initialExpandedTaskId);
+    // Make sure no active filter hides the task we're pointing at
+    const { filters: current } = useTaskStore.getState();
+    const hiddenBySearch =
+      current.search &&
+      !targetTask.title.toLowerCase().includes(current.search.toLowerCase());
+    const hiddenByType =
+      current.type !== "all" && current.type !== targetTask.task_type;
+    const hiddenByStatus =
+      current.status !== "all" && current.status !== targetTask.status;
+    if (hiddenBySearch || hiddenByType || hiddenByStatus) {
+      setFilters({ search: "", type: "all", status: "all" });
+    }
 
-    const timer = setTimeout(() => {
-      const el = document.getElementById(`task-card-${initialExpandedTaskId}`);
-      if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
+    setExpandedTaskId(targetId);
+    setHighlightedTaskId(targetId);
+
+    // Not tied to effect cleanup: consuming the deep link changes the prop,
+    // and that must not cancel the scroll or leave the highlight stuck.
+    setTimeout(() => {
+      document
+        .getElementById(`task-card-${targetId}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 150);
+    setTimeout(() => {
+      setHighlightedTaskId((cur) => (cur === targetId ? null : cur));
+    }, 2500);
 
-    return () => clearTimeout(timer);
-  }, [initialExpandedTaskId, tasks.length, tasks, filters.status, setFilters]);
+    onDeepLinkHandled?.();
+  }, [initialExpandedTaskId, hasLoaded, tasks, setFilters, onDeepLinkHandled]);
 
   const handleToggleExpand = (id: string) => {
     if (expandedTaskId === id) {

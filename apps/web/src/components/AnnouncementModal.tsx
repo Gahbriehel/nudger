@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Modal } from "@/components/ui/modal";
 import { Announcement } from "@/types/database.types";
 import { Megaphone } from "lucide-react";
+import { usePromptStore } from "@/store/promptStore";
 
 export function AnnouncementModal() {
   const [announcement, setAnnouncement] = React.useState<Announcement | null>(
@@ -65,7 +66,9 @@ export function AnnouncementModal() {
           }
         }
 
-        if (isMounted) {
+        // Announcements take priority, but never stack on another prompt;
+        // if something else is showing it'll appear next session instead.
+        if (isMounted && usePromptStore.getState().tryAcquire("announcement")) {
           setAnnouncement(activeItem);
           setIsOpen(true);
         }
@@ -101,13 +104,12 @@ export function AnnouncementModal() {
           announcement_id: announcement.id,
         });
       }
-
-      setIsOpen(false);
     } catch (err) {
       console.error("Failed to record announcement dismissal:", err);
-      setIsOpen(false);
     } finally {
+      setIsOpen(false);
       setIsDismissing(false);
+      usePromptStore.getState().release("announcement");
     }
   };
 
