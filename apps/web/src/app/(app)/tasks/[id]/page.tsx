@@ -142,7 +142,8 @@ export default function TaskDetailPage() {
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => actions.requestDelete(task, goBack)}
-              className="gap-2 py-2.5 text-destructive focus:text-destructive"
+              variant="destructive"
+              className="gap-2 py-2.5"
             >
               <Trash2 className="w-4 h-4" /> Delete
             </DropdownMenuItem>

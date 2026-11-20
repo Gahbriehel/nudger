@@ -79,10 +79,12 @@ export default function RootLayout({
             duration={3000}
             toastOptions={{
               classNames: {
-                // Default action button is solid black; match the toast's
-                // own tone instead (e.g. green text on the green success toast)
+                // `group` lets the action button read the toast's data-type
+                toast: "group",
+                // Solid button in the toast's own colour (green for success,
+                // red for errors, brand otherwise) so Undo is easy to spot
                 actionButton:
-                  "!h-8 !px-3 !rounded-lg !text-[13px] !font-semibold !bg-white/80 !text-current !border !border-black/10 hover:!bg-white dark:!bg-white/10 dark:!border-white/15 dark:hover:!bg-white/20",
+                  "!h-8 !px-3.5 !rounded-lg !text-[13px] !font-semibold !text-white !bg-brand-indigo hover:!opacity-90 group-data-[type=success]:!bg-green-700 group-data-[type=error]:!bg-red-600 group-data-[type=warning]:!bg-amber-600",
               },
             }}
             mobileOffset={{
