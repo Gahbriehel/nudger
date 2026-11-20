@@ -55,6 +55,7 @@ export async function updateSession(request: NextRequest) {
     !pathname.startsWith("/login") &&
     !pathname.startsWith("/auth") &&
     pathname !== "/sw.js" &&
+    pathname !== "/offline.html" &&
     pathname !== "/manifest.webmanifest" &&
     pathname !== "/manifest.json" &&
     !pathname.startsWith("/api/notifications/send-nudges")

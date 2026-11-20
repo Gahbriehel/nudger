@@ -1,11 +1,107 @@
-// Service Worker for Nudger Push Notifications
+// Service Worker for Nudger: offline reading + push notifications.
+//
+// Offline is read-only: pages and static assets are cached as you use the
+// app, and the task list itself is kept by the app in localStorage.
 
-self.addEventListener("install", () => {
-  self.skipWaiting();
+const VERSION = "v2";
+const PAGES_CACHE = `nudger-pages-${VERSION}`;
+const ASSETS_CACHE = `nudger-assets-${VERSION}`;
+const OFFLINE_URL = "/offline.html";
+const ICON = "/icons/icon-192.png";
+const BADGE = "/icons/badge-96.png";
+const PRECACHE = [OFFLINE_URL, ICON, BADGE, "/icons/apple-touch-icon.png"];
+const MAX_ASSETS = 250;
+
+self.addEventListener("install", (event) => {
+  event.waitUntil(
+    caches
+      .open(ASSETS_CACHE)
+      .then((cache) => cache.addAll(PRECACHE))
+      .then(() => self.skipWaiting()),
+  );
 });
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    caches
+      .keys()
+      .then((keys) =>
+        Promise.all(
+          keys
+            .filter((k) => k !== PAGES_CACHE && k !== ASSETS_CACHE)
+            .map((k) => caches.delete(k)),
+        ),
+      )
+      .then(() => self.clients.claim()),
+  );
+});
+
+/** Keep the asset cache from growing without bound across deploys. */
+async function trimAssets() {
+  const cache = await caches.open(ASSETS_CACHE);
+  const keys = await cache.keys();
+  const excess = keys.length - MAX_ASSETS;
+  for (let i = 0; i < excess; i++) await cache.delete(keys[i]);
+}
+
+/** Pages: network first (always fresh online), saved copy when offline. */
+async function handleNavigation(request) {
+  const url = new URL(request.url);
+  const key = url.origin + url.pathname; // ignore query strings
+  try {
+    const response = await fetch(request);
+    const cacheable =
+      response.ok &&
+      !response.redirected &&
+      !url.pathname.startsWith("/auth") &&
+      !url.pathname.startsWith("/api");
+    if (cacheable) {
+      const copy = response.clone();
+      caches.open(PAGES_CACHE).then((cache) => cache.put(key, copy));
+    }
+    return response;
+  } catch {
+    const cached = await caches.match(key, {
+      cacheName: PAGES_CACHE,
+      ignoreVary: true,
+    });
+    return cached || (await caches.match(OFFLINE_URL)) || Response.error();
+  }
+}
+
+/** Hashed build assets, fonts and icons: cache first. */
+async function handleAsset(request) {
+  const cached = await caches.match(request);
+  if (cached) return cached;
+  const response = await fetch(request);
+  if (response.ok) {
+    const copy = response.clone();
+    caches
+      .open(ASSETS_CACHE)
+      .then((cache) => cache.put(request, copy))
+      .then(trimAssets);
+  }
+  return response;
+}
+
+self.addEventListener("fetch", (event) => {
+  const { request } = event;
+  if (request.method !== "GET") return;
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return; // Supabase etc.
+
+  if (request.mode === "navigate") {
+    event.respondWith(handleNavigation(request));
+    return;
+  }
+  if (
+    url.pathname.startsWith("/_next/static/") ||
+    url.pathname.startsWith("/icons/") ||
+    url.pathname.startsWith("/images/")
+  ) {
+    event.respondWith(handleAsset(request));
+  }
+  // Everything else (API, RSC data) goes straight to the network
 });
 
 // Handle incoming push messages
@@ -15,8 +111,8 @@ self.addEventListener("push", (event) => {
   let notificationData = {
     title: "Nudger Alert",
     body: "You have a task that needs attention!",
-    icon: "/images/nudger-app-icon.png",
-    badge: "/images/nudger-app-icon.png",
+    icon: ICON,
+    badge: BADGE,
     data: {
       url: "/",
       taskId: null,
@@ -46,8 +142,11 @@ self.addEventListener("push", (event) => {
   }
   actions.push({ action: "open", title: "Open App" });
 
+  const taskId = notificationData.data?.taskId;
   const options = {
     body: notificationData.body,
+    // A newer nudge for the same task replaces the old one instead of stacking
+    ...(taskId ? { tag: `task-${taskId}`, renotify: true } : {}),
     icon: notificationData.icon,
     badge: notificationData.badge,
     data: notificationData.data,
@@ -107,8 +206,8 @@ self.addEventListener("notificationclick", (event) => {
             body: data.title
               ? `"${data.title}" marked as complete.`
               : "Marked as complete.",
-            icon: "/images/nudger-app-icon.png",
-            badge: "/images/nudger-app-icon.png",
+            icon: ICON,
+            badge: BADGE,
             tag: "task-completed-confirmation",
             renotify: true,
           });
@@ -117,7 +216,7 @@ self.addEventListener("notificationclick", (event) => {
           console.error("Error marking task complete via service worker:", err);
           return self.registration.showNotification("Update Failed", {
             body: "Could not mark task as complete. Please try opening Nudger.",
-            icon: "/images/nudger-app-icon.png",
+            icon: ICON,
             tag: "task-completed-error",
           });
         }),
@@ -125,23 +224,34 @@ self.addEventListener("notificationclick", (event) => {
     return;
   }
 
-  // Open / focus app window for notification click or "open" action
-  const targetUrl = event.notification.data?.url || "/";
-
-  event.waitUntil(
-    self.clients
-      .matchAll({ type: "window", includeUncontrolled: true })
-      .then((clientList) => {
-        // If a window is already open, focus it and navigate
-        for (const client of clientList) {
-          if (client.url.includes(targetUrl) && "focus" in client) {
-            return client.focus();
-          }
-        }
-        // Otherwise, open a new window
-        if (self.clients.openWindow) {
-          return self.clients.openWindow(targetUrl);
-        }
-      }),
-  );
+  // Open the notification's page (usually the task itself)
+  event.waitUntil(openUrl(event.notification.data?.url || "/"));
 });
+
+/**
+ * Show `path` in the app: reuse an open window if there is one (the app
+ * navigates in place, keeping its state), otherwise open a new one.
+ */
+async function openUrl(path) {
+  const target = new URL(path, self.location.origin);
+  const windows = await self.clients.matchAll({
+    type: "window",
+    includeUncontrolled: true,
+  });
+  const client =
+    windows.find((c) => c.focused) ||
+    windows.find((c) => c.visibilityState === "visible") ||
+    windows.find((c) => new URL(c.url).origin === target.origin);
+
+  if (!client) {
+    if (self.clients.openWindow) return self.clients.openWindow(target.href);
+    return;
+  }
+
+  const focused = await client.focus().catch(() => client);
+  if (new URL(focused.url).href === target.href) return;
+
+  // Signed-in pages handle this with client-side navigation
+  const relative = target.pathname + target.search + target.hash;
+  (focused || client).postMessage({ type: "NAVIGATE", url: relative });
+}

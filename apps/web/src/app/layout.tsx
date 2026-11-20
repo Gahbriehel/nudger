@@ -16,9 +16,12 @@ export const metadata: Metadata = {
   description:
     "Productivity system for tracking tasks, subtasks, recurrence rules, and cognitive memory cues.",
   icons: {
-    icon: "/images/nudger-app-icon.png",
-    shortcut: "/images/nudger-app-icon.png",
-    apple: "/images/nudger-app-icon.png",
+    icon: [
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/images/nudger-favicon.ico", sizes: "32x32" },
+    ],
+    // Square, full-bleed: iOS rounds it itself (transparency renders black)
+    apple: { url: "/icons/apple-touch-icon.png", sizes: "180x180" },
   },
   appleWebApp: {
     capable: true,

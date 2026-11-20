@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#6366f1" />
+    <title>Offline · Nudger</title>
+    <style>
+      :root {
+        --bg: #f8f9fc;
+        --card: #ffffff;
+        --fg: #0f172a;
+        --muted: #64748b;
+        --border: #e2e8f0;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0f172a;
+          --card: #162033;
+          --fg: #f1f5f9;
+          --muted: #94a3b8;
+          --border: #24324a;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        min-height: 100dvh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px 16px calc(24px + env(safe-area-inset-bottom));
+        background: var(--bg);
+        color: var(--fg);
+        font-family:
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+      }
+      main {
+        width: 100%;
+        max-width: 360px;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 28px 24px;
+        text-align: center;
+      }
+      img {
+        width: 56px;
+        height: 56px;
+        border-radius: 14px;
+      }
+      h1 {
+        font-size: 20px;
+        margin: 16px 0 6px;
+      }
+      p {
+        margin: 0 0 24px;
+        color: var(--muted);
+        font-size: 15px;
+        line-height: 1.5;
+      }
+      a,
+      button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        min-height: 48px;
+        border-radius: 12px;
+        font: inherit;
+        font-weight: 600;
+        font-size: 15px;
+        text-decoration: none;
+        cursor: pointer;
+      }
+      a {
+        background: #6366f1;
+        color: #fff;
+        border: 0;
+      }
+      button {
+        margin-top: 10px;
+        background: transparent;
+        color: var(--fg);
+        border: 1px solid var(--border);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img src="/icons/icon-192.png" alt="" />
+      <h1>You're offline</h1>
+      <p>
+        This page hasn't been saved for offline use yet. Your saved tasks are
+        still available from Home.
+      </p>
+      <a href="/">Go to Home</a>
+      <button type="button" onclick="location.reload()">Try again</button>
+    </main>
+    <script>
+      // Come back automatically once the connection returns
+      window.addEventListener("online", () => location.reload());
+    </script>
+  </body>
+</html>

@@ -1,5 +1,6 @@
 "use client";
 
+import { clearOfflineData } from "@/lib/offline";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuthStore } from "@/store/authStore";
 import { authService } from "@/services/auth.service";
@@ -272,6 +273,8 @@ export function SettingsView() {
   const handleSignOut = async () => {
     try {
       await authService.signOut();
+      // Don't leave this account's tasks readable on the device
+      await clearOfflineData();
       router.push("/auth/login");
       router.refresh();
     } catch (err) {

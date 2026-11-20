@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import { toInputDateTime } from "./TaskEditor";
+import { requireOnline } from "@/lib/offline";
 
 type When = "none" | "later" | "tomorrow" | "pick";
 
@@ -89,6 +90,7 @@ export function QuickAdd({
     e.preventDefault();
     const text = title.trim();
     if (!text || saving) return;
+    if (!requireOnline()) return;
     if (when === "pick" && !picked) {
       toast.error("Pick a date and time, or choose another option.");
       return;

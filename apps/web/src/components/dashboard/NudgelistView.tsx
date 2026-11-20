@@ -19,6 +19,7 @@ import {
 import { useTaskStore } from "@/store/taskStore";
 import { taskService } from "@/services/task.service";
 import { getNudgeBuckets } from "@/lib/nudges";
+import { requireOnline } from "@/lib/offline";
 import { useTaskActions } from "@/hooks/useTaskActions";
 import type { Task } from "@/types/database.types";
 import { Button } from "@/components/ui/button";
@@ -82,6 +83,7 @@ export function NudgelistView() {
 
   /** "Still relevant": touching the task resets its staleness timer. */
   const keep = async (task: Task) => {
+    if (!requireOnline()) return;
     const updated_at = new Date().toISOString();
     const previous = task.updated_at;
     updateTaskState(task.id, { updated_at });

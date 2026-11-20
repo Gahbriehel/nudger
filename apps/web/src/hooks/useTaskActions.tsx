@@ -16,6 +16,15 @@ import {
   deferCommit,
   UNDO_WINDOW_MS,
 } from "@/lib/deferredCommit";
+import { requireOnline } from "@/lib/offline";
+
+/** Offline mode is read-only: every change is wrapped in this check. */
+function whenOnline<A extends unknown[], R>(
+  fn: (...args: A) => R,
+  offlineResult?: R,
+): (...args: A) => R {
+  return (...args) => (requireOnline() ? fn(...args) : (offlineResult as R));
+}
 
 const completedMessage = (task: Task) =>
   task.task_type === "recurring"
@@ -419,18 +428,20 @@ export function useTaskActions() {
   );
 
   return {
-    toggleCompletion,
-    toggleSubtask,
-    addSubtask,
-    renameSubtask,
-    deleteSubtask,
-    addCue,
-    deleteCue,
-    edit: (task: Task) => openEditTask(task.id),
-    requestDelete: deleteTask,
-    snooze: (task: Task) => setSnoozeTask(task),
-    skip: (task: Task, type: "skipped" | "missed") =>
+    toggleCompletion: whenOnline(toggleCompletion),
+    toggleSubtask: whenOnline(toggleSubtask, Promise.resolve()),
+    // Resolving false keeps the typed text in the input
+    addSubtask: whenOnline(addSubtask, Promise.resolve(false)),
+    renameSubtask: whenOnline(renameSubtask, Promise.resolve()),
+    deleteSubtask: whenOnline(deleteSubtask, Promise.resolve()),
+    addCue: whenOnline(addCue, Promise.resolve(false)),
+    deleteCue: whenOnline(deleteCue, Promise.resolve()),
+    edit: whenOnline((task: Task) => openEditTask(task.id)),
+    requestDelete: whenOnline(deleteTask),
+    snooze: whenOnline((task: Task) => setSnoozeTask(task)),
+    skip: whenOnline((task: Task, type: "skipped" | "missed") =>
       setSkipTarget({ task, type }),
+    ),
     dialogs,
   };
 }
