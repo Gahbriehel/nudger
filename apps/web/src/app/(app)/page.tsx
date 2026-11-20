@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuthStore } from "@/store/authStore";
 import { useTaskStore } from "@/store/taskStore";
@@ -13,11 +12,10 @@ import { cn } from "@/lib/utils";
 import { Task } from "@/types/database.types";
 
 export default function HomePage() {
-  const router = useRouter();
   const { user } = useAuthStore();
   const { tasks, fetchTasks, loading, refreshing } = useTaskStore();
   const tasksLoading = loading || refreshing;
-  const { setShowCreateModal } = useUiStore();
+  const openCreateTask = useUiStore((s) => s.openCreateTask);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
   // Stats are shown by default on md+ screens; hidden on mobile
   const [showStats, setShowStats] = useState(false);
@@ -150,7 +148,7 @@ export default function HomePage() {
         {/* Action buttons */}
         <div className="flex gap-3 items-center flex-wrap">
           <Button
-            onClick={() => setShowCreateModal(true)}
+            onClick={openCreateTask}
             className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold h-10 px-5 rounded-lg text-xs"
           >
             + Create New Task
@@ -230,11 +228,9 @@ export default function HomePage() {
             ) : (
               <div className="space-y-2.5">
                 {urgentTasks.map((t: Task) => (
-                  <div
+                  <Link
                     key={t.id}
-                    onClick={() => {
-                      router.push(`/tasks?taskId=${t.id}`);
-                    }}
+                    href={`/tasks/${t.id}`}
                     className="bg-muted/40 border border-border hover:border-foreground/20 p-3.5 rounded-xl flex items-center justify-between gap-3 cursor-pointer transition-all duration-200"
                   >
                     <div className="space-y-0.5 truncate">
@@ -250,7 +246,7 @@ export default function HomePage() {
                     <span className="text-[10px] bg-red-500/10 text-red-500 dark:text-red-400 border border-red-500/20 px-2 py-0.5 rounded-full uppercase font-medium">
                       Nudge
                     </span>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}
@@ -272,16 +268,20 @@ export default function HomePage() {
 
             {recentTasks.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground text-xs bg-muted/30 rounded-xl border border-border border-dashed">
-                No tasks created yet.
+                No tasks yet.{" "}
+                <button
+                  onClick={openCreateTask}
+                  className="font-semibold text-foreground underline underline-offset-2"
+                >
+                  Add your first one
+                </button>
               </div>
             ) : (
               <div className="space-y-2.5">
                 {recentTasks.map((t: Task) => (
-                  <div
+                  <Link
                     key={t.id}
-                    onClick={() => {
-                      router.push(`/tasks?taskId=${t.id}`);
-                    }}
+                    href={`/tasks/${t.id}`}
                     className="bg-muted/40 border border-border hover:border-foreground/20 p-3.5 rounded-xl flex items-center justify-between gap-3 cursor-pointer transition-all duration-200"
                   >
                     <div className="space-y-0.5 truncate">
@@ -302,7 +302,7 @@ export default function HomePage() {
                     >
                       {t.status}
                     </span>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}

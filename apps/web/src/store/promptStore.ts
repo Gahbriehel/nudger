@@ -41,7 +41,7 @@ export const usePromptStore = create<PromptState>((set, get) => ({
     if (active === kind) return true;
     if (active) return false;
     // Never stack a prompt on top of the task editor
-    if (useUiStore.getState().showCreateModal) return false;
+    if (useUiStore.getState().editor) return false;
     if (kind !== "announcement" && askedThisSession && !opts.contextual) {
       return false;
     }

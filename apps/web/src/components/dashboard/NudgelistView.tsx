@@ -1,10 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useTaskStore } from "@/store/taskStore";
 import { taskService } from "@/services/task.service";
-import { nudgelistService, NudgelistData } from "@/services/nudgelist.service";
+import { getNudgeBuckets } from "@/lib/nudges";
+import { useTaskActions } from "@/hooks/useTaskActions";
 import { Task } from "@/types/database.types";
 import { format } from "@/lib/date-fns";
 import { Button } from "@/components/ui/button";
@@ -12,86 +13,44 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
 import { Sparkles, ExternalLink } from "lucide-react";
-import { SnoozeModal } from "./SnoozeModal";
-import { SkipModal } from "./SkipModal";
 import { SkipForward } from "lucide-react";
 
 export function NudgelistView() {
   const router = useRouter();
-  const { fetchTasks } = useTaskStore();
-  const [data, setData] = useState<NudgelistData>({
-    overdue: [],
-    forgotten: [],
-    stale: [],
-  });
-  // `loading` blocks only the first load; later reloads happen silently so
-  // the list doesn't flash to a spinner after every action.
-  const [loading, setLoading] = useState(true);
-  const [skipTaskItem, setSkipTaskItem] = useState<Task | null>(null);
-  const [skipActionType, setSkipActionType] = useState<"skipped" | "missed">(
-    "skipped",
-  );
+  const { tasks, hasLoaded, updateTaskState, fetchTasks } = useTaskStore();
+  const actions = useTaskActions();
 
-  const loadNudgelist = async () => {
-    try {
-      const result = await nudgelistService.getNudgelist();
-      setData(result);
-    } catch (err) {
-      console.error("Failed to load nudgelist:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Client-only clock, re-evaluated each minute
+  const [now, setNow] = useState<number | null>(null);
   useEffect(() => {
-    loadNudgelist();
+    setNow(Date.now());
+    const t = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(t);
   }, []);
 
-  // Optimistically drop a task from every bucket; returns a restore function.
-  const removeLocally = (taskId: string) => {
-    const snapshot = data;
-    setData((prev) => ({
-      overdue: prev.overdue.filter((t) => t.id !== taskId),
-      forgotten: prev.forgotten.filter((t) => t.id !== taskId),
-      stale: prev.stale.filter((t) => t.id !== taskId),
-    }));
-    return () => setData(snapshot);
-  };
+  const data = useMemo(
+    () =>
+      now === null
+        ? { overdue: [], forgotten: [], stale: [] }
+        : getNudgeBuckets(tasks, now),
+    [tasks, now],
+  );
+  const loading = !hasLoaded || now === null;
 
-  const handleComplete = async (task: Task) => {
-    const restore = removeLocally(task.id);
-    try {
-      await taskService.completeTask(task);
-      toast.success("Task completed!");
-      fetchTasks(); // background sync of the main task store
-      loadNudgelist();
-    } catch (err) {
-      console.error(err);
-      restore();
-      toast.error("Failed to complete task");
-    }
-  };
-
-  const [snoozeTask, setSnoozeTask] = useState<Task | null>(null);
-
-  const handleSnoozeSuccess = async () => {
-    await fetchTasks();
-    await loadNudgelist();
-  };
+  const handleComplete = (task: Task) => actions.toggleCompletion(task);
 
   const handleAcknowledge = async (task: Task) => {
-    const restore = removeLocally(task.id);
+    // Touching the task updates `updated_at`, resetting its stale timer
+    const updated_at = new Date().toISOString();
+    const previous = task.updated_at;
+    updateTaskState(task.id, { updated_at });
     try {
-      // Touching the task updates `updated_at`, resetting its stale timer
-      await taskService.updateTask(task.id, {
-        updated_at: new Date().toISOString(),
-      });
-      fetchTasks();
-      loadNudgelist();
+      await taskService.updateTask(task.id, { updated_at });
     } catch (err) {
       console.error(err);
-      restore();
-      toast.error("Failed to acknowledge task");
+      updateTaskState(task.id, { updated_at: previous });
+      toast.error("Failed to update task");
+      fetchTasks();
     }
   };
 
@@ -128,7 +87,7 @@ export function NudgelistView() {
               <div className="space-y-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <button
-                    onClick={() => router.push(`/tasks?taskId=${task.id}`)}
+                    onClick={() => router.push(`/tasks/${task.id}`)}
                     className="font-bold text-sm text-foreground hover:text-brand-indigo dark:hover:text-brand-blue flex items-center gap-1.5 group text-left transition-colors"
                     title="View task details in task list"
                   >
@@ -166,7 +125,7 @@ export function NudgelistView() {
               {/* Action Buttons - Responsive Grid */}
               <div className="grid grid-cols-2 md:flex md:flex-wrap gap-2">
                 <Button
-                  onClick={() => router.push(`/tasks?taskId=${task.id}`)}
+                  onClick={() => router.push(`/tasks/${task.id}`)}
                   variant="outline"
                   className="text-xs py-1 h-8 rounded px-3 border-border hover:bg-muted text-foreground flex items-center justify-center gap-1.5 md:w-auto"
                   title="View task details in task list"
@@ -185,10 +144,7 @@ export function NudgelistView() {
                 {task.task_type === "recurring" && (
                   <>
                     <Button
-                      onClick={() => {
-                        setSkipActionType("skipped");
-                        setSkipTaskItem(task);
-                      }}
+                      onClick={() => actions.skip(task, "skipped")}
                       variant="outline"
                       className="text-xs py-1 h-8 rounded px-3 border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 flex items-center justify-center gap-1.5 md:w-auto"
                     >
@@ -196,10 +152,7 @@ export function NudgelistView() {
                       Skip
                     </Button>
                     <Button
-                      onClick={() => {
-                        setSkipActionType("missed");
-                        setSkipTaskItem(task);
-                      }}
+                      onClick={() => actions.skip(task, "missed")}
                       variant="outline"
                       className="text-xs py-1 h-8 rounded px-3 border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 flex items-center justify-center gap-1.5 md:w-auto"
                     >
@@ -223,7 +176,7 @@ export function NudgelistView() {
 
                 {type === "overdue" ? (
                   <Button
-                    onClick={() => setSnoozeTask(task)}
+                    onClick={() => actions.snooze(task)}
                     variant="outline"
                     className="text-xs py-1 h-8 rounded px-3 flex items-center justify-center md:w-auto"
                   >
@@ -295,23 +248,7 @@ export function NudgelistView() {
         </div>
       )}
 
-      <SnoozeModal
-        isOpen={!!snoozeTask}
-        onClose={() => setSnoozeTask(null)}
-        task={snoozeTask}
-        onSuccess={handleSnoozeSuccess}
-      />
-
-      <SkipModal
-        isOpen={!!skipTaskItem}
-        onClose={() => setSkipTaskItem(null)}
-        task={skipTaskItem}
-        onSuccess={() => {
-          fetchTasks();
-          loadNudgelist();
-        }}
-        actionType={skipActionType}
-      />
+      {actions.dialogs}
     </div>
   );
 }

@@ -8,9 +8,9 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col relative">
+    <div className="min-h-screen bg-background text-foreground flex flex-col relative pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
       {/* Theme switcher in top corner */}
-      <div className="absolute top-4 right-4 z-50">
+      <div className="absolute top-[calc(env(safe-area-inset-top,0px)+1rem)] right-4 z-50">
         <ThemeSwitcher />
       </div>
 

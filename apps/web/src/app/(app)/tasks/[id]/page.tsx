@@ -1,1272 +1,507 @@
 "use client";
 
-import { useState, useEffect, useRef, Suspense } from "react";
-import { taskService } from "@/services/task.service";
-import { tagService } from "@/services/tag.service";
+import { useState } from "react";
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
 import {
-  Task,
-  Subtask,
-  Tag,
-  TaskType,
-  RecurrenceType,
-} from "@/types/database.types";
-import { format } from "@/lib/date-fns";
+  ArrowLeft,
+  Bell,
+  CalendarClock,
+  Check,
+  Lightbulb,
+  Moon,
+  MoreVertical,
+  Pencil,
+  Plus,
+  Repeat,
+  SkipForward,
+  Trash2,
+  X,
+  XCircle,
+} from "lucide-react";
+import { useTaskStore } from "@/store/taskStore";
+import { useTaskActions } from "@/hooks/useTaskActions";
+import type { Subtask, Task } from "@/types/database.types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { useRouter, useParams } from "next/navigation";
-import Link from "next/link";
-import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
 import {
-  Lightbulb,
-  PartyPopper,
-  SkipForward,
-  Pencil,
-  Trash2,
-  Check,
-  X,
-} from "lucide-react";
-import { SkipModal } from "@/components/dashboard/SkipModal";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
+import {
+  TASK_TYPE_BADGE,
+  TASK_TYPE_LABEL,
+  formatWhen,
+  isOverdue,
+  recurrenceLabel,
+} from "@/lib/taskFormat";
 
-function TaskDetailContent() {
-  const params = useParams();
-  const id = params.id as string;
+export default function TaskDetailPage() {
+  const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const task = useTaskStore((s) => s.tasks.find((t) => t.id === id));
+  const hasLoaded = useTaskStore((s) => s.hasLoaded);
+  const actions = useTaskActions();
 
-  const [task, setTask] = useState<Task | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // local states for checklist / cues additions
-  const [newSubtask, setNewSubtask] = useState("");
-  const [newCue, setNewCue] = useState("");
-
-  // Inline subtask editing state
-  const [editingSubtaskId, setEditingSubtaskId] = useState<string | null>(null);
-  const [editingSubtaskTitle, setEditingSubtaskTitle] = useState("");
-
-  // Edit mode states
-  const [isEditing, setIsEditing] = useState(false);
-  const [isSavingEdit, setIsSavingEdit] = useState(false);
-  const [editTitle, setEditTitle] = useState("");
-  const [editDescription, setEditDescription] = useState("");
-  const [editNotes, setEditNotes] = useState("");
-  const [editTaskType, setEditTaskType] = useState<TaskType>("flexible");
-  const [editDueDate, setEditDueDate] = useState("");
-  const [editReminderAt, setEditReminderAt] = useState("");
-  const [editRecurrenceType, setEditRecurrenceType] =
-    useState<RecurrenceType>("daily");
-  const [editRecurrenceInterval, setEditRecurrenceInterval] =
-    useState<string>("1");
-  const [editTags, setEditTags] = useState<string[]>([]);
-  const [newTagInput, setNewTagInput] = useState("");
-  const [availableTags, setAvailableTags] = useState<Tag[]>([]);
-
-  // Edit scope prompt state
-  const [showEditScopePrompt, setShowEditScopePrompt] = useState(false);
-
-  // Skip modal state
-  const [showSkipModal, setShowSkipModal] = useState(false);
-  const [skipActionType, setSkipActionType] = useState<"skipped" | "missed">(
-    "skipped",
-  );
-
-  // smart completion prompt state
-  const [showCompletePrompt, setShowCompletePrompt] = useState(false);
-  const [isCompletingTask, setIsCompletingTask] = useState(false);
-  // tracks whether we've already fired the prompt for the current all-complete state
-  // resets to false whenever a subtask is unchecked
-  const promptShownRef = useRef(false);
-
-  const loadTask = async () => {
-    try {
-      const data = await taskService.getTaskById(id);
-      setTask(data);
-    } catch (err) {
-      const error = err as Error;
-      setError(error.message || "Failed to load task");
-    } finally {
-      setLoading(false);
-    }
+  const goBack = () => {
+    // Prefer real back navigation (keeps list scroll position); fall back to
+    // the task list when the page was opened directly (e.g. a notification).
+    if (window.history.length > 1) router.back();
+    else router.push("/tasks");
   };
 
-  useEffect(() => {
-    loadTask();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
-
-  useEffect(() => {
-    const fetchAvailableTags = async () => {
-      try {
-        const tags = await tagService.getTags();
-        setAvailableTags(tags);
-      } catch (err) {
-        console.error("Failed to load available tags:", err);
-      }
-    };
-    fetchAvailableTags();
-  }, []);
-
-  const startEditing = () => {
-    if (!task) return;
-    setEditTitle(task.title || "");
-    setEditDescription(task.description || "");
-    setEditNotes(task.notes || "");
-    setEditTaskType(task.task_type || "flexible");
-    setEditDueDate(
-      task.due_date ? format(task.due_date, "yyyy-MM-dd'T'HH:mm") : "",
-    );
-    setEditReminderAt(
-      task.reminder_at ? format(task.reminder_at, "yyyy-MM-dd'T'HH:mm") : "",
-    );
-    setEditRecurrenceType(task.recurrence_type || "daily");
-    setEditRecurrenceInterval(String(task.recurrence_interval || 1));
-    setEditTags(task.tags ? task.tags.map((t) => t.name) : []);
-    setNewTagInput("");
-    setIsEditing(true);
-  };
-
-  const handleAddEditTag = () => {
-    const cleanTag = newTagInput.trim().toLowerCase();
-    if (!cleanTag) return;
-    if (!editTags.includes(cleanTag)) {
-      setEditTags([...editTags, cleanTag]);
-    }
-    setNewTagInput("");
-  };
-
-  const handleToggleEditAvailableTag = (tagName: string) => {
-    const cleanTag = tagName.toLowerCase();
-    if (editTags.includes(cleanTag)) {
-      setEditTags(editTags.filter((t) => t !== cleanTag));
-    } else {
-      setEditTags([...editTags, cleanTag]);
-    }
-  };
-
-  const handleSaveClick = () => {
-    if (!task) return;
-    if (!editTitle.trim()) {
-      toast.error("Task title is required");
-      return;
-    }
-
-    const nowBuffer = new Date(Date.now() - 60000);
-    if (
-      editTaskType !== "flexible" &&
-      editDueDate &&
-      new Date(editDueDate) < nowBuffer
-    ) {
-      toast.error("Due date cannot be in the past.");
-      return;
-    }
-    if (
-      editTaskType !== "flexible" &&
-      editReminderAt &&
-      new Date(editReminderAt) < nowBuffer
-    ) {
-      toast.error("Reminder date/time cannot be in the past.");
-      return;
-    }
-    if (
-      editTaskType !== "flexible" &&
-      editDueDate &&
-      editReminderAt &&
-      new Date(editReminderAt) > new Date(editDueDate)
-    ) {
-      toast.error("Reminder date/time cannot be set after the due date.");
-      return;
-    }
-
-    if (task.task_type === "recurring") {
-      setShowEditScopePrompt(true);
-    } else {
-      executeSave("series");
-    }
-  };
-
-  const executeSave = async (scope: "instance" | "series") => {
-    if (!task) return;
-    setIsSavingEdit(true);
-    setShowEditScopePrompt(false);
-    try {
-      const type = editTaskType;
-      const updates: Partial<Task> = {
-        title: editTitle.trim(),
-        description: editDescription.trim() || null,
-        notes: editNotes.trim() || null,
-        task_type: type,
-      };
-
-      if (type === "flexible") {
-        updates.due_date = null;
-        updates.reminder_at = null;
-        updates.recurrence_type = null;
-        updates.recurrence_interval = null;
-      } else if (type === "scheduled") {
-        updates.due_date = editDueDate
-          ? new Date(editDueDate).toISOString()
-          : null;
-        updates.reminder_at = editReminderAt
-          ? new Date(editReminderAt).toISOString()
-          : null;
-        updates.recurrence_type = null;
-        updates.recurrence_interval = null;
-      } else if (type === "recurring") {
-        updates.due_date = editDueDate
-          ? new Date(editDueDate).toISOString()
-          : null;
-        updates.reminder_at = editReminderAt
-          ? new Date(editReminderAt).toISOString()
-          : null;
-        updates.recurrence_type = editRecurrenceType;
-        updates.recurrence_interval = parseInt(editRecurrenceInterval) || 1;
-      }
-
-      if (scope === "instance") {
-        const newTask = await taskService.editTaskInstance(
-          task.id,
-          updates,
-          editTags,
-        );
-        toast.success("Task updated successfully");
-        setIsEditing(false);
-        router.push(`/tasks/${newTask.id}`);
-        router.refresh();
-      } else {
-        await taskService.updateTask(task.id, updates);
-        await taskService.updateTaskTags(task.id, editTags);
-        toast.success("Task updated successfully");
-        setIsEditing(false);
-        loadTask();
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to save changes");
-    } finally {
-      setIsSavingEdit(false);
-    }
-  };
-
-  useEffect(() => {
-    if (task?.subtasks) {
-      const allComplete =
-        task.subtasks.length > 0 && task.subtasks.every((s) => s.completed);
-      if (!allComplete) {
-        promptShownRef.current = false;
-      }
-    }
-  }, [task]);
-
-  const handleToggleSubtask = async (sub: Subtask) => {
-    if (!task) return;
-    const nextVal = !sub.completed;
-
-    // optimistic UI update
-    const updatedSubtasks = task.subtasks?.map((s) =>
-      s.id === sub.id ? { ...s, completed: nextVal } : s,
-    );
-    setTask({ ...task, subtasks: updatedSubtasks });
-
-    // check if all subtasks are now complete
-    const allComplete =
-      !!updatedSubtasks &&
-      updatedSubtasks.length > 0 &&
-      updatedSubtasks.every((s) => s.completed);
-
-    if (allComplete && !promptShownRef.current && task.status !== "completed") {
-      promptShownRef.current = true; // mark as shown so rapid re-checks don't re-fire
-      // small delay so the last checkmark animation finishes first
-      setTimeout(() => setShowCompletePrompt(true), 350);
-    }
-
-    try {
-      await taskService.toggleSubtask(sub.id, nextVal);
-      if (!allComplete) {
-        toast.success(
-          nextVal ? "Subtask completed" : "Subtask marked as pending",
-        );
-      }
-    } catch {
-      toast.error("Failed to update subtask");
-      loadTask();
-    }
-  };
-
-  const handleAddSubtask = async () => {
-    if (!newSubtask.trim()) return;
-    try {
-      await taskService.addSubtask(id, newSubtask.trim());
-      setNewSubtask("");
-      loadTask();
-      toast.success("Subtask added");
-    } catch {
-      toast.error("Failed to add subtask");
-    }
-  };
-
-  const handleDeleteSubtask = async (subId: string) => {
-    setTask((prev) =>
-      prev
-        ? {
-            ...prev,
-            subtasks: prev.subtasks?.filter((s) => s.id !== subId),
-          }
-        : null,
-    );
-    try {
-      await taskService.deleteSubtask(subId);
-      toast.success("Checklist item deleted");
-    } catch {
-      toast.error("Failed to delete checklist item");
-      loadTask();
-    }
-  };
-
-  const startEditingSubtask = (sub: Subtask) => {
-    setEditingSubtaskId(sub.id);
-    setEditingSubtaskTitle(sub.title);
-  };
-
-  const handleSaveSubtaskEdit = async () => {
-    if (!editingSubtaskId) return;
-    const trimmed = editingSubtaskTitle.trim();
-    if (!trimmed) {
-      toast.error("Checklist item cannot be empty");
-      return;
-    }
-    const currentId = editingSubtaskId;
-    setTask((prev) =>
-      prev
-        ? {
-            ...prev,
-            subtasks: prev.subtasks?.map((s) =>
-              s.id === currentId ? { ...s, title: trimmed } : s,
-            ),
-          }
-        : null,
-    );
-    setEditingSubtaskId(null);
-    setEditingSubtaskTitle("");
-    try {
-      await taskService.updateSubtask(currentId, trimmed);
-      toast.success("Checklist item updated");
-    } catch {
-      toast.error("Failed to update checklist item");
-      loadTask();
-    }
-  };
-
-  const handleCancelSubtaskEdit = () => {
-    setEditingSubtaskId(null);
-    setEditingSubtaskTitle("");
-  };
-
-  const handleAddCue = async () => {
-    if (!newCue.trim()) return;
-    try {
-      await taskService.addMemoryCue(id, newCue.trim());
-      setNewCue("");
-      loadTask();
-      toast.success("Memory cue added");
-    } catch {
-      toast.error("Failed to add cue");
-    }
-  };
-
-  const handleDeleteCue = async (cueId: string) => {
-    try {
-      await taskService.deleteMemoryCue(cueId);
-      loadTask();
-      toast.success("Memory cue deleted");
-    } catch {
-      toast.error("Failed to delete memory cue");
-    }
-  };
-
-  const handleCompleteTask = async () => {
-    if (!task) return;
-    setIsCompletingTask(true);
-    try {
-      await taskService.completeTask(task);
-      toast.success("Task completed!");
-      router.push("/");
-      router.refresh();
-    } catch {
-      toast.error("Failed to complete task");
-      setIsCompletingTask(false);
-    }
-  };
-
-  if (loading) {
+  if (!hasLoaded) {
     return (
-      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
-        <Spinner size="md" label="Loading task details..." />
+      <div className="flex justify-center py-16">
+        <Spinner size="md" label="Loading task..." />
       </div>
     );
   }
 
-  if (error || !task) {
+  if (!task) {
     return (
-      <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-6 space-y-4">
-        <div className="text-destructive text-sm">
-          {error || "Task not found."}
-        </div>
+      <div className="text-center py-16 space-y-4">
+        <p className="text-sm text-muted-foreground">
+          This task doesn&apos;t exist anymore.
+        </p>
         <Link
-          href="/"
-          className="bg-primary text-primary-foreground font-semibold text-xs px-4 py-2 rounded-lg"
+          href="/tasks"
+          className="inline-flex h-10 items-center rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground"
         >
-          Back to Dashboard
+          Go to tasks
         </Link>
       </div>
     );
   }
 
-  const completedSubtasks =
-    task.subtasks?.filter((s) => s.completed).length || 0;
-  const totalSubtasks = task.subtasks?.length || 0;
-  const pct =
-    totalSubtasks > 0
-      ? Math.round((completedSubtasks / totalSubtasks) * 100)
-      : 0;
+  const done = task.status === "completed";
+  const overdue = isOverdue(task);
+  const repeat = recurrenceLabel(task);
+  const canSnooze = !done && task.task_type !== "flexible";
+  const canSkip = !done && task.task_type === "recurring";
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col py-10 px-4">
-      {/* Smart Completion Prompt Modal */}
-      {showCompletePrompt && (
-        <div
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
-          style={{ animation: "fadeInOverlay 0.2s ease" }}
+    <div className="max-w-2xl mx-auto space-y-6">
+      {/* Top bar */}
+      <div className="flex items-center justify-between -mx-2">
+        <button
+          onClick={goBack}
+          className="flex items-center gap-1.5 h-11 px-2 rounded-lg text-sm font-semibold text-muted-foreground hover:text-foreground"
         >
-          {/* Backdrop */}
-          <div
-            className="absolute inset-0 bg-background/70 backdrop-blur-sm"
-            onClick={() => setShowCompletePrompt(false)}
-          />
-
-          {/* Dialog */}
-          <div
-            className="relative z-10 w-full max-w-sm bg-card border border-border rounded-2xl shadow-2xl p-6 space-y-5"
-            style={{
-              animation: "slideUpPrompt 0.3s cubic-bezier(0.34,1.56,0.64,1)",
-            }}
-          >
-            {/* Confetti icon */}
-            <div className="flex justify-center">
-              <div className="w-14 h-14 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center">
-                <PartyPopper className="w-6 h-6 text-green-600 dark:text-green-400" />
-              </div>
-            </div>
-
-            <div className="text-center space-y-1.5">
-              <h2 className="text-base font-bold text-foreground">All done!</h2>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                You&apos;ve completed every checklist item.{" "}
-                <br className="hidden sm:block" />
-                Ready to mark{" "}
-                <span className="font-semibold text-foreground">
-                  &ldquo;{task.title}&rdquo;
-                </span>{" "}
-                as complete?
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <Button
-                onClick={() => {
-                  setShowCompletePrompt(false);
-                  handleCompleteTask();
-                }}
-                disabled={isCompletingTask}
-                className="w-full h-10 rounded-xl bg-green-600 hover:bg-green-700 text-white font-semibold text-sm flex items-center justify-center gap-2 transition-all"
-              >
-                {isCompletingTask ? (
-                  <>
-                    <Spinner size="sm" />
-                    Completing...
-                  </>
-                ) : (
-                  <>
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                    Yes, mark as complete
-                  </>
-                )}
-              </Button>
-              <Button
-                onClick={() => setShowCompletePrompt(false)}
-                variant="outline"
-                className="w-full h-9 rounded-xl text-sm font-medium"
-              >
-                Not yet
-              </Button>
-            </div>
-          </div>
-
-          <style>{`
-            @keyframes fadeInOverlay {
-              from { opacity: 0; }
-              to   { opacity: 1; }
-            }
-            @keyframes slideUpPrompt {
-              from { opacity: 0; transform: translateY(24px) scale(0.96); }
-              to   { opacity: 1; transform: translateY(0) scale(1); }
-            }
-          `}</style>
-        </div>
-      )}
-
-      {/* Edit Scope Prompt Modal */}
-      {showEditScopePrompt && (
-        <div
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
-          style={{ animation: "fadeInOverlay 0.2s ease" }}
-        >
-          {/* Backdrop */}
-          <div
-            className="absolute inset-0 bg-background/70 backdrop-blur-sm"
-            onClick={() => setShowEditScopePrompt(false)}
-          />
-
-          {/* Dialog */}
-          <div
-            className="relative z-10 w-full max-w-sm bg-card border border-border rounded-2xl shadow-2xl p-6 space-y-5"
-            style={{
-              animation: "slideUpPrompt 0.3s cubic-bezier(0.34,1.56,0.64,1)",
-            }}
-          >
-            <div className="text-center space-y-1.5">
-              <h2 className="text-base font-bold text-foreground">
-                Edit Recurring Task
-              </h2>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                This is a recurring task. Do you want to apply these changes to
-                this instance only, or to the entire series?
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <Button
-                onClick={() => executeSave("instance")}
-                disabled={isSavingEdit}
-                className="w-full h-10 rounded-xl bg-brand-indigo hover:bg-brand-indigo/90 text-white font-semibold text-sm transition-all"
-              >
-                {isSavingEdit ? <Spinner size="sm" /> : "This instance only"}
-              </Button>
-              <Button
-                onClick={() => executeSave("series")}
-                disabled={isSavingEdit}
-                variant="outline"
-                className="w-full h-10 rounded-xl font-semibold text-sm transition-all"
-              >
-                {isSavingEdit ? <Spinner size="sm" /> : "All future instances"}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-      <div className="max-w-2xl w-full mx-auto space-y-6">
-        {/* Navigation */}
-        <div>
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
+          <ArrowLeft className="w-5 h-5" />
+          Back
+        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              aria-label="Task options"
+              className="h-11 w-11 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2.5"
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-            Back to Dashboard
-          </Link>
-        </div>
-
-        {/* Task Details Card */}
-        <div className="border border-border bg-card backdrop-blur-md rounded-2xl p-6 shadow-lg space-y-6">
-          {/* Header */}
-          {isEditing ? (
-            // Edit Mode Form
-            <div className="space-y-4 text-xs">
-              {/* Title input */}
-              <div className="grid gap-1">
-                <Label
-                  htmlFor="edit-title"
-                  className="font-semibold text-muted-foreground text-[11px]"
-                >
-                  Title
-                </Label>
-                <Input
-                  id="edit-title"
-                  value={editTitle}
-                  onChange={(e) => setEditTitle(e.target.value)}
-                  className="text-base md:text-xs h-9 rounded-xl border-border/80 bg-background"
-                  placeholder="Task title"
-                />
-              </div>
-
-              {/* Description & Notes */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="grid gap-1">
-                  <Label
-                    htmlFor="edit-desc"
-                    className="font-semibold text-muted-foreground text-[11px]"
-                  >
-                    Description
-                  </Label>
-                  <Textarea
-                    id="edit-desc"
-                    value={editDescription}
-                    onChange={(e) => setEditDescription(e.target.value)}
-                    className="text-base md:text-xs rounded-xl min-h-[70px] border-border/80 bg-background"
-                    placeholder="Task description"
-                  />
-                </div>
-                <div className="grid gap-1">
-                  <Label
-                    htmlFor="edit-notes"
-                    className="font-semibold text-muted-foreground text-[11px]"
-                  >
-                    Reference Notes
-                  </Label>
-                  <Textarea
-                    id="edit-notes"
-                    value={editNotes}
-                    onChange={(e) => setEditNotes(e.target.value)}
-                    className="text-base md:text-xs rounded-xl min-h-[70px] border-border/80 bg-background"
-                    placeholder="Reference notes"
-                  />
-                </div>
-              </div>
-
-              {/* Task Type Select */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="grid gap-1">
-                  <Label
-                    htmlFor="edit-type"
-                    className="font-semibold text-muted-foreground text-[11px]"
-                  >
-                    Task Type
-                  </Label>
-                  <select
-                    id="edit-type"
-                    value={editTaskType}
-                    onChange={(e) =>
-                      setEditTaskType(e.target.value as TaskType)
-                    }
-                    className="bg-background border border-border/80 text-foreground rounded-xl p-2 text-base md:text-xs h-9 focus:outline-none focus:ring-2 focus:ring-ring"
-                  >
-                    <option value="flexible">Flexible</option>
-                    <option value="scheduled">Scheduled</option>
-                    <option value="recurring">Recurring</option>
-                  </select>
-                </div>
-
-                {editTaskType !== "flexible" && (
-                  <>
-                    <div className="grid gap-1">
-                      <Label
-                        htmlFor="edit-due"
-                        className="font-semibold text-muted-foreground text-[11px]"
-                      >
-                        Due Date
-                      </Label>
-                      <Input
-                        id="edit-due"
-                        type="datetime-local"
-                        value={editDueDate}
-                        onChange={(e) => setEditDueDate(e.target.value)}
-                        className="text-base md:text-xs h-9 rounded-xl border-border/80 bg-background"
-                      />
-                    </div>
-                    <div className="grid gap-1">
-                      <Label
-                        htmlFor="edit-reminder"
-                        className="font-semibold text-muted-foreground text-[11px]"
-                      >
-                        Reminder
-                      </Label>
-                      <Input
-                        id="edit-reminder"
-                        type="datetime-local"
-                        value={editReminderAt}
-                        onChange={(e) => setEditReminderAt(e.target.value)}
-                        className="text-base md:text-xs h-9 rounded-xl border-border/80 bg-background"
-                      />
-                    </div>
-                  </>
-                )}
-              </div>
-
-              {/* Recurrence Details */}
-              {editTaskType === "recurring" && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-muted/40 p-3 rounded-xl border border-border">
-                  <div className="grid gap-1">
-                    <Label
-                      htmlFor="edit-recurrence-type"
-                      className="font-semibold text-muted-foreground text-[11px]"
-                    >
-                      Recurrence Interval
-                    </Label>
-                    <select
-                      id="edit-recurrence-type"
-                      value={editRecurrenceType}
-                      onChange={(e) =>
-                        setEditRecurrenceType(e.target.value as RecurrenceType)
-                      }
-                      className="bg-background border border-border/80 text-foreground rounded-xl p-2 text-base md:text-xs focus:outline-none focus:ring-2 focus:ring-ring"
-                    >
-                      <option value="daily">Daily</option>
-                      <option value="weekly">Weekly</option>
-                      <option value="monthly">Monthly</option>
-                      <option value="yearly">Yearly</option>
-                    </select>
-                  </div>
-                  <div className="grid gap-1">
-                    <Label
-                      htmlFor="edit-recurrence-interval"
-                      className="font-semibold text-muted-foreground text-[11px]"
-                    >
-                      Repeat Every
-                    </Label>
-                    <Input
-                      id="edit-recurrence-interval"
-                      type="number"
-                      min="1"
-                      value={editRecurrenceInterval}
-                      onChange={(e) =>
-                        setEditRecurrenceInterval(e.target.value)
-                      }
-                      className="text-base md:text-xs h-9 rounded-xl border-border/80 bg-background"
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : (
-            // View Mode Header
-            <div className="space-y-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <span
-                  className={cn(
-                    "text-[10px] px-2.5 py-0.5 rounded-full font-medium tracking-wide uppercase",
-                    task.task_type === "flexible" &&
-                      "bg-muted text-muted-foreground border border-border",
-                    task.task_type === "scheduled" &&
-                      "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20",
-                    task.task_type === "recurring" &&
-                      "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20",
-                  )}
-                >
-                  {task.task_type}
-                </span>
-                {task.due_date && (
-                  <span className="text-[10px] bg-muted border border-border text-muted-foreground px-2 py-0.5 rounded font-medium">
-                    Due: {format(task.due_date, "MMM dd, yyyy HH:mm")}
-                  </span>
-                )}
-                {task.reminder_at && task.task_type !== "flexible" && (
-                  <span className="text-[10px] bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded font-medium flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-                    Reminder: {format(task.reminder_at, "MMM dd, yyyy HH:mm")}
-                  </span>
-                )}
-                <span
-                  className={cn(
-                    "text-[10px] px-2.5 py-0.5 rounded-full uppercase font-medium border",
-                    task.status === "completed"
-                      ? "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20"
-                      : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
-                  )}
-                >
-                  {task.status}
-                </span>
-              </div>
-
-              <h1
-                className={cn(
-                  "text-2xl font-bold tracking-tight text-foreground",
-                  task.status === "completed" &&
-                    "line-through text-muted-foreground",
-                )}
+              <MoreVertical className="w-5 h-5" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem
+              onClick={() => actions.edit(task)}
+              className="gap-2 py-2.5"
+            >
+              <Pencil className="w-4 h-4" /> Edit
+            </DropdownMenuItem>
+            {canSnooze && (
+              <DropdownMenuItem
+                onClick={() => actions.snooze(task)}
+                className="gap-2 py-2.5"
               >
-                {task.title}
-              </h1>
-
-              {task.description && (
-                <p className="text-sm text-foreground leading-relaxed bg-muted/30 p-3.5 rounded-xl border border-border">
-                  {task.description}
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* Subtasks checklist */}
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                Subtask Checklist
-              </h2>
-              {totalSubtasks > 0 && (
-                <span className="text-[10px] text-muted-foreground font-semibold">
-                  {completedSubtasks}/{totalSubtasks} completed ({pct}%)
-                </span>
-              )}
-            </div>
-
-            {totalSubtasks > 0 && (
-              <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-foreground rounded-full transition-all duration-300"
-                  style={{ width: `${pct}%` }}
-                />
-              </div>
+                <Moon className="w-4 h-4" /> Snooze
+              </DropdownMenuItem>
             )}
-
-            <div className="flex gap-2">
-              <Input
-                placeholder="Add subtask item..."
-                value={newSubtask}
-                onChange={(e) => setNewSubtask(e.target.value)}
-                className="text-base md:text-xs h-9 rounded-xl border-border/80 bg-background"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleAddSubtask();
-                  }
-                }}
-              />
-              <Button
-                onClick={handleAddSubtask}
-                variant="outline"
-                className="text-xs h-9 px-4 rounded-xl font-semibold border-border/80"
-              >
-                Add
-              </Button>
-            </div>
-
-            {task.subtasks && task.subtasks.length > 0 ? (
-              <div className="space-y-2">
-                {task.subtasks
-                  .sort((a, b) => {
-                    // Primary: incomplete first, completed last
-                    if (a.completed !== b.completed) {
-                      return a.completed ? 1 : -1;
-                    }
-                    // Secondary: created_at descending
-                    return (
-                      new Date(b.created_at).getTime() -
-                      new Date(a.created_at).getTime()
-                    );
-                  })
-                  .map((sub) => (
-                    <div
-                      key={sub.id}
-                      className="group flex items-center justify-between bg-muted/30 dark:bg-[#131920] border border-border/80 dark:border-[#222A35]/50 px-4 py-3 rounded-2xl text-xs transition-all hover:bg-muted/40 dark:hover:bg-[#171E27]"
-                    >
-                      {editingSubtaskId === sub.id ? (
-                        <div className="flex items-center gap-2 flex-1">
-                          <Input
-                            value={editingSubtaskTitle}
-                            onChange={(e) =>
-                              setEditingSubtaskTitle(e.target.value)
-                            }
-                            className="text-base md:text-xs h-8 rounded-xl border-border/80 bg-background flex-1"
-                            autoFocus
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                e.preventDefault();
-                                handleSaveSubtaskEdit();
-                              } else if (e.key === "Escape") {
-                                e.preventDefault();
-                                handleCancelSubtaskEdit();
-                              }
-                            }}
-                          />
-                          <button
-                            type="button"
-                            onClick={handleSaveSubtaskEdit}
-                            className="p-1.5 rounded-lg hover:bg-green-500/10 text-green-600 dark:text-green-400 transition-colors"
-                            title="Save changes (Enter)"
-                            aria-label="Save checklist item"
-                          >
-                            <Check className="w-4 h-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={handleCancelSubtaskEdit}
-                            className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                            title="Cancel (Esc)"
-                            aria-label="Cancel editing"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ) : (
-                        <>
-                          <label className="flex items-center gap-3 cursor-pointer flex-1 text-foreground min-w-0 mr-2">
-                            <input
-                              type="checkbox"
-                              checked={sub.completed}
-                              onChange={() => handleToggleSubtask(sub)}
-                              className="sr-only"
-                            />
-                            <div
-                              className={cn(
-                                "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all",
-                                sub.completed
-                                  ? "bg-foreground border-foreground text-background"
-                                  : "border-muted-foreground/60 hover:border-foreground",
-                              )}
-                            >
-                              {sub.completed && (
-                                <svg
-                                  className="w-3.5 h-3.5"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                  strokeWidth="3.5"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M5 13l4 4L19 7"
-                                  />
-                                </svg>
-                              )}
-                            </div>
-                            <span
-                              className={cn(
-                                "font-medium select-none text-foreground/90 break-words",
-                                sub.completed &&
-                                  "line-through text-muted-foreground",
-                              )}
-                            >
-                              {sub.title}
-                            </span>
-                          </label>
-                          <div className="flex items-center gap-1 shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => startEditingSubtask(sub)}
-                              className="text-muted-foreground hover:text-foreground p-1 rounded-md hover:bg-muted/80 transition-colors"
-                              title="Edit checklist item"
-                              aria-label={`Edit ${sub.title}`}
-                            >
-                              <Pencil className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteSubtask(sub.id)}
-                              className="text-muted-foreground hover:text-destructive p-1 rounded-md hover:bg-destructive/10 transition-colors"
-                              title="Delete checklist item"
-                              aria-label={`Delete ${sub.title}`}
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  ))}
-              </div>
-            ) : (
-              <p className="text-xs text-muted-foreground">
-                No subtasks added yet.
-              </p>
-            )}
-          </div>
-
-          {/* Memory Cues */}
-          <div className="space-y-3">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Memory Cues
-            </h2>
-
-            {isEditing && (
-              <div className="flex gap-2">
-                <Input
-                  placeholder="e.g. Place server logs spreadsheet on secondary monitor, post-it on screen..."
-                  value={newCue}
-                  onChange={(e) => setNewCue(e.target.value)}
-                  className="text-base md:text-xs h-9 rounded-xl border-border/80 bg-background"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      handleAddCue();
-                    }
-                  }}
-                />
-                <Button
-                  onClick={handleAddCue}
-                  variant="outline"
-                  className="text-xs h-9 px-4 rounded-xl font-semibold border-border/80"
+            {canSkip && (
+              <>
+                <DropdownMenuItem
+                  onClick={() => actions.skip(task, "skipped")}
+                  className="gap-2 py-2.5"
                 >
-                  Add
-                </Button>
-              </div>
-            )}
-
-            {task.memory_cues && task.memory_cues.length > 0 ? (
-              <div className="space-y-2">
-                {task.memory_cues.map((cue) => (
-                  <div
-                    key={cue.id}
-                    className="flex items-center justify-between bg-muted/30 dark:bg-[#131920] border border-border/80 dark:border-[#222A35]/50 px-4 py-3 rounded-2xl text-xs transition-all hover:bg-muted/40 dark:hover:bg-[#171E27]"
-                  >
-                    <div className="flex items-center gap-3 text-foreground">
-                      <Lightbulb className="w-4 h-4 text-amber-500 dark:text-amber-400 select-none flex-shrink-0" />
-                      <span className="font-medium text-foreground/90">
-                        {cue.content}
-                      </span>
-                    </div>
-                    {isEditing && (
-                      <button
-                        onClick={() => handleDeleteCue(cue.id)}
-                        className="text-destructive/70 hover:text-destructive text-[10px] font-semibold transition-colors px-1.5 py-0.5"
-                      >
-                        Delete
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs text-muted-foreground">
-                No memory cues added yet.
-              </p>
-            )}
-          </div>
-
-          {/* Reference Notes View Mode (hides if empty and not editing) */}
-          {!isEditing && task.notes && (
-            <div className="space-y-3">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                Reference Notes
-              </h2>
-              <p className="text-xs text-foreground leading-relaxed bg-muted/30 p-3.5 rounded-xl border border-border whitespace-pre-wrap">
-                {task.notes}
-              </p>
-            </div>
-          )}
-
-          {/* Tags list */}
-          {isEditing ? (
-            <div className="space-y-2 border-t border-border pt-4">
-              <Label className="font-semibold text-muted-foreground text-[11px]">
-                Tags
-              </Label>
-              <div className="flex gap-2">
-                <Input
-                  value={newTagInput}
-                  onChange={(e) => setNewTagInput(e.target.value)}
-                  placeholder="New tag name..."
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      handleAddEditTag();
-                    }
-                  }}
-                  className="text-base md:text-xs h-9 rounded-xl border-border/80 bg-background"
-                />
-                <Button
-                  type="button"
-                  onClick={handleAddEditTag}
-                  variant="outline"
-                  className="text-xs h-9 rounded-xl font-semibold border-border/80"
+                  <SkipForward className="w-4 h-4" /> Skip occurrence
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => actions.skip(task, "missed")}
+                  className="gap-2 py-2.5"
                 >
-                  Add Tag
-                </Button>
-              </div>
-
-              {editTags.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mt-1">
-                  {editTags.map((t) => (
-                    <span
-                      key={t}
-                      className="bg-primary/20 text-foreground border border-primary/30 text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1 cursor-pointer hover:bg-primary/30 transition-colors"
-                      onClick={() => handleToggleEditAvailableTag(t)}
-                    >
-                      #{t}
-                      <span className="text-[9px] opacity-60">×</span>
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              {availableTags.length > 0 && (
-                <div className="space-y-1">
-                  <p className="text-[10px] text-muted-foreground">
-                    Select from existing tags:
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {availableTags
-                      .filter((tag) => !editTags.includes(tag.name))
-                      .map((tag) => (
-                        <button
-                          key={tag.id}
-                          type="button"
-                          onClick={() => handleToggleEditAvailableTag(tag.name)}
-                          className="bg-muted hover:bg-muted/80 border border-border text-[10px] text-foreground px-2 py-0.5 rounded-full transition-all"
-                        >
-                          #{tag.name}
-                        </button>
-                      ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : (
-            task.tags &&
-            task.tags.length > 0 && (
-              <div className="space-y-2 border-t border-border pt-4">
-                <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Associated Tags
-                </h2>
-                <div className="flex flex-wrap gap-1.5">
-                  {task.tags.map((t) => (
-                    <span
-                      key={t.id}
-                      className="text-xs bg-brand-indigo/5 text-brand-indigo dark:text-brand-blue border border-brand-indigo/10 px-2.5 py-1 rounded-full font-medium"
-                    >
-                      #{t.name}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )
-          )}
-
-          {/* Actions footer */}
-          <div className="flex flex-col gap-3 pt-4 border-t border-border sm:flex-row sm:items-center sm:justify-between">
-            <span className="text-[10px] text-muted-foreground">
-              Created: {format(task.created_at, "PP")}
-            </span>
-            <div className="flex flex-wrap gap-2">
-              {isEditing ? (
-                <>
-                  <Button
-                    onClick={handleSaveClick}
-                    disabled={isSavingEdit}
-                    className="bg-brand-indigo hover:bg-brand-indigo/90 text-white text-xs font-semibold py-1.5 h-8 rounded px-4 transition-all"
-                  >
-                    {isSavingEdit ? <Spinner size="sm" /> : "Save Changes"}
-                  </Button>
-                  <Button
-                    onClick={() => setIsEditing(false)}
-                    disabled={isSavingEdit}
-                    variant="outline"
-                    className="text-xs border border-border py-1.5 h-8 rounded px-4 font-semibold transition-all"
-                  >
-                    Cancel
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button
-                    onClick={startEditing}
-                    variant="outline"
-                    className="text-xs border border-border py-1.5 h-8 rounded px-4 font-semibold transition-all hover:bg-muted"
-                  >
-                    Edit Task
-                  </Button>
-                  {task.task_type === "recurring" &&
-                    task.status !== "completed" && (
-                      <>
-                        <Button
-                          onClick={() => {
-                            setSkipActionType("skipped");
-                            setShowSkipModal(true);
-                          }}
-                          variant="outline"
-                          className="text-xs border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 py-1.5 h-8 rounded px-4 font-semibold transition-all flex items-center gap-1.5"
-                        >
-                          <SkipForward className="w-3.5 h-3.5" />
-                          Skip
-                        </Button>
-                        <Button
-                          onClick={() => {
-                            setSkipActionType("missed");
-                            setShowSkipModal(true);
-                          }}
-                          variant="outline"
-                          className="text-xs border border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 py-1.5 h-8 rounded px-4 font-semibold transition-all flex items-center gap-1.5"
-                        >
-                          <svg
-                            className="w-3.5 h-3.5"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth="2"
-                              d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-                            />
-                          </svg>
-                          Missed
-                        </Button>
-                      </>
-                    )}
-                  {task.status !== "completed" && (
-                    <Button
-                      onClick={handleCompleteTask}
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-emerald-500 dark:hover:bg-emerald-600 dark:text-background text-xs font-semibold py-1.5 h-8 rounded px-4 transition-all"
-                    >
-                      Mark Complete
-                    </Button>
-                  )}
-                </>
-              )}
-            </div>
-          </div>
-        </div>
+                  <XCircle className="w-4 h-4" /> Mark missed
+                </DropdownMenuItem>
+              </>
+            )}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => actions.requestDelete(task, goBack)}
+              className="gap-2 py-2.5 text-destructive focus:text-destructive"
+            >
+              <Trash2 className="w-4 h-4" /> Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
-      {/* Skip Modal */}
-      <SkipModal
-        isOpen={showSkipModal}
-        onClose={() => setShowSkipModal(false)}
-        task={task}
-        onSuccess={() => loadTask()}
-        actionType={skipActionType}
-      />
+      {/* Header */}
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <span
+            className={cn(
+              "text-xs px-2.5 py-1 rounded-full font-semibold border",
+              TASK_TYPE_BADGE[task.task_type],
+            )}
+          >
+            {TASK_TYPE_LABEL[task.task_type]}
+          </span>
+          {done && (
+            <span className="text-xs px-2.5 py-1 rounded-full font-semibold border border-green-300 text-green-700 dark:border-green-500/40 dark:text-green-400">
+              Done
+            </span>
+          )}
+        </div>
+        <h1
+          className={cn(
+            "text-2xl font-bold tracking-tight text-foreground break-words",
+            done && "line-through text-muted-foreground",
+          )}
+        >
+          {task.title}
+        </h1>
+
+        {/* Schedule facts */}
+        {(task.due_date || task.reminder_at || repeat) && (
+          <ul className="space-y-1.5 text-sm">
+            {task.due_date && (
+              <li
+                className={cn(
+                  "flex items-center gap-2",
+                  overdue
+                    ? "text-red-600 dark:text-red-400 font-semibold"
+                    : "text-muted-foreground",
+                )}
+              >
+                <CalendarClock className="w-4 h-4 shrink-0" />
+                {overdue ? "Overdue · was due " : "Due "}
+                {formatWhen(task.due_date)}
+              </li>
+            )}
+            {task.reminder_at && !done && (
+              <li className="flex items-center gap-2 text-muted-foreground">
+                <Bell className="w-4 h-4 shrink-0" />
+                Reminder {formatWhen(task.reminder_at)}
+              </li>
+            )}
+            {repeat && (
+              <li className="flex items-center gap-2 text-muted-foreground">
+                <Repeat className="w-4 h-4 shrink-0" />
+                {repeat}
+              </li>
+            )}
+          </ul>
+        )}
+
+        {task.tags && task.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {task.tags.map((tag) => (
+              <span
+                key={tag.id}
+                className="text-xs bg-brand-indigo/5 text-brand-indigo dark:text-brand-blue border border-brand-indigo/10 px-2.5 py-1 rounded-full font-medium"
+              >
+                #{tag.name}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Primary actions */}
+      <div className="flex gap-2">
+        <Button
+          onClick={() => actions.toggleCompletion(task)}
+          variant={done ? "outline" : "default"}
+          className="flex-1 h-12 rounded-xl text-sm font-semibold gap-2"
+        >
+          <Check className="w-4 h-4" />
+          {done ? "Mark as not done" : "Mark complete"}
+        </Button>
+        {canSnooze && (
+          <Button
+            onClick={() => actions.snooze(task)}
+            variant="outline"
+            className="h-12 rounded-xl text-sm font-semibold gap-2 px-4"
+          >
+            <Moon className="w-4 h-4" />
+            Snooze
+          </Button>
+        )}
+      </div>
+
+      {task.description && (
+        <Section title="Details">
+          <p className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">
+            {task.description}
+          </p>
+        </Section>
+      )}
+
+      <Checklist task={task} actions={actions} />
+      <MemoryCues task={task} actions={actions} />
+
+      {task.notes && (
+        <Section title="Notes">
+          <p className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">
+            {task.notes}
+          </p>
+        </Section>
+      )}
+
+      {actions.dialogs}
     </div>
   );
 }
 
-export default function TaskDetailPage() {
+type Actions = ReturnType<typeof useTaskActions>;
+
+function Section({
+  title,
+  aside,
+  children,
+}: {
+  title: string;
+  aside?: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
-          <Spinner size="md" label="Loading details..." />
-        </div>
+    <section className="border border-border bg-card rounded-2xl p-4 sm:p-5 space-y-3 shadow-sm">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+          {title}
+        </h2>
+        {aside}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+/** Text input + add button; submits on Enter. */
+function AddRow({
+  placeholder,
+  label,
+  onAdd,
+}: {
+  placeholder: string;
+  label: string;
+  onAdd: (text: string) => Promise<boolean>;
+}) {
+  const [text, setText] = useState("");
+  const submit = async () => {
+    const value = text.trim();
+    if (!value) return;
+    setText("");
+    const ok = await onAdd(value);
+    if (!ok) setText(value); // restore on failure
+  };
+  return (
+    <form
+      className="flex gap-2"
+      onSubmit={(e) => {
+        e.preventDefault();
+        submit();
+      }}
+    >
+      <Input
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder={placeholder}
+        aria-label={label}
+        className="h-11 rounded-xl text-base md:text-sm"
+      />
+      <Button
+        type="submit"
+        variant="outline"
+        aria-label={label}
+        className="h-11 w-11 shrink-0 rounded-xl p-0"
+      >
+        <Plus className="w-5 h-5" />
+      </Button>
+    </form>
+  );
+}
+
+function Checklist({ task, actions }: { task: Task; actions: Actions }) {
+  const subs = task.subtasks ?? [];
+  const doneCount = subs.filter((s) => s.completed).length;
+  const pct = subs.length ? Math.round((doneCount / subs.length) * 100) : 0;
+
+  return (
+    <Section
+      title="Checklist"
+      aside={
+        subs.length > 0 && (
+          <span className="text-xs font-semibold text-muted-foreground">
+            {doneCount}/{subs.length}
+          </span>
+        )
       }
     >
-      <TaskDetailContent />
-    </Suspense>
+      {subs.length > 0 && (
+        <>
+          <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+            <div
+              className="h-full bg-foreground rounded-full transition-all duration-300"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+          <ul className="divide-y divide-border/60 -mx-1">
+            {subs.map((sub) => (
+              <ChecklistItem
+                key={sub.id}
+                task={task}
+                sub={sub}
+                actions={actions}
+              />
+            ))}
+          </ul>
+        </>
+      )}
+      <AddRow
+        placeholder="Add a checklist item"
+        label="Add checklist item"
+        onAdd={(text) => actions.addSubtask(task.id, text)}
+      />
+    </Section>
+  );
+}
+
+function ChecklistItem({
+  task,
+  sub,
+  actions,
+}: {
+  task: Task;
+  sub: Subtask;
+  actions: Actions;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(sub.title);
+  const saving = sub.id.startsWith("temp-");
+
+  const commit = () => {
+    setEditing(false);
+    if (draft.trim() && draft.trim() !== sub.title) {
+      actions.renameSubtask(task.id, sub.id, draft);
+    } else {
+      setDraft(sub.title);
+    }
+  };
+
+  return (
+    <li className={cn("flex items-center gap-1 py-1", saving && "opacity-60")}>
+      <button
+        onClick={() => actions.toggleSubtask(task, sub)}
+        disabled={saving}
+        aria-label={sub.completed ? "Mark not done" : "Mark done"}
+        className="h-11 w-11 shrink-0 flex items-center justify-center"
+      >
+        <span
+          className={cn(
+            "w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors",
+            sub.completed
+              ? "bg-foreground border-foreground text-background"
+              : "border-muted-foreground/60",
+          )}
+        >
+          {sub.completed && <Check className="w-3.5 h-3.5" strokeWidth={3.5} />}
+        </span>
+      </button>
+
+      {editing ? (
+        <Input
+          value={draft}
+          autoFocus
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") commit();
+            if (e.key === "Escape") {
+              setDraft(sub.title);
+              setEditing(false);
+            }
+          }}
+          className="h-10 flex-1 rounded-lg text-base md:text-sm"
+        />
+      ) : (
+        <button
+          onClick={() => !saving && setEditing(true)}
+          className={cn(
+            "flex-1 text-left text-sm py-2 break-words min-w-0",
+            sub.completed && "line-through text-muted-foreground",
+          )}
+        >
+          {sub.title}
+        </button>
+      )}
+
+      {!editing && (
+        <button
+          onClick={() => actions.deleteSubtask(task.id, sub.id)}
+          disabled={saving}
+          aria-label={`Delete "${sub.title}"`}
+          className="h-11 w-11 shrink-0 flex items-center justify-center text-muted-foreground hover:text-destructive"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      )}
+    </li>
+  );
+}
+
+function MemoryCues({ task, actions }: { task: Task; actions: Actions }) {
+  const cues = task.memory_cues ?? [];
+  return (
+    <Section title="Memory cues">
+      {cues.length === 0 && (
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          Real-world triggers that jog your memory, e.g. &ldquo;Leave the
+          charger by the door&rdquo;.
+        </p>
+      )}
+      {cues.length > 0 && (
+        <ul className="space-y-2">
+          {cues.map((cue) => (
+            <li
+              key={cue.id}
+              className={cn(
+                "flex items-start gap-2.5 rounded-xl bg-amber-500/5 border border-amber-500/15 pl-3",
+                cue.id.startsWith("temp-") && "opacity-60",
+              )}
+            >
+              <Lightbulb className="w-4 h-4 text-amber-500 shrink-0 mt-3" />
+              <span className="flex-1 text-sm py-2.5 break-words min-w-0">
+                {cue.content}
+              </span>
+              <button
+                onClick={() => actions.deleteCue(cue.id)}
+                aria-label="Delete memory cue"
+                className="h-10 w-10 shrink-0 flex items-center justify-center text-muted-foreground hover:text-destructive"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <AddRow
+        placeholder="Add a memory cue"
+        label="Add memory cue"
+        onAdd={(text) => actions.addCue(task.id, text)}
+      />
+    </Section>
   );
 }

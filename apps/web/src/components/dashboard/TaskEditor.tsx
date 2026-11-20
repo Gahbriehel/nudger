@@ -4,11 +4,11 @@
 import { useState, useEffect } from "react";
 import { useForm, zodResolver } from "@/lib/react-hook-form";
 import { z, infer as zInfer } from "@/lib/zod";
-import { taskService } from "@/services/task.service";
+import { taskService, calculateInitialDueDate } from "@/services/task.service";
 import { tagService } from "@/services/tag.service";
 import { useTaskStore } from "@/store/taskStore";
 import { usePromptStore } from "@/store/promptStore";
-import { Tag, TaskType, RecurrenceType } from "@/types/database.types";
+import { Tag, Task, TaskType, RecurrenceType } from "@/types/database.types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,19 +43,52 @@ const taskSchema = z.object({
 
 type TaskFormInput = zInfer<typeof taskSchema>;
 
-interface TaskFormProps {
-  onSuccess: () => void;
-  onCancel: () => void;
+/** Format an ISO date for a `datetime-local` input (local time). */
+function toInputDateTime(iso?: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
+interface TaskEditorProps {
+  /** Omit to create a new task; pass a task to edit it. */
+  task?: Task;
+  /** Receives the saved task. Editing a single recurring occurrence creates a
+   * new task, so callers should navigate to the returned id. */
+  onSuccess: (task: Task) => void;
+  onCancel: () => void;
+  /** Lets the container guard against discarding unsaved input. */
+  onDirtyChange?: (dirty: boolean) => void;
+}
+
+/**
+ * The one task form, used for both creating and editing. Checklist items and
+ * memory cues are only collected here on create; for existing tasks they are
+ * edited live on the task page.
+ */
+export function TaskEditor({
+  task,
+  onSuccess,
+  onCancel,
+  onDirtyChange,
+}: TaskEditorProps) {
+  const isEdit = !!task;
   const addTaskState = useTaskStore((s) => s.addTaskState);
+  const fetchTasks = useTaskStore((s) => s.fetchTasks);
   const [error, setError] = useState<string | null>(null);
+  // For recurring edits: ask whether to change one occurrence or the series
+  const [pendingScopeData, setPendingScopeData] =
+    useState<TaskFormInput | null>(null);
+  const [isSavingScope, setIsSavingScope] = useState(false);
 
   const [recurrencePattern, setRecurrencePattern] = useState<
     "interval" | "specific_days"
-  >("interval");
-  const [selectedDays, setSelectedDays] = useState<number[]>([]);
+  >(task?.recurrence_days?.length ? "specific_days" : "interval");
+  const [selectedDays, setSelectedDays] = useState<number[]>(
+    task?.recurrence_days ?? [],
+  );
 
   // Subtasks & Memory Cues local state
   const [subtasks, setSubtasks] = useState<string[]>([]);
@@ -69,7 +102,9 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
 
   // Tags selection
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>(
+    task?.tags?.map((t) => t.name) ?? [],
+  );
   const [newTagInput, setNewTagInput] = useState("");
 
   // Min date-time constraint for datetime-local picker
@@ -95,14 +130,14 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
     formState: { errors, isSubmitting },
   } = useForm<TaskFormInput>({
     defaultValues: {
-      title: "",
-      description: "",
-      task_type: "flexible",
-      due_date: "",
-      reminder_at: "",
-      recurrence_type: "daily",
-      recurrence_interval: "1",
-      notes: "",
+      title: task?.title ?? "",
+      description: task?.description ?? "",
+      task_type: task?.task_type ?? "flexible",
+      due_date: toInputDateTime(task?.due_date),
+      reminder_at: toInputDateTime(task?.reminder_at),
+      recurrence_type: task?.recurrence_type ?? "daily",
+      recurrence_interval: String(task?.recurrence_interval ?? 1),
+      notes: task?.notes ?? "",
     },
     resolver: zodResolver(taskSchema),
   });
@@ -180,7 +215,90 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
     }
   };
 
+  const initialDue = toInputDateTime(task?.due_date);
+  const initialReminder = toInputDateTime(task?.reminder_at);
+
+  // Report unsaved input so the container can confirm before discarding
+  const isDirty =
+    (isEdit
+      ? values.title !== (task?.title ?? "") ||
+        values.description !== (task?.description ?? "") ||
+        values.notes !== (task?.notes ?? "") ||
+        values.task_type !== task?.task_type ||
+        values.due_date !== initialDue ||
+        values.reminder_at !== initialReminder
+      : !!(values.title || values.description || values.notes) ||
+        subtasks.length > 0 ||
+        memoryCues.length > 0) ||
+    !!(newSubtask.trim() || newCue.trim() || newTagInput.trim());
+  useEffect(() => {
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
+
+  /** Validation + recurring scope question, then save. */
   const onSubmit = async (data: TaskFormInput) => {
+    setError(null);
+    const timed = data.task_type !== "flexible";
+
+    // Only dates the user actually set/changed must be in the future, so an
+    // overdue task can still be renamed without being forced to reschedule.
+    const nowBuffer = new Date(Date.now() - 60000);
+    const dueChanged = !isEdit || data.due_date !== initialDue;
+    const reminderChanged = !isEdit || data.reminder_at !== initialReminder;
+    if (
+      timed &&
+      dueChanged &&
+      data.due_date &&
+      new Date(data.due_date) < nowBuffer
+    ) {
+      toast.error("Due date cannot be in the past.");
+      return;
+    }
+    if (
+      timed &&
+      reminderChanged &&
+      data.reminder_at &&
+      new Date(data.reminder_at) < nowBuffer
+    ) {
+      toast.error("Reminder cannot be in the past.");
+      return;
+    }
+    if (
+      timed &&
+      data.due_date &&
+      data.reminder_at &&
+      new Date(data.reminder_at) > new Date(data.due_date)
+    ) {
+      toast.error("Reminder cannot be after the due date.");
+      return;
+    }
+    if (
+      data.task_type === "recurring" &&
+      recurrencePattern === "specific_days" &&
+      selectedDays.length === 0
+    ) {
+      toast.error("Please select at least one day of the week.");
+      return;
+    }
+
+    if (isEdit && task.task_type === "recurring") {
+      setPendingScopeData(data);
+      return;
+    }
+    await save(data, "series");
+  };
+
+  const saveWithScope = async (scope: "instance" | "series") => {
+    if (!pendingScopeData || isSavingScope) return;
+    setIsSavingScope(true);
+    try {
+      await save(pendingScopeData, scope);
+    } finally {
+      setIsSavingScope(false);
+    }
+  };
+
+  const save = async (data: TaskFormInput, scope: "instance" | "series") => {
     setError(null);
 
     // Fold in any half-typed checklist item / cue / tag instead of blocking
@@ -197,88 +315,72 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
         ? [...selectedTags, pendingTag]
         : selectedTags;
 
-    // Validate past dates (with 60 seconds buffer)
-    const nowBuffer = new Date(Date.now() - 60000);
-    if (data.due_date && new Date(data.due_date) < nowBuffer) {
-      toast.error("Due date cannot be in the past.");
-      return;
-    }
-    if (data.reminder_at && new Date(data.reminder_at) < nowBuffer) {
-      toast.error("Reminder date/time cannot be in the past.");
-      return;
-    }
+    const timed = data.task_type !== "flexible";
+    const recurring = data.task_type === "recurring";
+    const specificDays = recurring && recurrencePattern === "specific_days";
+    const interval = parseInt(data.recurrence_interval || "1", 10) || 1;
 
-    // Validate reminder_at is not after due_date
-    if (data.due_date && data.reminder_at) {
-      const dueDate = new Date(data.due_date);
-      const reminderDate = new Date(data.reminder_at);
-      if (reminderDate > dueDate) {
-        toast.error("Reminder date/time cannot be set after the due date.");
-        return;
-      }
+    let dueDate =
+      timed && data.due_date ? new Date(data.due_date).toISOString() : null;
+    if (isEdit && specificDays && !dueDate) {
+      dueDate = calculateInitialDueDate(new Date(), selectedDays);
     }
 
-    if (
-      data.task_type === "recurring" &&
-      recurrencePattern === "specific_days" &&
-      selectedDays.length === 0
-    ) {
-      toast.error("Please select at least one day of the week.");
-      return;
-    }
-
-    try {
-      const interval = data.recurrence_interval
-        ? parseInt(data.recurrence_interval, 10)
-        : null;
-
-      const taskPayload = {
-        title: data.title,
-        description: data.description || null,
-        task_type: data.task_type as TaskType,
-        due_date: data.due_date ? new Date(data.due_date).toISOString() : null,
-        reminder_at: data.reminder_at
+    const payload = {
+      title: data.title.trim(),
+      description: data.description?.trim() || null,
+      task_type: data.task_type as TaskType,
+      due_date: dueDate,
+      reminder_at:
+        timed && data.reminder_at
           ? new Date(data.reminder_at).toISOString()
           : null,
-        recurrence_type:
-          data.task_type === "recurring"
-            ? recurrencePattern === "specific_days"
-              ? ("weekly" as RecurrenceType)
-              : (data.recurrence_type as RecurrenceType)
-            : null,
-        recurrence_interval:
-          data.task_type === "recurring"
-            ? recurrencePattern === "specific_days"
-              ? 1
-              : interval || 1
-            : null,
-        recurrence_days:
-          data.task_type === "recurring" &&
-          recurrencePattern === "specific_days"
-            ? selectedDays
-            : null,
-        notes: data.notes || null,
-      };
+      recurrence_type: recurring
+        ? specificDays
+          ? ("weekly" as RecurrenceType)
+          : (data.recurrence_type as RecurrenceType)
+        : null,
+      recurrence_interval: recurring ? (specificDays ? 1 : interval) : null,
+      recurrence_days: specificDays ? selectedDays : null,
+      notes: data.notes?.trim() || null,
+    };
 
-      const newTask = await taskService.createTask(
-        taskPayload,
-        finalSubtasks,
-        finalCues,
-        finalTags,
-      );
+    try {
+      if (!isEdit) {
+        const newTask = await taskService.createTask(
+          payload,
+          finalSubtasks,
+          finalCues,
+          finalTags,
+        );
+        addTaskState(newTask);
+        onSuccess(newTask);
 
-      addTaskState(newTask);
-      onSuccess();
-
-      // Best moment to ask for notifications: the user just told us when
-      // something matters. (No-op if already enabled or recently declined.)
-      if (newTask.due_date || newTask.reminder_at) {
-        usePromptStore
-          .getState()
-          .requestContextualNotificationAsk(newTask.title);
+        // Best moment to ask for notifications: the user just told us when
+        // something matters. (No-op if already enabled or recently declined.)
+        if (newTask.due_date || newTask.reminder_at) {
+          usePromptStore
+            .getState()
+            .requestContextualNotificationAsk(newTask.title);
+        }
+        return;
       }
+
+      let saved: Task;
+      if (scope === "instance") {
+        saved = await taskService.editTaskInstance(task.id, payload, finalTags);
+      } else {
+        await taskService.updateTask(task.id, payload);
+        await taskService.updateTaskTags(task.id, finalTags);
+        saved = { ...task, ...payload };
+      }
+      setPendingScopeData(null);
+      await fetchTasks();
+      onSuccess(saved);
     } catch (err: any) {
-      const msg = err.message || "Failed to create task";
+      const msg =
+        err?.message ||
+        (isEdit ? "Failed to save changes" : "Failed to create task");
       setError(msg);
       toast.error(msg);
     }
@@ -375,7 +477,7 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
               <Input
                 id="due_date"
                 type="datetime-local"
-                min={minDateTime}
+                min={isEdit ? undefined : minDateTime}
                 {...register("due_date")}
               />
             </div>
@@ -392,7 +494,7 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
               <Input
                 id="reminder_at"
                 type="datetime-local"
-                min={minDateTime}
+                min={isEdit ? undefined : minDateTime}
                 {...register("reminder_at")}
               />
             </div>
@@ -415,7 +517,7 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
                 <Input
                   id="due_date"
                   type="datetime-local"
-                  min={minDateTime}
+                  min={isEdit ? undefined : minDateTime}
                   {...register("due_date")}
                 />
               </div>
@@ -432,7 +534,7 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
                 <Input
                   id="reminder_at"
                   type="datetime-local"
-                  min={minDateTime}
+                  min={isEdit ? undefined : minDateTime}
                   {...register("reminder_at")}
                 />
               </div>
@@ -541,181 +643,188 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
           </div>
         )}
 
-        {/* Subtasks checklist */}
-        <div className="space-y-3">
-          <div>
-            <Label className="text-sm font-semibold flex items-center gap-1.5">
-              Subtasks / Checklist
-              <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                optional
-              </span>
-              <InfoTooltip>
-                Break this task into smaller steps you can check off.
-              </InfoTooltip>
-            </Label>
-          </div>
-          <div className="flex gap-2">
-            <Input
-              value={newSubtask}
-              onChange={(e) => setNewSubtask(e.target.value)}
-              placeholder="Add subtask details..."
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  handleAddSubtask();
-                }
-              }}
-              className="rounded-xl h-10 text-base md:text-sm"
-            />
-            <Button
-              type="button"
-              onClick={handleAddSubtask}
-              variant="outline"
-              className="px-4 h-10 rounded-xl font-semibold"
-            >
-              Add
-            </Button>
-          </div>
-          {subtasks.length > 0 && (
-            <ul className="space-y-2 mt-2">
-              {subtasks.map((sub, idx) => (
-                <li
-                  key={idx}
-                  className="flex justify-between items-center bg-muted/30 dark:bg-[#131920] border border-border/80 dark:border-[#222A35]/50 px-4 py-3 rounded-2xl text-sm text-foreground shadow-sm transition-all hover:bg-muted/40 dark:hover:bg-[#171E27]"
-                >
-                  {editingSubtaskIndex === idx ? (
-                    <div className="flex items-center gap-2 flex-1">
-                      <Input
-                        value={editingSubtaskText}
-                        onChange={(e) => setEditingSubtaskText(e.target.value)}
-                        className="text-base md:text-xs h-8 rounded-xl border-border/80 bg-background flex-1"
-                        autoFocus
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            handleSaveEditSubtask(idx);
-                          } else if (e.key === "Escape") {
-                            e.preventDefault();
-                            handleCancelEditSubtask();
-                          }
-                        }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleSaveEditSubtask(idx)}
-                        className="p-1.5 rounded-lg hover:bg-green-500/10 text-green-600 dark:text-green-400 transition-colors"
-                        title="Save changes (Enter)"
-                        aria-label="Save checklist item"
-                      >
-                        <Check className="w-4 h-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleCancelEditSubtask}
-                        className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                        title="Cancel (Esc)"
-                        aria-label="Cancel editing"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="flex items-center gap-3 min-w-0 mr-2">
-                        <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/60 flex-shrink-0" />
-                        <span className="font-semibold text-foreground/90 break-words">
-                          {sub}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => handleStartEditSubtask(idx)}
-                          className="text-muted-foreground hover:text-foreground p-1 rounded-md hover:bg-muted/80 transition-colors"
-                          title="Edit checklist item"
-                          aria-label={`Edit ${sub}`}
-                        >
-                          <Pencil className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveSubtask(idx)}
-                          className="text-muted-foreground hover:text-destructive p-1 rounded-md hover:bg-destructive/10 transition-colors"
-                          title="Remove checklist item"
-                          aria-label={`Remove ${sub}`}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        {/* Memory Cues */}
-        <div className="space-y-3">
-          <div>
-            <Label className="text-sm font-semibold flex items-center gap-1.5">
-              Memory Cues
-              <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                optional
-              </span>
-              <InfoTooltip>
-                Environmental triggers to help you remember — e.g. &ldquo;Place
-                server logs spreadsheet on secondary monitor&rdquo;.
-              </InfoTooltip>
-            </Label>
-          </div>
-          <div className="flex gap-2">
-            <Input
-              value={newCue}
-              onChange={(e) => setNewCue(e.target.value)}
-              placeholder="e.g. Place server logs spreadsheet on secondary monitor, post-it on screen..."
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  handleAddCue();
-                }
-              }}
-              className="rounded-xl h-10 text-base md:text-sm"
-            />
-            <Button
-              type="button"
-              onClick={handleAddCue}
-              variant="outline"
-              className="px-4 h-10 rounded-xl font-semibold"
-            >
-              Add
-            </Button>
-          </div>
-          {memoryCues.length > 0 && (
-            <ul className="space-y-2 mt-2">
-              {memoryCues.map((cue, idx) => (
-                <li
-                  key={idx}
-                  className="flex justify-between items-center bg-muted/30 dark:bg-[#131920] border border-border/80 dark:border-[#222A35]/50 px-4 py-3 rounded-2xl text-sm text-foreground shadow-sm transition-all hover:bg-muted/40 dark:hover:bg-[#171E27]"
-                >
-                  <div className="flex items-center gap-3">
-                    <Lightbulb className="w-4 h-4 text-amber-500 dark:text-amber-400 select-none flex-shrink-0" />
-                    <span className="font-semibold text-foreground/90">
-                      {cue}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveCue(idx)}
-                    className="text-destructive/80 hover:text-destructive text-xs font-semibold transition-colors px-1.5 py-0.5"
+        {/* Subtasks checklist (create only — edited live on the task page) */}
+        {!isEdit && (
+          <div className="space-y-3">
+            <div>
+              <Label className="text-sm font-semibold flex items-center gap-1.5">
+                Subtasks / Checklist
+                <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                  optional
+                </span>
+                <InfoTooltip>
+                  Break this task into smaller steps you can check off.
+                </InfoTooltip>
+              </Label>
+            </div>
+            <div className="flex gap-2">
+              <Input
+                value={newSubtask}
+                onChange={(e) => setNewSubtask(e.target.value)}
+                placeholder="Add subtask details..."
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAddSubtask();
+                  }
+                }}
+                className="rounded-xl h-10 text-base md:text-sm"
+              />
+              <Button
+                type="button"
+                onClick={handleAddSubtask}
+                variant="outline"
+                className="px-4 h-10 rounded-xl font-semibold"
+              >
+                Add
+              </Button>
+            </div>
+            {subtasks.length > 0 && (
+              <ul className="space-y-2 mt-2">
+                {subtasks.map((sub, idx) => (
+                  <li
+                    key={idx}
+                    className="flex justify-between items-center bg-muted/30 dark:bg-[#131920] border border-border/80 dark:border-[#222A35]/50 px-4 py-3 rounded-2xl text-sm text-foreground shadow-sm transition-all hover:bg-muted/40 dark:hover:bg-[#171E27]"
                   >
-                    Remove
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+                    {editingSubtaskIndex === idx ? (
+                      <div className="flex items-center gap-2 flex-1">
+                        <Input
+                          value={editingSubtaskText}
+                          onChange={(e) =>
+                            setEditingSubtaskText(e.target.value)
+                          }
+                          className="text-base md:text-xs h-8 rounded-xl border-border/80 bg-background flex-1"
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              handleSaveEditSubtask(idx);
+                            } else if (e.key === "Escape") {
+                              e.preventDefault();
+                              handleCancelEditSubtask();
+                            }
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleSaveEditSubtask(idx)}
+                          className="p-1.5 rounded-lg hover:bg-green-500/10 text-green-600 dark:text-green-400 transition-colors"
+                          title="Save changes (Enter)"
+                          aria-label="Save checklist item"
+                        >
+                          <Check className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleCancelEditSubtask}
+                          className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                          title="Cancel (Esc)"
+                          aria-label="Cancel editing"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-3 min-w-0 mr-2">
+                          <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/60 flex-shrink-0" />
+                          <span className="font-semibold text-foreground/90 break-words">
+                            {sub}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => handleStartEditSubtask(idx)}
+                            className="text-muted-foreground hover:text-foreground p-1 rounded-md hover:bg-muted/80 transition-colors"
+                            title="Edit checklist item"
+                            aria-label={`Edit ${sub}`}
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveSubtask(idx)}
+                            className="text-muted-foreground hover:text-destructive p-1 rounded-md hover:bg-destructive/10 transition-colors"
+                            title="Remove checklist item"
+                            aria-label={`Remove ${sub}`}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+
+        {/* Memory Cues (create only) */}
+        {!isEdit && (
+          <div className="space-y-3">
+            <div>
+              <Label className="text-sm font-semibold flex items-center gap-1.5">
+                Memory Cues
+                <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                  optional
+                </span>
+                <InfoTooltip>
+                  Environmental triggers to help you remember — e.g.
+                  &ldquo;Place server logs spreadsheet on secondary
+                  monitor&rdquo;.
+                </InfoTooltip>
+              </Label>
+            </div>
+            <div className="flex gap-2">
+              <Input
+                value={newCue}
+                onChange={(e) => setNewCue(e.target.value)}
+                placeholder="e.g. Place server logs spreadsheet on secondary monitor, post-it on screen..."
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAddCue();
+                  }
+                }}
+                className="rounded-xl h-10 text-base md:text-sm"
+              />
+              <Button
+                type="button"
+                onClick={handleAddCue}
+                variant="outline"
+                className="px-4 h-10 rounded-xl font-semibold"
+              >
+                Add
+              </Button>
+            </div>
+            {memoryCues.length > 0 && (
+              <ul className="space-y-2 mt-2">
+                {memoryCues.map((cue, idx) => (
+                  <li
+                    key={idx}
+                    className="flex justify-between items-center bg-muted/30 dark:bg-[#131920] border border-border/80 dark:border-[#222A35]/50 px-4 py-3 rounded-2xl text-sm text-foreground shadow-sm transition-all hover:bg-muted/40 dark:hover:bg-[#171E27]"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Lightbulb className="w-4 h-4 text-amber-500 dark:text-amber-400 select-none flex-shrink-0" />
+                      <span className="font-semibold text-foreground/90">
+                        {cue}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveCue(idx)}
+                      className="text-destructive/80 hover:text-destructive text-xs font-semibold transition-colors px-1.5 py-0.5"
+                    >
+                      Remove
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
 
         {/* Tags Selector */}
         <div className="space-y-3">
@@ -815,30 +924,67 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
         </div>
 
         {/* Form Controls */}
-        <div className="flex justify-end gap-3 pt-4 border-t border-border">
-          <Button
-            type="button"
-            onClick={onCancel}
-            variant="outline"
-            className="h-10 min-w-[100px] rounded-xl font-semibold"
-          >
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold flex items-center justify-center min-w-[100px] rounded-xl h-10"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? (
-              <Spinner
-                size="sm"
-                className="border-t-primary-foreground border-primary-foreground/30"
-              />
-            ) : (
-              "Save Task"
-            )}
-          </Button>
-        </div>
+        {pendingScopeData ? (
+          <div className="space-y-3 pt-4 border-t border-border">
+            <p className="text-sm text-foreground font-semibold">
+              Apply changes to…
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <Button
+                type="button"
+                onClick={() => saveWithScope("instance")}
+                disabled={isSavingScope}
+                variant="outline"
+                className="h-11 rounded-xl font-semibold"
+              >
+                This occurrence only
+              </Button>
+              <Button
+                type="button"
+                onClick={() => saveWithScope("series")}
+                disabled={isSavingScope}
+                className="h-11 rounded-xl font-semibold"
+              >
+                All future occurrences
+              </Button>
+            </div>
+            <button
+              type="button"
+              onClick={() => setPendingScopeData(null)}
+              disabled={isSavingScope}
+              className="text-xs text-muted-foreground hover:text-foreground"
+            >
+              Back
+            </button>
+          </div>
+        ) : (
+          <div className="flex justify-end gap-3 pt-4 border-t border-border">
+            <Button
+              type="button"
+              onClick={onCancel}
+              variant="outline"
+              className="h-11 min-w-[100px] rounded-xl font-semibold"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold flex items-center justify-center min-w-[120px] rounded-xl h-11"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <Spinner
+                  size="sm"
+                  className="border-t-primary-foreground border-primary-foreground/30"
+                />
+              ) : isEdit ? (
+                "Save changes"
+              ) : (
+                "Save Task"
+              )}
+            </Button>
+          </div>
+        )}
       </form>
     </>
   );

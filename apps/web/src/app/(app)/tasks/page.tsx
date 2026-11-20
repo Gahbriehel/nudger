@@ -1,90 +1,77 @@
 "use client";
 
+import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { RefreshCw } from "lucide-react";
 import { TaskList } from "@/components/dashboard/TaskList";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { useUiStore } from "@/store/uiStore";
 import { useTaskStore } from "@/store/taskStore";
 import { cn } from "@/lib/utils";
-import { Suspense, useCallback } from "react";
-import { Spinner } from "@/components/ui/spinner";
 
 function TasksPageContent() {
-  const searchParams = useSearchParams();
   const router = useRouter();
-  const selectedTaskId = searchParams.get("taskId");
-
-  // Consume the deep link once TaskList has focused the task, so a refresh,
-  // back navigation, or later data update doesn't jump back to it.
-  const handleDeepLinkHandled = useCallback(() => {
-    router.replace("/tasks", { scroll: false });
-  }, [router]);
-  const { setShowCreateModal } = useUiStore();
+  const searchParams = useSearchParams();
+  const legacyTaskId = searchParams.get("taskId");
+  const openCreateTask = useUiStore((s) => s.openCreateTask);
   const { fetchTasks, loading, refreshing } = useTaskStore();
-  const tasksLoading = loading || refreshing;
+
+  // Old deep links (/tasks?taskId=…) now live at /tasks/[id]
+  useEffect(() => {
+    if (legacyTaskId) router.replace(`/tasks/${legacyTaskId}`);
+  }, [legacyTaskId, router]);
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">
             Your Tasks
           </h1>
-          <p className="text-xs text-muted-foreground mt-1 leading-normal">
-            View, filter, sort, and manage all your productivity items.
+          <p className="text-sm text-muted-foreground mt-1">
+            Everything you&apos;ve offloaded, in one place.
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {/* On phones the floating + button handles this */}
           <Button
-            onClick={() => setShowCreateModal(true)}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs h-9 px-4 rounded-lg"
+            onClick={openCreateTask}
+            className="hidden md:inline-flex font-semibold text-sm h-10 px-4 rounded-lg"
           >
             + Add Task
           </Button>
           <button
             id="tasks-refresh-btn"
             onClick={() => fetchTasks()}
-            disabled={tasksLoading}
-            title="Refresh tasks"
-            className="h-9 w-9 flex items-center justify-center rounded-lg border border-border bg-card hover:bg-muted text-muted-foreground hover:text-foreground transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+            disabled={loading || refreshing}
+            aria-label="Refresh tasks"
+            className="h-11 w-11 flex items-center justify-center rounded-lg border border-border bg-card hover:bg-muted text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
           >
-            <svg
-              className={cn("w-4 h-4", tasksLoading && "animate-spin")}
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-              />
-            </svg>
+            <RefreshCw
+              className={cn(
+                "w-4 h-4",
+                (loading || refreshing) && "animate-spin",
+              )}
+            />
           </button>
         </div>
       </div>
-      <TaskList
-        initialExpandedTaskId={selectedTaskId}
-        onDeepLinkHandled={handleDeepLinkHandled}
-      />
+      <TaskList />
     </div>
   );
 }
 
 export default function TasksPage() {
   return (
-    <>
-      {" "}
-      <Suspense
-        fallback={
-          <div className="flex justify-center items-center py-12">
-            <Spinner size="md" label="Loading tasks..." />
-          </div>
-        }
-      >
-        <TasksPageContent />
-      </Suspense>
-    </>
+    <Suspense
+      fallback={
+        <div className="flex justify-center items-center py-12">
+          <Spinner size="md" label="Loading tasks..." />
+        </div>
+      }
+    >
+      <TasksPageContent />
+    </Suspense>
   );
 }

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Poppins, Inter } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "sonner";
@@ -27,10 +27,13 @@ export const metadata: Metadata = {
   },
 };
 
-export const viewport = {
+export const viewport: Viewport = {
   themeColor: "#6366f1",
   width: "device-width",
   initialScale: 1,
+  // Draw edge-to-edge (needed with the iOS "black-translucent" status bar);
+  // layouts pad themselves with env(safe-area-inset-*).
+  viewportFit: "cover",
 };
 
 const poppins = Poppins({
@@ -72,7 +75,8 @@ export default function RootLayout({
             visibleToasts={3}
             duration={3000}
             mobileOffset={{
-              bottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)",
+              // clear the mobile bottom tab bar (4rem) as well
+              bottom: "calc(env(safe-area-inset-bottom, 0px) + 4rem + 16px)",
             }}
           />
           <ServiceWorkerRegister />

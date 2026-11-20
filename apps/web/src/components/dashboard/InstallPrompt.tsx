@@ -112,7 +112,7 @@ export function InstallPrompt() {
     <div
       role="dialog"
       aria-labelledby="install-prompt-title"
-      className="fixed inset-x-0 bottom-0 z-[90] flex justify-center px-4 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] pointer-events-none"
+      className="fixed inset-x-0 bottom-0 z-[90] flex justify-center px-4 pb-[calc(env(safe-area-inset-bottom,0px)+5rem)] md:pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] pointer-events-none"
     >
       <div className="pointer-events-auto relative w-full max-w-md border border-border bg-card/95 backdrop-blur-md rounded-2xl shadow-2xl p-5 animate-in fade-in slide-in-from-bottom-4 duration-300">
         <button
