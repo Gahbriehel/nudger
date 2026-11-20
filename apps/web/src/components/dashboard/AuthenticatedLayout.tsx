@@ -46,6 +46,28 @@ export function AuthenticatedLayout({
       });
   }, [fetchTasks, setLoading, setSession]);
 
+  // Silently refresh when the app returns to the foreground (installed PWAs
+  // are often resumed from the background with hours-old data).
+  useEffect(() => {
+    let lastRefresh = Date.now();
+    const MIN_INTERVAL_MS = 30_000;
+
+    const handleVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      if (!useAuthStore.getState().session) return;
+      if (Date.now() - lastRefresh < MIN_INTERVAL_MS) return;
+      lastRefresh = Date.now();
+      fetchTasks();
+    };
+
+    document.addEventListener("visibilitychange", handleVisible);
+    window.addEventListener("focus", handleVisible);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisible);
+      window.removeEventListener("focus", handleVisible);
+    };
+  }, [fetchTasks]);
+
   // Listen for Service Worker messages (e.g. task completed via push action)
   useEffect(() => {
     if (typeof window === "undefined" || !("serviceWorker" in navigator)) {

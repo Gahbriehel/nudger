@@ -72,6 +72,11 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
     updateSubtaskState,
     deleteSubtaskState,
     deleteTaskState,
+    addSubtaskState,
+    replaceSubtaskState,
+    addCueState,
+    replaceCueState,
+    deleteCueState,
   } = useTaskStore();
 
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(
@@ -226,24 +231,13 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
       return;
     }
 
-    // Validate un-added list items to prevent accidental data loss
+    // Commit any half-typed checklist item / cue / tag rather than making the
+    // user go back and press "Add" (and rather than silently dropping it).
     if (newSubtaskTexts[taskId]?.trim()) {
-      toast.error(
-        "Please click the 'Add' button to add your checklist item, or clear the text before saving.",
-      );
-      return;
+      void handleAddSubtask(taskId);
     }
     if (newCueTexts[taskId]?.trim()) {
-      toast.error(
-        "Please click the 'Add' button to add your memory cue, or clear the text before saving.",
-      );
-      return;
-    }
-    if (newTagInput.trim()) {
-      toast.error(
-        "Please click the 'Add Tag' button to add your tag, or clear the text before saving.",
-      );
-      return;
+      void handleAddCue(taskId);
     }
 
     // Validate past dates (with 60 seconds buffer)
@@ -345,14 +339,20 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
         notes: editNotes.trim() || null,
       };
 
+      const pendingTag = newTagInput.trim().toLowerCase();
+      const tagsToSave =
+        pendingTag && !editTags.includes(pendingTag)
+          ? [...editTags, pendingTag]
+          : editTags;
+
       if (scope === "instance") {
-        await taskService.editTaskInstance(taskId, updates, editTags);
+        await taskService.editTaskInstance(taskId, updates, tagsToSave);
       } else {
         await taskService.updateTask(taskId, updates);
-        await taskService.updateTaskTags(taskId, editTags);
+        await taskService.updateTaskTags(taskId, tagsToSave);
       }
 
-      toast.success("Task updated successfully");
+      setNewTagInput("");
       setEditingTaskId(null);
       await fetchTasks();
 
@@ -378,11 +378,6 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
       }
     });
   }, [tasks]);
-
-  // Fetch tasks on load
-  useEffect(() => {
-    fetchTasks();
-  }, [fetchTasks]);
 
   // Scroll to the initially-expanded task once tasks are loaded and adjust filters if needed
   useEffect(() => {
@@ -462,7 +457,6 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
           completed_at: null,
         });
         await fetchTasks();
-        toast.success("Task marked as pending");
       } else {
         // Complete (and rollover if recurring)
         await taskService.completeTask(task);
@@ -481,6 +475,7 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
   };
 
   const handleToggleSubtask = async (taskId: string, subtask: Subtask) => {
+    if (subtask.id.startsWith("temp-")) return; // still saving
     const nextVal = !subtask.completed;
 
     // Find task in local store
@@ -510,11 +505,6 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
 
     try {
       await taskService.toggleSubtask(subtask.id, nextVal);
-      if (!allComplete) {
-        toast.success(
-          nextVal ? "Subtask completed" : "Subtask marked as pending",
-        );
-      }
     } catch (err) {
       console.error(err);
       toast.error("Failed to update subtask");
@@ -575,22 +565,34 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
     const text = newSubtaskTexts[taskId]?.trim();
     if (!text) return;
 
+    const tempId = `temp-${Date.now()}`;
+    addSubtaskState(taskId, {
+      id: tempId,
+      task_id: taskId,
+      title: text,
+      completed: false,
+      completed_at: null,
+      sort_order: 0,
+      created_at: new Date().toISOString(),
+    });
+    setNewSubtaskTexts((prev) => ({ ...prev, [taskId]: "" }));
+
     try {
-      await taskService.addSubtask(taskId, text);
-      setNewSubtaskTexts({ ...newSubtaskTexts, [taskId]: "" });
-      await fetchTasks();
-      toast.success("Subtask added");
+      const created = await taskService.addSubtask(taskId, text);
+      replaceSubtaskState(taskId, tempId, created);
     } catch (err) {
       console.error(err);
-      toast.error("Failed to add subtask");
+      deleteSubtaskState(taskId, tempId);
+      setNewSubtaskTexts((prev) => ({ ...prev, [taskId]: text }));
+      toast.error("Failed to add checklist item");
     }
   };
 
   const handleDeleteSubtask = async (taskId: string, subtaskId: string) => {
+    if (subtaskId.startsWith("temp-")) return; // still saving
     deleteSubtaskState(taskId, subtaskId);
     try {
       await taskService.deleteSubtask(subtaskId);
-      toast.success("Checklist item deleted");
     } catch (err) {
       console.error(err);
       toast.error("Failed to delete checklist item");
@@ -616,7 +618,6 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
     setEditingSubtaskTitle("");
     try {
       await taskService.updateSubtask(currentSubtaskId, trimmed);
-      toast.success("Checklist item updated");
     } catch (err) {
       console.error(err);
       toast.error("Failed to update checklist item");
@@ -633,25 +634,35 @@ export function TaskList({ initialExpandedTaskId }: TaskListProps = {}) {
     const text = newCueTexts[taskId]?.trim();
     if (!text) return;
 
+    const tempId = `temp-${Date.now()}`;
+    addCueState(taskId, {
+      id: tempId,
+      task_id: taskId,
+      content: text,
+      created_at: new Date().toISOString(),
+    });
+    setNewCueTexts((prev) => ({ ...prev, [taskId]: "" }));
+
     try {
-      await taskService.addMemoryCue(taskId, text);
-      setNewCueTexts({ ...newCueTexts, [taskId]: "" });
-      await fetchTasks();
-      toast.success("Memory cue added");
+      const created = await taskService.addMemoryCue(taskId, text);
+      replaceCueState(taskId, tempId, created);
     } catch (err) {
       console.error(err);
+      deleteCueState(tempId);
+      setNewCueTexts((prev) => ({ ...prev, [taskId]: text }));
       toast.error("Failed to add memory cue");
     }
   };
 
   const handleDeleteCue = async (cueId: string) => {
+    if (cueId.startsWith("temp-")) return; // still saving
+    deleteCueState(cueId);
     try {
       await taskService.deleteMemoryCue(cueId);
-      await fetchTasks();
-      toast.success("Memory cue deleted");
     } catch (err) {
       console.error(err);
       toast.error("Failed to delete memory cue");
+      await fetchTasks(); // rollback
     }
   };
 

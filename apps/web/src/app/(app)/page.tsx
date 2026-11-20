@@ -6,7 +6,6 @@ import Link from "next/link";
 import { useAuthStore } from "@/store/authStore";
 import { useTaskStore } from "@/store/taskStore";
 import { useUiStore } from "@/store/uiStore";
-import { AuthenticatedLayout } from "@/components/dashboard/AuthenticatedLayout";
 import { QuickStats } from "@/components/dashboard/QuickStats";
 import { Button } from "@/components/ui/button";
 import { format } from "@/lib/date-fns";
@@ -16,7 +15,8 @@ import { Task } from "@/types/database.types";
 export default function HomePage() {
   const router = useRouter();
   const { user } = useAuthStore();
-  const { tasks, fetchTasks, loading: tasksLoading } = useTaskStore();
+  const { tasks, fetchTasks, loading, refreshing } = useTaskStore();
+  const tasksLoading = loading || refreshing;
   const { setShowCreateModal } = useUiStore();
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
   // Stats are shown by default on md+ screens; hidden on mobile
@@ -59,7 +59,8 @@ export default function HomePage() {
     .slice(0, 3);
 
   return (
-    <AuthenticatedLayout>
+    <>
+      {" "}
       <div className="space-y-8">
         {/* Welcoming and Digital Clock banner */}
         <div className="relative overflow-hidden border border-border bg-card/85 backdrop-blur-md p-6 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-lg before:absolute before:top-0 before:left-0 before:right-0 before:h-[3px] before:bg-gradient-to-r before:from-brand-indigo before:to-brand-blue">
@@ -348,6 +349,6 @@ export default function HomePage() {
           </Link>
         </div>
       </div>
-    </AuthenticatedLayout>
+    </>
   );
 }

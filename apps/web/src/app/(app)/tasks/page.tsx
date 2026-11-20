@@ -1,7 +1,6 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { AuthenticatedLayout } from "@/components/dashboard/AuthenticatedLayout";
 import { TaskList } from "@/components/dashboard/TaskList";
 import { Button } from "@/components/ui/button";
 import { useUiStore } from "@/store/uiStore";
@@ -14,7 +13,8 @@ function TasksPageContent() {
   const searchParams = useSearchParams();
   const selectedTaskId = searchParams.get("taskId");
   const { setShowCreateModal } = useUiStore();
-  const { fetchTasks, loading: tasksLoading } = useTaskStore();
+  const { fetchTasks, loading, refreshing } = useTaskStore();
+  const tasksLoading = loading || refreshing;
 
   return (
     <div className="space-y-6">
@@ -67,7 +67,8 @@ function TasksPageContent() {
 
 export default function TasksPage() {
   return (
-    <AuthenticatedLayout>
+    <>
+      {" "}
       <Suspense
         fallback={
           <div className="flex justify-center items-center py-12">
@@ -77,6 +78,6 @@ export default function TasksPage() {
       >
         <TasksPageContent />
       </Suspense>
-    </AuthenticatedLayout>
+    </>
   );
 }

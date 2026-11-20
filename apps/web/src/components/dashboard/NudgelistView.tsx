@@ -24,14 +24,15 @@ export function NudgelistView() {
     forgotten: [],
     stale: [],
   });
-  const [loading, setLoading] = useState(false);
+  // `loading` blocks only the first load; later reloads happen silently so
+  // the list doesn't flash to a spinner after every action.
+  const [loading, setLoading] = useState(true);
   const [skipTaskItem, setSkipTaskItem] = useState<Task | null>(null);
   const [skipActionType, setSkipActionType] = useState<"skipped" | "missed">(
     "skipped",
   );
 
   const loadNudgelist = async () => {
-    setLoading(true);
     try {
       const result = await nudgelistService.getNudgelist();
       setData(result);
@@ -46,14 +47,27 @@ export function NudgelistView() {
     loadNudgelist();
   }, []);
 
+  // Optimistically drop a task from every bucket; returns a restore function.
+  const removeLocally = (taskId: string) => {
+    const snapshot = data;
+    setData((prev) => ({
+      overdue: prev.overdue.filter((t) => t.id !== taskId),
+      forgotten: prev.forgotten.filter((t) => t.id !== taskId),
+      stale: prev.stale.filter((t) => t.id !== taskId),
+    }));
+    return () => setData(snapshot);
+  };
+
   const handleComplete = async (task: Task) => {
+    const restore = removeLocally(task.id);
     try {
       await taskService.completeTask(task);
-      await fetchTasks(); // Sync main task store
-      await loadNudgelist(); // Reload nudgelist
       toast.success("Task completed!");
+      fetchTasks(); // background sync of the main task store
+      loadNudgelist();
     } catch (err) {
       console.error(err);
+      restore();
       toast.error("Failed to complete task");
     }
   };
@@ -66,16 +80,17 @@ export function NudgelistView() {
   };
 
   const handleAcknowledge = async (task: Task) => {
+    const restore = removeLocally(task.id);
     try {
       // Touching the task updates `updated_at`, resetting its stale timer
       await taskService.updateTask(task.id, {
         updated_at: new Date().toISOString(),
       });
-      await fetchTasks();
-      await loadNudgelist();
-      toast.success("Task acknowledged");
+      fetchTasks();
+      loadNudgelist();
     } catch (err) {
       console.error(err);
+      restore();
       toast.error("Failed to acknowledge task");
     }
   };

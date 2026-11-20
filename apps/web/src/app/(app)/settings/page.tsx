@@ -1,11 +1,11 @@
 "use client";
 
-import { AuthenticatedLayout } from "@/components/dashboard/AuthenticatedLayout";
 import { SettingsView } from "@/components/dashboard/SettingsView";
 
 export default function SettingsPage() {
   return (
-    <AuthenticatedLayout>
+    <>
+      {" "}
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">
@@ -18,6 +18,6 @@ export default function SettingsPage() {
         </div>
         <SettingsView />
       </div>
-    </AuthenticatedLayout>
+    </>
   );
 }

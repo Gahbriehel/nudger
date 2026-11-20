@@ -13,8 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
-import { Toaster } from "@/components/ui/toaster";
-import { useToast } from "@/hooks/useToast";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 import { Spinner } from "@/components/ui/spinner";
@@ -51,7 +50,6 @@ interface TaskFormProps {
 export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
   const addTaskState = useTaskStore((s) => s.addTaskState);
   const [error, setError] = useState<string | null>(null);
-  const { toasts, toast, dismiss } = useToast();
 
   const [recurrencePattern, setRecurrencePattern] = useState<
     "interval" | "specific_days"
@@ -184,49 +182,28 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
   const onSubmit = async (data: TaskFormInput) => {
     setError(null);
 
-    // Validate un-added list items to prevent accidental data loss.
-    // Use toasts so the message is visible regardless of scroll position.
-    if (newSubtask.trim()) {
-      toast({
-        message:
-          "You have an unsaved checklist item. Click 'Add' to include it, or clear the field before saving.",
-        variant: "destructive",
-      });
-      return;
-    }
-    if (newCue.trim()) {
-      toast({
-        message:
-          "You have an unsaved memory cue. Click 'Add' to include it, or clear the field before saving.",
-        variant: "destructive",
-      });
-      return;
-    }
-    if (newTagInput.trim()) {
-      toast({
-        message:
-          "You have an unsaved tag. Click 'Add Tag' to include it, or clear the field before saving.",
-        variant: "destructive",
-      });
-      return;
-    }
+    // Fold in any half-typed checklist item / cue / tag instead of blocking
+    // the save and asking the user to press "Add" first.
+    const pendingSubtask = newSubtask.trim();
+    const pendingCue = newCue.trim();
+    const pendingTag = newTagInput.trim().toLowerCase();
+    const finalSubtasks = pendingSubtask
+      ? [...subtasks, pendingSubtask]
+      : subtasks;
+    const finalCues = pendingCue ? [...memoryCues, pendingCue] : memoryCues;
+    const finalTags =
+      pendingTag && !selectedTags.includes(pendingTag)
+        ? [...selectedTags, pendingTag]
+        : selectedTags;
 
     // Validate past dates (with 60 seconds buffer)
     const nowBuffer = new Date(Date.now() - 60000);
     if (data.due_date && new Date(data.due_date) < nowBuffer) {
-      toast({
-        message: "Due date cannot be in the past.",
-        variant: "destructive",
-      });
-      setError("Due date cannot be in the past.");
+      toast.error("Due date cannot be in the past.");
       return;
     }
     if (data.reminder_at && new Date(data.reminder_at) < nowBuffer) {
-      toast({
-        message: "Reminder date/time cannot be in the past.",
-        variant: "destructive",
-      });
-      setError("Reminder date/time cannot be in the past.");
+      toast.error("Reminder date/time cannot be in the past.");
       return;
     }
 
@@ -235,11 +212,7 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
       const dueDate = new Date(data.due_date);
       const reminderDate = new Date(data.reminder_at);
       if (reminderDate > dueDate) {
-        toast({
-          message: "Reminder date/time cannot be set after the due date.",
-          variant: "destructive",
-        });
-        setError("Reminder date/time cannot be set after the due date.");
+        toast.error("Reminder date/time cannot be set after the due date.");
         return;
       }
     }
@@ -249,7 +222,7 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
       recurrencePattern === "specific_days" &&
       selectedDays.length === 0
     ) {
-      setError("Please select at least one day of the week.");
+      toast.error("Please select at least one day of the week.");
       return;
     }
 
@@ -288,21 +261,22 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
 
       const newTask = await taskService.createTask(
         taskPayload,
-        subtasks,
-        memoryCues,
-        selectedTags,
+        finalSubtasks,
+        finalCues,
+        finalTags,
       );
 
       addTaskState(newTask);
       onSuccess();
     } catch (err: any) {
-      setError(err.message || "Failed to create task");
+      const msg = err.message || "Failed to create task";
+      setError(msg);
+      toast.error(msg);
     }
   };
 
   return (
     <>
-      <Toaster toasts={toasts} dismiss={dismiss} />
       <form
         onSubmit={handleSubmit(onSubmit)}
         className="space-y-6 text-foreground pb-4 px-1"

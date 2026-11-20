@@ -63,7 +63,18 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           {children}
-          <Toaster richColors closeButton position="top-right" />
+          {/* Bottom placement keeps toasts off the header/nav; on phones sonner
+              renders them full-width, lifted clear of the iOS home indicator. */}
+          <Toaster
+            richColors
+            closeButton
+            position="bottom-right"
+            visibleToasts={3}
+            duration={3000}
+            mobileOffset={{
+              bottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)",
+            }}
+          />
           <ServiceWorkerRegister />
           <AnnouncementModal />
         </ThemeProvider>

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { AuthenticatedLayout } from "@/components/dashboard/AuthenticatedLayout";
 import { ReportPeriodSelector } from "@/components/dashboard/reports/ReportPeriodSelector";
 import { ReportOverviewCards } from "@/components/dashboard/reports/ReportOverviewCards";
 import { ActivityVelocityChart } from "@/components/dashboard/reports/ActivityVelocityChart";
@@ -65,7 +64,8 @@ export default function ReportsPage() {
   };
 
   return (
-    <AuthenticatedLayout>
+    <>
+      {" "}
       <div className="space-y-6 pb-12">
         {/* Page Banner Header */}
         <div className="relative overflow-hidden border border-border bg-card/85 backdrop-blur-md p-6 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-lg before:absolute before:top-0 before:left-0 before:right-0 before:h-[3px] before:bg-gradient-to-r before:from-brand-indigo before:to-brand-blue">
@@ -141,6 +141,6 @@ export default function ReportsPage() {
           </div>
         )}
       </div>
-    </AuthenticatedLayout>
+    </>
   );
 }
