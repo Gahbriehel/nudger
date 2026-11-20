@@ -1,4 +1,4 @@
-import type { Task, TaskType } from "@/types/database.types";
+import type { Subtask, Task, TaskType } from "@/types/database.types";
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -82,4 +82,19 @@ export function formatWhen(iso: string, now: Date = new Date()): string {
     ...(d.getFullYear() !== now.getFullYear() ? { year: "numeric" } : {}),
   });
   return `${date}, ${time}`;
+}
+
+/**
+ * Splits a checklist into what's left (in list order) and what's done, so
+ * open items are never buried among ticked ones.
+ */
+export function splitChecklist(subs: Subtask[] | undefined | null): {
+  open: Subtask[];
+  done: Subtask[];
+} {
+  const sorted = [...(subs ?? [])].sort((a, b) => a.sort_order - b.sort_order);
+  return {
+    open: sorted.filter((s) => !s.completed),
+    done: sorted.filter((s) => s.completed),
+  };
 }

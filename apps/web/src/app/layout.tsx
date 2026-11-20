@@ -74,6 +74,14 @@ export default function RootLayout({
             position="bottom-right"
             visibleToasts={3}
             duration={3000}
+            toastOptions={{
+              classNames: {
+                // Default action button is solid black; match the toast's
+                // own tone instead (e.g. green text on the green success toast)
+                actionButton:
+                  "!h-8 !px-3 !rounded-lg !text-[13px] !font-semibold !bg-white/80 !text-current !border !border-black/10 hover:!bg-white dark:!bg-white/10 dark:!border-white/15 dark:hover:!bg-white/20",
+              },
+            }}
             mobileOffset={{
               // clear the mobile bottom tab bar (4rem) as well
               bottom: "calc(env(safe-area-inset-bottom, 0px) + 4rem + 16px)",

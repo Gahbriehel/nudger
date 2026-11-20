@@ -8,6 +8,7 @@ import {
   Bell,
   CalendarClock,
   Check,
+  ChevronDown,
   Lightbulb,
   Moon,
   MoreVertical,
@@ -39,6 +40,7 @@ import {
   formatWhen,
   isOverdue,
   recurrenceLabel,
+  splitChecklist,
 } from "@/lib/taskFormat";
 
 export default function TaskDetailPage() {
@@ -337,8 +339,11 @@ function AddRow({
 
 function Checklist({ task, actions }: { task: Task; actions: Actions }) {
   const subs = task.subtasks ?? [];
-  const doneCount = subs.filter((s) => s.completed).length;
+  const { open, done } = splitChecklist(subs);
+  const doneCount = done.length;
   const pct = subs.length ? Math.round((doneCount / subs.length) * 100) : 0;
+  // Ticked items fold away so what's left is always at the top
+  const [showDone, setShowDone] = useState(false);
 
   return (
     <Section
@@ -359,16 +364,52 @@ function Checklist({ task, actions }: { task: Task; actions: Actions }) {
               style={{ width: `${pct}%` }}
             />
           </div>
-          <ul className="divide-y divide-border/60 -mx-1">
-            {subs.map((sub) => (
-              <ChecklistItem
-                key={sub.id}
-                task={task}
-                sub={sub}
-                actions={actions}
-              />
-            ))}
-          </ul>
+          {open.length > 0 ? (
+            <ul className="divide-y divide-border/60 -mx-1">
+              {open.map((sub) => (
+                <ChecklistItem
+                  key={sub.id}
+                  task={task}
+                  sub={sub}
+                  actions={actions}
+                />
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Every item is ticked off.
+            </p>
+          )}
+          {done.length > 0 && (
+            <div className="-mx-1">
+              <button
+                type="button"
+                onClick={() => setShowDone((v) => !v)}
+                aria-expanded={showDone}
+                className="flex items-center gap-1.5 min-h-11 px-1 text-sm font-semibold text-muted-foreground hover:text-foreground"
+              >
+                <ChevronDown
+                  className={cn(
+                    "w-4 h-4 transition-transform",
+                    !showDone && "-rotate-90",
+                  )}
+                />
+                Completed · {done.length}
+              </button>
+              {showDone && (
+                <ul className="divide-y divide-border/60">
+                  {done.map((sub) => (
+                    <ChecklistItem
+                      key={sub.id}
+                      task={task}
+                      sub={sub}
+                      actions={actions}
+                    />
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
         </>
       )}
       <AddRow

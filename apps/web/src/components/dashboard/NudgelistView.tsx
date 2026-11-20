@@ -5,6 +5,8 @@ import Link from "next/link";
 import { toast } from "sonner";
 import {
   Check,
+  ChevronRight,
+  ExternalLink,
   Moon,
   MoreVertical,
   Pencil,
@@ -179,22 +181,29 @@ function NudgeCard({
   const recurring = task.task_type === "recurring";
 
   return (
-    <li className="border border-border bg-card p-4 rounded-xl shadow-sm space-y-3">
+    // The whole card opens the task (stretched link); buttons sit above it
+    <li className="relative border border-border bg-card p-4 rounded-xl shadow-sm space-y-3 transition-colors hover:border-foreground/20 active:bg-muted/40">
       <div className="space-y-1">
         <div className="flex items-start justify-between gap-2">
           <Link
             href={`/tasks/${task.id}`}
-            className="font-bold text-base text-foreground leading-snug break-words hover:underline underline-offset-2"
+            className="font-bold text-base text-foreground leading-snug break-words after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-ring"
           >
             {task.title}
           </Link>
-          <span
-            className={cn(
-              "text-[11px] px-2.5 py-0.5 rounded-full font-semibold border shrink-0 mt-0.5",
-              TASK_TYPE_BADGE[task.task_type],
-            )}
-          >
-            {TASK_TYPE_LABEL[task.task_type]}
+          <span className="flex items-center gap-1 shrink-0 mt-0.5">
+            <span
+              className={cn(
+                "text-[11px] px-2.5 py-0.5 rounded-full font-semibold border",
+                TASK_TYPE_BADGE[task.task_type],
+              )}
+            >
+              {TASK_TYPE_LABEL[task.task_type]}
+            </span>
+            <ChevronRight
+              className="w-4 h-4 text-muted-foreground"
+              aria-hidden
+            />
           </span>
         </div>
         <p
@@ -212,7 +221,7 @@ function NudgeCard({
       </div>
 
       {/* One clear primary action, one contextual secondary, rest in ⋯ */}
-      <div className="flex gap-2">
+      <div className="relative z-10 flex gap-2">
         <Button
           onClick={() => actions.toggleCompletion(task)}
           className="flex-1 h-11 rounded-xl text-sm font-semibold gap-1.5"
@@ -248,6 +257,11 @@ function NudgeCard({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem asChild className="gap-2 py-2.5">
+              <Link href={`/tasks/${task.id}`}>
+                <ExternalLink className="w-4 h-4" /> Open task
+              </Link>
+            </DropdownMenuItem>
             {kind !== "overdue" && (
               <DropdownMenuItem
                 onClick={() => actions.snooze(task)}

@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { SlidersHorizontal } from "lucide-react";
+import { CalendarClock, SlidersHorizontal } from "lucide-react";
 import { taskService } from "@/services/task.service";
 import { useTaskStore } from "@/store/taskStore";
 import { usePromptStore } from "@/store/promptStore";
@@ -56,6 +56,21 @@ export function QuickAdd({
   const [when, setWhen] = useState<When>("none");
   const [picked, setPicked] = useState("");
   const [saving, setSaving] = useState(false);
+  const pickerRef = useRef<HTMLInputElement>(null);
+
+  // Choosing "Pick…" opens the native picker straight away where the browser
+  // allows it (still inside the tap's user activation); otherwise the
+  // labelled field below makes the next step obvious.
+  useEffect(() => {
+    if (when !== "pick") return;
+    const input = pickerRef.current;
+    if (!input) return;
+    try {
+      input.showPicker?.();
+    } catch {
+      input.focus();
+    }
+  }, [when]);
 
   useEffect(() => {
     onDirtyChange(!!title.trim());
@@ -165,14 +180,31 @@ export function QuickAdd({
             ))}
         </div>
         {when === "pick" && (
-          <Input
-            type="datetime-local"
-            value={picked}
-            min={toInputDateTime(new Date().toISOString())}
-            onChange={(e) => setPicked(e.target.value)}
-            aria-label="Due date and time"
-            className="h-11 text-base md:text-sm"
-          />
+          <label className="block space-y-1.5 pt-1">
+            <span className="text-xs font-semibold text-muted-foreground">
+              Due date and time
+            </span>
+            <span className="relative block">
+              <Input
+                ref={pickerRef}
+                type="datetime-local"
+                value={picked}
+                min={toInputDateTime(new Date().toISOString())}
+                onChange={(e) => setPicked(e.target.value)}
+                className={cn(
+                  "h-11 text-base md:text-sm",
+                  // Hide the browser's empty mask behind our own hint
+                  !picked && "text-transparent",
+                )}
+              />
+              {!picked && (
+                <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center gap-2 text-base md:text-sm text-muted-foreground">
+                  <CalendarClock className="w-4 h-4" />
+                  Tap to choose a date and time
+                </span>
+              )}
+            </span>
+          </label>
         )}
       </div>
 

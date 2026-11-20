@@ -186,7 +186,7 @@ export function useTaskActions() {
       title: text,
       completed: false,
       completed_at: null,
-      sort_order: 0,
+      sort_order: Number.MAX_SAFE_INTEGER, // new items go last until saved
       created_at: new Date().toISOString(),
     });
     try {

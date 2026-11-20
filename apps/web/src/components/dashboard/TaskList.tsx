@@ -21,7 +21,7 @@ import {
 import { useTaskStore, type TaskFilters } from "@/store/taskStore";
 import { useUiStore } from "@/store/uiStore";
 import { useTaskActions } from "@/hooks/useTaskActions";
-import type { Task } from "@/types/database.types";
+import type { Subtask, Task } from "@/types/database.types";
 import { format } from "@/lib/date-fns";
 import { cn } from "@/lib/utils";
 import {
@@ -31,6 +31,7 @@ import {
   formatWhen,
   isOverdue,
   recurrenceLabel,
+  splitChecklist,
 } from "@/lib/taskFormat";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -268,6 +269,44 @@ function TaskCard({
   const canSkip = !done && task.task_type === "recurring";
   // Inline checklist: tick items without leaving the list
   const [checklistOpen, setChecklistOpen] = useState(false);
+  const [showDoneSubs, setShowDoneSubs] = useState(false);
+  // Open items first, so nothing is buried among ticked ones
+  const checklist = useMemo(
+    () => splitChecklist(task.subtasks),
+    [task.subtasks],
+  );
+  const renderSub = (sub: Subtask) => {
+    const saving = sub.id.startsWith("temp-");
+    return (
+      <li key={sub.id}>
+        <button
+          onClick={() => actions.toggleSubtask(task, sub)}
+          disabled={saving}
+          aria-pressed={sub.completed}
+          className="w-full flex items-center gap-3 min-h-11 px-2 py-1.5 rounded-lg text-left hover:bg-muted/60 disabled:opacity-60"
+        >
+          <span
+            className={cn(
+              "w-5 h-5 shrink-0 rounded-md border-2 flex items-center justify-center transition-colors",
+              sub.completed
+                ? "bg-foreground border-foreground text-background"
+                : "border-muted-foreground/60",
+            )}
+          >
+            {sub.completed && <Check className="w-3 h-3" strokeWidth={3.5} />}
+          </span>
+          <span
+            className={cn(
+              "text-sm break-words min-w-0",
+              sub.completed && "line-through text-muted-foreground",
+            )}
+          >
+            {sub.title}
+          </span>
+        </button>
+      </li>
+    );
+  };
 
   return (
     <li
@@ -385,41 +424,27 @@ function TaskCard({
                   id={`checklist-${task.id}`}
                   className="relative z-10 mt-1 -ml-2 divide-y divide-border/50"
                 >
-                  {subs.map((sub) => {
-                    const saving = sub.id.startsWith("temp-");
-                    return (
-                      <li key={sub.id}>
-                        <button
-                          onClick={() => actions.toggleSubtask(task, sub)}
-                          disabled={saving}
-                          aria-pressed={sub.completed}
-                          className="w-full flex items-center gap-3 min-h-11 px-2 py-1.5 rounded-lg text-left hover:bg-muted/60 disabled:opacity-60"
-                        >
-                          <span
-                            className={cn(
-                              "w-5 h-5 shrink-0 rounded-md border-2 flex items-center justify-center transition-colors",
-                              sub.completed
-                                ? "bg-foreground border-foreground text-background"
-                                : "border-muted-foreground/60",
-                            )}
-                          >
-                            {sub.completed && (
-                              <Check className="w-3 h-3" strokeWidth={3.5} />
-                            )}
-                          </span>
-                          <span
-                            className={cn(
-                              "text-sm break-words min-w-0",
-                              sub.completed &&
-                                "line-through text-muted-foreground",
-                            )}
-                          >
-                            {sub.title}
-                          </span>
-                        </button>
-                      </li>
-                    );
-                  })}
+                  {checklist.open.map(renderSub)}
+                  {checklist.done.length > 0 && (
+                    <li>
+                      <button
+                        type="button"
+                        onClick={() => setShowDoneSubs((v) => !v)}
+                        aria-expanded={showDoneSubs}
+                        className="w-full flex items-center gap-1.5 min-h-11 px-2 text-xs font-semibold text-muted-foreground hover:text-foreground"
+                      >
+                        <ChevronDown
+                          className={cn(
+                            "w-4 h-4 transition-transform",
+                            !showDoneSubs && "-rotate-90",
+                          )}
+                        />
+                        {showDoneSubs ? "Hide" : "Show"} {checklist.done.length}{" "}
+                        completed
+                      </button>
+                    </li>
+                  )}
+                  {showDoneSubs && checklist.done.map(renderSub)}
                 </ul>
               )}
             </div>
