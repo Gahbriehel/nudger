@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { useTaskStore } from "@/store/taskStore";
 import { taskService } from "@/services/task.service";
 import { toast } from "sonner";
+import { isPausedAt } from "@/lib/recurrence";
 import { getRandomReminderTime } from "@/lib/utils";
 import { getPushSubscription } from "@/lib/pushNotification";
 import { isPushSupported, withTimeout } from "@/lib/platform";
@@ -77,7 +78,7 @@ export function useNotificationChecker() {
 
       // 1. Process pending reminders
       const pendingReminders = currentTasks.filter((task) => {
-        if (task.status !== "pending") return false;
+        if (task.status !== "pending" || isPausedAt(task)) return false;
         if (!task.reminder_at) return false;
 
         const key = `${task.id}-reminder`;
@@ -147,7 +148,7 @@ export function useNotificationChecker() {
 
       // 2. Process pending due dates
       const pendingDues = currentTasks.filter((task) => {
-        if (task.status !== "pending") return false;
+        if (task.status !== "pending" || isPausedAt(task)) return false;
         if (!task.due_date) return false;
 
         const key = `${task.id}-due`;

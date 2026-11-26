@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { SnoozeModal } from "@/components/dashboard/SnoozeModal";
 import { SkipModal } from "@/components/dashboard/SkipModal";
+import { PauseModal } from "@/components/dashboard/PauseModal";
+import { isPaused } from "@/lib/taskFormat";
 import {
   cancelCommit,
   deferCommit,
@@ -47,6 +49,7 @@ export function useTaskActions() {
     null,
   );
   const [snoozeTask, setSnoozeTask] = useState<Task | null>(null);
+  const [pauseTarget, setPauseTarget] = useState<Task | null>(null);
   const [skipTarget, setSkipTarget] = useState<{
     task: Task;
     type: "skipped" | "missed";
@@ -147,6 +150,7 @@ export function useTaskActions() {
 
   /** Checkbox behaviour: complete (asking about open subtasks) or reopen. */
   const toggleCompletion = (task: Task) => {
+    if (isPaused(task)) return; // resume first
     if (task.status === "completed") return reopenTask(task);
     if ((task.subtasks ?? []).some((s) => !s.completed)) {
       setPendingSubtasksTask(task);
@@ -315,6 +319,21 @@ export function useTaskActions() {
     });
   };
 
+  /** Resume a paused recurring task at its next occurrence from now. */
+  const resumeTask = async (task: Task) => {
+    const snapshot = latest(task);
+    try {
+      const update = await taskService.resumeTask(snapshot);
+      store.updateTaskState(task.id, update);
+      toast.success(`Resumed "${snapshot.title}"`);
+    } catch (err) {
+      console.error(err);
+      toast.error("Couldn't resume this task");
+    } finally {
+      fetchTasks();
+    }
+  };
+
   const runBusy = async (fn: () => Promise<void>) => {
     setBusy(true);
     try {
@@ -417,6 +436,13 @@ export function useTaskActions() {
         onSuccess={fetchTasks}
       />
 
+      <PauseModal
+        isOpen={!!pauseTarget}
+        onClose={() => setPauseTarget(null)}
+        task={pauseTarget}
+        onSuccess={fetchTasks}
+      />
+
       <SkipModal
         isOpen={!!skipTarget}
         onClose={() => setSkipTarget(null)}
@@ -439,6 +465,8 @@ export function useTaskActions() {
     edit: whenOnline((task: Task) => openEditTask(task.id)),
     requestDelete: whenOnline(deleteTask),
     snooze: whenOnline((task: Task) => setSnoozeTask(task)),
+    pause: whenOnline((task: Task) => setPauseTarget(task)),
+    resume: whenOnline(resumeTask, Promise.resolve()),
     skip: whenOnline((task: Task, type: "skipped" | "missed") =>
       setSkipTarget({ task, type }),
     ),

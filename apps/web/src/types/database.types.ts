@@ -18,6 +18,10 @@ export interface Task {
   notes: string | null;
   last_completed_at: string | null;
   last_skipped_at?: string | null;
+  /** Set while a recurring task is paused. */
+  paused_at?: string | null;
+  /** Optional auto-resume time; null/absent = paused until resumed manually. */
+  paused_until?: string | null;
   completed_at: string | null;
   created_at: string;
   updated_at: string;

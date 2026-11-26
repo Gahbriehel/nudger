@@ -7,7 +7,7 @@ import { applyPendingOverlays } from "@/lib/deferredCommit";
 export interface TaskFilters {
   search: string;
   type: "all" | "flexible" | "scheduled" | "recurring";
-  status: "all" | "pending" | "completed";
+  status: "all" | "pending" | "completed" | "paused";
   sort: "recently_updated" | "oldest" | "due_soon" | "most_subtasks";
 }
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { isPausedAt } from "@/lib/recurrence";
 import {
   ArrowRight,
   BarChart3,
@@ -42,7 +43,9 @@ function useAgenda(tasks: Task[], now: Date | null) {
     const nowMs = now.getTime();
     const todayEnd = endOfToday(now);
     const weekEnd = nowMs + 7 * DAY_MS;
-    const pending = tasks.filter((t) => t.status !== "completed");
+    const pending = tasks.filter(
+      (t) => t.status !== "completed" && !isPausedAt(t, nowMs),
+    );
     const byDue = (a: Task, b: Task) =>
       new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime();
     const dueAt = (t: Task) => new Date(t.due_date!).getTime();

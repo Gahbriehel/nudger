@@ -165,6 +165,11 @@ export function FilterSidebar({ open, onClose }: FilterSidebarProps) {
                   label: "Completed",
                   description: "Checked off tasks",
                 },
+                {
+                  value: "paused",
+                  label: "Paused",
+                  description: "Recurring tasks on hold",
+                },
               ].map((opt) => (
                 <button
                   key={opt.value}

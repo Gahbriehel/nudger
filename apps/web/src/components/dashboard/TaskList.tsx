@@ -10,6 +10,8 @@ import {
   Moon,
   MoreVertical,
   Pencil,
+  PauseCircle,
+  PlayCircle,
   Plus,
   Repeat,
   Search,
@@ -30,6 +32,8 @@ import {
   TASK_TYPE_LABEL,
   formatWhen,
   isOverdue,
+  isPaused,
+  pausedLabel,
   recurrenceLabel,
   splitChecklist,
 } from "@/lib/taskFormat";
@@ -63,15 +67,19 @@ function filterAndSort(tasks: Task[], filters: TaskFilters): Task[] {
         task.tags?.some((tag) => tag.name.toLowerCase().includes(term));
       const matchesType =
         filters.type === "all" || task.task_type === filters.type;
+      const paused = isPaused(task);
       const matchesStatus =
-        filters.status === "all" || task.status === filters.status;
+        filters.status === "all" ||
+        (filters.status === "paused"
+          ? paused
+          : !paused && task.status === filters.status);
       return matchesSearch && matchesType && matchesStatus;
     })
     .sort((a, b) => {
-      // Pending first, completed last
-      const ac = a.status === "completed";
-      const bc = b.status === "completed";
-      if (ac !== bc) return ac ? 1 : -1;
+      // Active first, then completed, then paused
+      const rank = (t: Task) =>
+        isPaused(t) ? 2 : t.status === "completed" ? 1 : 0;
+      if (rank(a) !== rank(b)) return rank(a) - rank(b);
 
       switch (filters.sort) {
         case "oldest":
@@ -112,7 +120,9 @@ export function TaskList() {
     () => filterAndSort(tasks, filters),
     [tasks, filters],
   );
-  const totalPending = tasks.filter((t) => t.status !== "completed").length;
+  const totalPending = tasks.filter(
+    (t) => t.status !== "completed" && !isPaused(t),
+  ).length;
   const activeFilterCount = [
     filters.type !== "all",
     filters.status !== "all",
@@ -260,13 +270,15 @@ function TaskCard({
   actions: ReturnType<typeof useTaskActions>;
 }) {
   const done = task.status === "completed";
+  const paused = isPaused(task);
   const overdue = now ? isOverdue(task, now.getTime()) : false;
   const subs = task.subtasks ?? [];
   const subsDone = subs.filter((s) => s.completed).length;
   const repeat = recurrenceLabel(task);
   // Snoozing an undated task gives it a time (it becomes scheduled)
-  const canSnooze = !done;
-  const canSkip = !done && task.task_type === "recurring";
+  const canSnooze = !done && !paused;
+  const canSkip = !done && !paused && task.task_type === "recurring";
+  const isRecurring = task.task_type === "recurring";
   // Inline checklist: tick items without leaving the list
   const [checklistOpen, setChecklistOpen] = useState(false);
   const [showDoneSubs, setShowDoneSubs] = useState(false);
@@ -314,7 +326,7 @@ function TaskCard({
       className={cn(
         // `relative` anchors the stretched link that makes the card tappable
         "relative border border-border border-l-4 bg-card rounded-xl shadow-sm transition-colors hover:border-brand-indigo/30 dark:hover:border-brand-blue/30",
-        done
+        done || paused
           ? "border-l-muted-foreground/30 opacity-60"
           : TASK_TYPE_ACCENT[task.task_type],
       )}
@@ -323,8 +335,11 @@ function TaskCard({
         {/* Complete toggle — 44px target */}
         <button
           onClick={() => actions.toggleCompletion(task)}
-          aria-label={done ? "Mark not done" : "Mark complete"}
-          className="relative z-10 h-11 w-11 shrink-0 flex items-center justify-center"
+          disabled={paused}
+          aria-label={
+            paused ? "Paused" : done ? "Mark not done" : "Mark complete"
+          }
+          className="relative z-10 h-11 w-11 shrink-0 flex items-center justify-center disabled:cursor-not-allowed disabled:opacity-40"
         >
           <span
             className={cn(
@@ -354,10 +369,12 @@ function TaskCard({
             <span
               className={cn(
                 "text-[11px] px-2.5 py-0.5 rounded-full font-semibold border shrink-0 mt-0.5",
-                TASK_TYPE_BADGE[task.task_type],
+                paused
+                  ? "bg-muted text-muted-foreground border-border"
+                  : TASK_TYPE_BADGE[task.task_type],
               )}
             >
-              {TASK_TYPE_LABEL[task.task_type]}
+              {paused ? "Paused" : TASK_TYPE_LABEL[task.task_type]}
             </span>
           </div>
 
@@ -367,9 +384,15 @@ function TaskCard({
             </p>
           )}
 
-          {(task.due_date || repeat) && (
+          {(task.due_date || repeat || paused) && (
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-              {task.due_date && (
+              {paused && (
+                <span className="flex items-center gap-1.5 font-medium text-muted-foreground">
+                  <PauseCircle className="w-3.5 h-3.5" />
+                  {pausedLabel(task)}
+                </span>
+              )}
+              {task.due_date && !paused && (
                 <span
                   className={cn(
                     "flex items-center gap-1.5 font-medium",
@@ -489,6 +512,22 @@ function TaskCard({
                 <Moon className="w-4 h-4" /> Snooze
               </DropdownMenuItem>
             )}
+            {isRecurring &&
+              (paused ? (
+                <DropdownMenuItem
+                  onClick={() => actions.resume(task)}
+                  className="gap-2 py-2.5"
+                >
+                  <PlayCircle className="w-4 h-4" /> Resume
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem
+                  onClick={() => actions.pause(task)}
+                  className="gap-2 py-2.5"
+                >
+                  <PauseCircle className="w-4 h-4" /> Pause
+                </DropdownMenuItem>
+              ))}
             {canSkip && (
               <>
                 <DropdownMenuItem

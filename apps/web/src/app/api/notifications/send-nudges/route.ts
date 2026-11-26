@@ -2,6 +2,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { NextRequest, NextResponse } from "next/server";
 import webpush from "web-push";
 import { getRandomReminderTime } from "@/lib/utils";
+import { computeResumeUpdate } from "@/lib/recurrence";
+import type { Task } from "@/types/database.types";
 
 interface PushSubscriptionRecord {
   id: string;
@@ -222,6 +224,34 @@ async function processNudges() {
   const now = new Date().toISOString();
   const todayStr = new Date().toISOString().split("T")[0];
 
+  // -1. Auto-resume paused recurring tasks whose pause has elapsed
+  const { data: expiredPauses, error: pausesError } = await supabase
+    .from("tasks")
+    .select("*")
+    .not("paused_at", "is", null)
+    .not("paused_until", "is", null)
+    .lte("paused_until", now);
+
+  if (pausesError) {
+    console.error("Failed to query expired pauses:", pausesError);
+  } else {
+    for (const task of (expiredPauses || []) as Task[]) {
+      const update = computeResumeUpdate(task);
+      const { error: resumeError } = await supabase
+        .from("tasks")
+        .update(update)
+        .eq("id", task.id);
+      if (resumeError) {
+        console.error(`Failed to resume task ${task.id}:`, resumeError);
+      } else if (task.status === "completed" && update.status === "pending") {
+        await supabase
+          .from("subtasks")
+          .update({ completed: false })
+          .eq("task_id", task.id);
+      }
+    }
+  }
+
   // 0. Find and reset recurring completed tasks that are within the lead-up window
   const resetCutoff = new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString();
   const { data: overdueRecurring, error: recurringError } = await supabase
@@ -229,6 +259,7 @@ async function processNudges() {
     .select("id")
     .eq("task_type", "recurring")
     .eq("status", "completed")
+    .is("paused_at", null)
     .lte("due_date", resetCutoff);
 
   if (recurringError) {
@@ -266,6 +297,7 @@ async function processNudges() {
     .select("*, subtasks(*)")
     .eq("status", "pending")
     .eq("reminder_sent", false)
+    .is("paused_at", null)
     .lte("reminder_at", now);
 
   if (reminderError) {
@@ -278,6 +310,7 @@ async function processNudges() {
     .select("*")
     .eq("status", "pending")
     .eq("due_sent", false)
+    .is("paused_at", null)
     .lte("due_date", now);
 
   if (dueError) {
@@ -307,7 +340,8 @@ async function processNudges() {
       .from("tasks")
       .select("user_id")
       .in("user_id", potentialIdleUserIds)
-      .eq("status", "pending");
+      .eq("status", "pending")
+      .is("paused_at", null);
 
     const usersWithPendingTasks = new Set(
       activeTasks?.map((t) => t.user_id) || [],

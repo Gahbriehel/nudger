@@ -2,116 +2,23 @@
 import { createClient } from "@/lib/supabase/client";
 import { Task, Subtask, Tag, MemoryCue } from "@/types/database.types";
 import { getRandomReminderTime } from "@/lib/utils";
+import {
+  calculateCatchUpDueDate,
+  calculateInitialDueDate,
+  calculateNextDueDate,
+  computeResumeUpdate,
+  isPauseExpired,
+  shouldResetRecurringTask,
+} from "@/lib/recurrence";
+
+// Re-exported so existing imports keep working
+export {
+  calculateCatchUpDueDate,
+  calculateInitialDueDate,
+  calculateNextDueDate,
+};
 
 const supabase = createClient();
-const RECURRING_RESET_WINDOW_HOURS = 6;
-
-function shouldResetRecurringTask(
-  task: Task | null | undefined,
-  now: Date = new Date(),
-): boolean {
-  if (!task || task.task_type !== "recurring") return false;
-  if (task.status !== "completed" || !task.due_date) return false;
-
-  const dueDate = new Date(task.due_date);
-  if (Number.isNaN(dueDate.getTime())) return false;
-
-  const resetThreshold = new Date(
-    dueDate.getTime() - RECURRING_RESET_WINDOW_HOURS * 60 * 60 * 1000,
-  );
-
-  return now >= resetThreshold;
-}
-
-export function calculateInitialDueDate(
-  startDate: Date,
-  recurrenceDays: number[],
-): string {
-  const currentDay = startDate.getDay();
-  if (recurrenceDays.includes(currentDay)) {
-    return startDate.toISOString();
-  }
-  for (let i = 1; i <= 7; i++) {
-    const nextDate = new Date(startDate);
-    nextDate.setDate(startDate.getDate() + i);
-    if (recurrenceDays.includes(nextDate.getDay())) {
-      return nextDate.toISOString();
-    }
-  }
-  return startDate.toISOString();
-}
-
-export function calculateNextDueDate(
-  dueDateStr: string | null,
-  type: string,
-  interval: number,
-  recurrenceDays: number[] | null = null,
-): string | null {
-  if (!dueDateStr) return null;
-  const date = new Date(dueDateStr);
-
-  if (type === "weekly" && recurrenceDays && recurrenceDays.length > 0) {
-    for (let i = 1; i <= 7; i++) {
-      const nextDate = new Date(date);
-      nextDate.setDate(date.getDate() + i);
-      if (recurrenceDays.includes(nextDate.getDay())) {
-        return nextDate.toISOString();
-      }
-    }
-  }
-
-  const add = interval || 1;
-
-  switch (type) {
-    case "daily":
-      date.setDate(date.getDate() + add);
-      break;
-    case "weekly":
-      date.setDate(date.getDate() + add * 7);
-      break;
-    case "monthly":
-      date.setMonth(date.getMonth() + add);
-      break;
-    case "yearly":
-      date.setFullYear(date.getFullYear() + add);
-      break;
-    default:
-      return null;
-  }
-  return date.toISOString();
-}
-
-export function calculateCatchUpDueDate(
-  dueDateStr: string | null,
-  type: string | null,
-  interval: number | null,
-  recurrenceDays: number[] | null = null,
-  targetDate: Date = new Date(),
-): string | null {
-  if (!dueDateStr || !type) return null;
-  let currentDueStr: string | null = dueDateStr;
-  const maxSafetyIterations = 1000;
-  let count = 0;
-
-  while (currentDueStr && count < maxSafetyIterations) {
-    const nextDue = calculateNextDueDate(
-      currentDueStr,
-      type,
-      interval || 1,
-      recurrenceDays,
-    );
-    if (!nextDue) break;
-    currentDueStr = nextDue;
-
-    if (new Date(currentDueStr).getTime() >= targetDate.getTime()) {
-      break;
-    }
-    count++;
-  }
-
-  return currentDueStr;
-}
-
 export const taskService = {
   async getTasks(): Promise<Task[]> {
     // We join subtasks, cues, and tag relationships
@@ -141,6 +48,14 @@ export const taskService = {
         tags,
         memory_cues: task.task_memory_cues || [],
       } as Task;
+
+      // Auto-resume recurring tasks whose pause has elapsed
+      if (isPauseExpired(mappedTask)) {
+        Object.assign(mappedTask, computeResumeUpdate(mappedTask));
+        taskService.resumeTask(task).catch((err) => {
+          console.error("Failed to auto-resume paused task:", err);
+        });
+      }
 
       // Reset recurring tasks to pending once they are within the lead-up window
       if (shouldResetRecurringTask(mappedTask)) {
@@ -674,6 +589,49 @@ export const taskService = {
     });
     if (error) throw error;
     return data || [];
+  },
+
+  /**
+   * Pause a recurring task: no nudges, nothing goes overdue, nothing is logged
+   * as missed. `until` auto-resumes it; null keeps it paused until resumed.
+   */
+  async pauseTask(taskId: string, until: Date | null): Promise<void> {
+    const { error } = await supabase
+      .from("tasks")
+      .update({
+        paused_at: new Date().toISOString(),
+        paused_until: until ? until.toISOString() : null,
+      })
+      .eq("id", taskId);
+    if (error) throw error;
+  },
+
+  /** Resume a paused recurring task at its next occurrence from now. */
+  async resumeTask(
+    task: Pick<
+      Task,
+      | "id"
+      | "due_date"
+      | "reminder_at"
+      | "recurrence_type"
+      | "recurrence_interval"
+      | "recurrence_days"
+      | "status"
+    >,
+  ): Promise<Partial<Task>> {
+    const update = computeResumeUpdate(task);
+    const { error } = await supabase
+      .from("tasks")
+      .update(update)
+      .eq("id", task.id);
+    if (error) throw error;
+    if (update.status === "pending" && task.status === "completed") {
+      await supabase
+        .from("subtasks")
+        .update({ completed: false })
+        .eq("task_id", task.id);
+    }
+    return update;
   },
 
   async resetRecurringTask(taskId: string): Promise<void> {

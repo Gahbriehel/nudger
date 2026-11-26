@@ -13,6 +13,8 @@ import {
   Moon,
   MoreVertical,
   Pencil,
+  PauseCircle,
+  PlayCircle,
   Plus,
   Repeat,
   SkipForward,
@@ -39,6 +41,8 @@ import {
   TASK_TYPE_LABEL,
   formatWhen,
   isOverdue,
+  isPaused,
+  pausedLabel,
   recurrenceLabel,
   splitChecklist,
 } from "@/lib/taskFormat";
@@ -82,11 +86,13 @@ export default function TaskDetailPage() {
   }
 
   const done = task.status === "completed";
+  const paused = isPaused(task);
   const overdue = isOverdue(task);
   const repeat = recurrenceLabel(task);
   // Snoozing an undated task gives it a time (it becomes scheduled)
-  const canSnooze = !done;
-  const canSkip = !done && task.task_type === "recurring";
+  const canSnooze = !done && !paused;
+  const canSkip = !done && !paused && task.task_type === "recurring";
+  const isRecurring = task.task_type === "recurring";
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -123,6 +129,22 @@ export default function TaskDetailPage() {
                 <Moon className="w-4 h-4" /> Snooze
               </DropdownMenuItem>
             )}
+            {isRecurring &&
+              (paused ? (
+                <DropdownMenuItem
+                  onClick={() => actions.resume(task)}
+                  className="gap-2 py-2.5"
+                >
+                  <PlayCircle className="w-4 h-4" /> Resume
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem
+                  onClick={() => actions.pause(task)}
+                  className="gap-2 py-2.5"
+                >
+                  <PauseCircle className="w-4 h-4" /> Pause
+                </DropdownMenuItem>
+              ))}
             {canSkip && (
               <>
                 <DropdownMenuItem
@@ -162,7 +184,12 @@ export default function TaskDetailPage() {
           >
             {TASK_TYPE_LABEL[task.task_type]}
           </span>
-          {done && (
+          {paused && (
+            <span className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-semibold border border-border bg-muted text-muted-foreground">
+              <PauseCircle className="w-3.5 h-3.5" /> {pausedLabel(task)}
+            </span>
+          )}
+          {done && !paused && (
             <span className="text-xs px-2.5 py-1 rounded-full font-semibold border border-green-300 text-green-700 dark:border-green-500/40 dark:text-green-400">
               Done
             </span>
@@ -180,7 +207,7 @@ export default function TaskDetailPage() {
         {/* Schedule facts */}
         {(task.due_date || task.reminder_at || repeat) && (
           <ul className="space-y-1.5 text-sm">
-            {task.due_date && (
+            {task.due_date && !paused && (
               <li
                 className={cn(
                   "flex items-center gap-2",
@@ -194,7 +221,7 @@ export default function TaskDetailPage() {
                 {formatWhen(task.due_date)}
               </li>
             )}
-            {task.reminder_at && !done && (
+            {task.reminder_at && !done && !paused && (
               <li className="flex items-center gap-2 text-muted-foreground">
                 <Bell className="w-4 h-4 shrink-0" />
                 Reminder {formatWhen(task.reminder_at)}
@@ -224,26 +251,35 @@ export default function TaskDetailPage() {
       </div>
 
       {/* Primary actions */}
-      <div className="flex gap-2">
+      {paused ? (
         <Button
-          onClick={() => actions.toggleCompletion(task)}
-          variant={done ? "outline" : "default"}
-          className="flex-1 h-12 rounded-xl text-sm font-semibold gap-2"
+          onClick={() => actions.resume(task)}
+          className="w-full h-12 rounded-xl text-sm font-semibold gap-2"
         >
-          <Check className="w-4 h-4" />
-          {done ? "Mark as not done" : "Mark complete"}
+          <PlayCircle className="w-4 h-4" /> Resume
         </Button>
-        {canSnooze && (
+      ) : (
+        <div className="flex gap-2">
           <Button
-            onClick={() => actions.snooze(task)}
-            variant="outline"
-            className="h-12 rounded-xl text-sm font-semibold gap-2 px-4"
+            onClick={() => actions.toggleCompletion(task)}
+            variant={done ? "outline" : "default"}
+            className="flex-1 h-12 rounded-xl text-sm font-semibold gap-2"
           >
-            <Moon className="w-4 h-4" />
-            Snooze
+            <Check className="w-4 h-4" />
+            {done ? "Mark as not done" : "Mark complete"}
           </Button>
-        )}
-      </div>
+          {canSnooze && (
+            <Button
+              onClick={() => actions.snooze(task)}
+              variant="outline"
+              className="h-12 rounded-xl text-sm font-semibold gap-2 px-4"
+            >
+              <Moon className="w-4 h-4" />
+              Snooze
+            </Button>
+          )}
+        </div>
+      )}
 
       {task.description && (
         <Section title="Details">

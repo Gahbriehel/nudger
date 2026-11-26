@@ -1,4 +1,5 @@
 import { Task } from "@/types/database.types";
+import { isPausedAt } from "@/lib/recurrence";
 
 export interface NudgeBuckets {
   /** Past their due date. */
@@ -19,7 +20,7 @@ export function getNudgeBuckets(
   const buckets: NudgeBuckets = { overdue: [], forgotten: [], stale: [] };
 
   for (const task of tasks) {
-    if (task.status === "completed") continue;
+    if (task.status === "completed" || isPausedAt(task, now)) continue;
 
     const isOverdue =
       !!task.due_date && new Date(task.due_date).getTime() < now;

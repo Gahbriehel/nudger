@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useTaskStore } from "@/store/taskStore";
 import { cn } from "@/lib/utils";
+import { isPausedAt } from "@/lib/recurrence";
 
 const isSameDay = (iso: string | null | undefined, ref: Date) => {
   if (!iso) return false;
@@ -24,7 +25,9 @@ export function QuickStats() {
     return () => clearInterval(t);
   }, []);
 
-  const pending = tasks.filter((t) => t.status !== "completed");
+  const pending = tasks.filter(
+    (t) => t.status !== "completed" && !isPausedAt(t),
+  );
   const overdue = now
     ? pending.filter(
         (t) => t.due_date && new Date(t.due_date).getTime() < now.getTime(),

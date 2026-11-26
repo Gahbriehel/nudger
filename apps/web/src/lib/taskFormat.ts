@@ -1,4 +1,21 @@
 import type { Subtask, Task, TaskType } from "@/types/database.types";
+import { isPausedAt } from "@/lib/recurrence";
+
+export const isPaused = (task: Task, now: number = Date.now()) =>
+  isPausedAt(task, now);
+
+/** "Paused until 12 Jan" / "Paused until resumed". */
+export function pausedLabel(task: Task): string {
+  if (!task.paused_until) return "Paused until resumed";
+  const d = new Date(task.paused_until).toLocaleDateString(undefined, {
+    day: "numeric",
+    month: "short",
+    ...(new Date(task.paused_until).getFullYear() !== new Date().getFullYear()
+      ? { year: "numeric" }
+      : {}),
+  });
+  return `Paused until ${d}`;
+}
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -52,6 +69,7 @@ export function recurrenceLabel(task: Task): string | null {
 export function isOverdue(task: Task, now: number = Date.now()): boolean {
   return (
     task.status !== "completed" &&
+    !isPausedAt(task, now) &&
     !!task.due_date &&
     new Date(task.due_date).getTime() < now
   );
