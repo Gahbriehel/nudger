@@ -117,8 +117,15 @@ export function NudgelistView() {
             Your mind is clear
           </p>
           <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">
-            Nothing overdue, forgotten, or going stale.
+            Nothing overdue, forgotten, or going stale. Tasks show up here when
+            they pass their due date or go untouched for 3 days or more.
           </p>
+          <Link
+            href="/guide#nudges"
+            className="text-xs font-semibold text-brand-indigo underline-offset-2 hover:underline"
+          >
+            How nudges work
+          </Link>
         </div>
       ) : (
         SECTIONS.map(({ kind, title, intro, badge }) => {

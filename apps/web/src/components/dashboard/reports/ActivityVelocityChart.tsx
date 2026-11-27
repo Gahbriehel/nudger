@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { DailyActivityPoint } from "@/types/database.types";
 import { cn } from "@/lib/utils";
 import { BarChart3, Award } from "lucide-react";
@@ -68,6 +69,12 @@ export function ActivityVelocityChart({
             Tasks completed or occurrences checked off will automatically graph
             here.
           </p>
+          <Link
+            href="/guide#reports"
+            className="inline-block text-xs font-semibold text-brand-indigo underline-offset-2 hover:underline"
+          >
+            How reports work
+          </Link>
         </div>
       ) : (
         <div className="space-y-4">

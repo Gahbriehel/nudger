@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { BarChart3, ChevronRight } from "lucide-react";
+import { BarChart3, BookOpen, ChevronRight } from "lucide-react";
 import { SettingsView } from "@/components/dashboard/SettingsView";
 
 export default function SettingsPage() {
@@ -30,6 +30,24 @@ export default function SettingsPage() {
           </span>
           <span className="block text-xs text-muted-foreground">
             Weekly & monthly productivity summaries
+          </span>
+        </span>
+        <ChevronRight className="w-5 h-5 text-muted-foreground" />
+      </Link>
+
+      <Link
+        href="/guide"
+        className="flex items-center gap-3 border border-border bg-card rounded-2xl p-4 shadow-sm active:bg-muted"
+      >
+        <span className="p-2.5 rounded-xl bg-brand-indigo/10 text-brand-indigo">
+          <BookOpen className="w-5 h-5" />
+        </span>
+        <span className="flex-1">
+          <span className="block text-sm font-semibold text-foreground">
+            How Nudger works
+          </span>
+          <span className="block text-xs text-muted-foreground">
+            A guide to tasks, nudges, reports and notifications
           </span>
         </span>
         <ChevronRight className="w-5 h-5 text-muted-foreground" />

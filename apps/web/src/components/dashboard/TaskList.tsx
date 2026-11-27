@@ -201,14 +201,22 @@ export function TaskList() {
       ) : tasks.length === 0 ? (
         <EmptyState
           title="Nothing to remember yet"
-          body="Add the first thing you don't want to keep in your head — a deadline, a habit, or just something for later."
+          body="Add the first thing you don't want to keep in your head — a deadline, a habit, or just something for later. All you need is a title."
           action={
-            <Button
-              onClick={openCreateTask}
-              className="h-11 px-5 rounded-xl font-semibold gap-2"
-            >
-              <Plus className="w-4 h-4" /> Add your first task
-            </Button>
+            <div className="flex flex-col items-center gap-3">
+              <Button
+                onClick={openCreateTask}
+                className="h-11 px-5 rounded-xl font-semibold gap-2"
+              >
+                <Plus className="w-4 h-4" /> Add your first task
+              </Button>
+              <Link
+                href="/guide#task-types"
+                className="text-xs font-semibold text-brand-indigo underline-offset-2 hover:underline"
+              >
+                Flexible, scheduled or recurring? Learn the difference
+              </Link>
+            </div>
           }
         />
       ) : visible.length === 0 ? (

@@ -144,6 +144,15 @@ export default function HomePage() {
             >
               <Plus className="w-4 h-4" /> Add a task
             </Button>
+            <p className="text-xs text-muted-foreground pt-1">
+              New here?{" "}
+              <Link
+                href="/guide"
+                className="font-semibold text-brand-indigo underline-offset-2 hover:underline"
+              >
+                See how Nudger works
+              </Link>
+            </p>
           </div>
         ) : (
           <>
