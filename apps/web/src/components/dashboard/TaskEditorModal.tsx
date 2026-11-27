@@ -128,7 +128,7 @@ export function TaskEditorModal() {
             <X className="w-5 h-5" aria-hidden="true" />
           </button>
         </div>
-        <div className="overflow-y-auto overscroll-contain -mx-1 px-1 pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] sm:pb-0">
+        <div className="overflow-y-auto overscroll-contain scroll-pt-3 -mx-1.5 px-1.5 pt-1.5 pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] sm:pb-0">
           {isQuick ? (
             <QuickAdd
               onSaved={() => {

@@ -3,7 +3,15 @@
 // Offline is read-only: pages and static assets are cached as you use the
 // app, and the task list itself is kept by the app in localStorage.
 
-const VERSION = "v2";
+// Bump to purge every device's saved copies on the next visit.
+const VERSION = "v3";
+
+// Dev servers serve un-hashed files (same URL, new content), so cache-first
+// would keep showing old code. Only cache build assets on real deployments.
+const IS_DEV_HOST =
+  /^(localhost|127\.0\.0\.1|\[::1\]|192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(
+    self.location.hostname,
+  );
 const PAGES_CACHE = `nudger-pages-${VERSION}`;
 const ASSETS_CACHE = `nudger-assets-${VERSION}`;
 const OFFLINE_URL = "/offline.html";
@@ -95,9 +103,10 @@ self.addEventListener("fetch", (event) => {
     return;
   }
   if (
-    url.pathname.startsWith("/_next/static/") ||
-    url.pathname.startsWith("/icons/") ||
-    url.pathname.startsWith("/images/")
+    !IS_DEV_HOST &&
+    (url.pathname.startsWith("/_next/static/") ||
+      url.pathname.startsWith("/icons/") ||
+      url.pathname.startsWith("/images/"))
   ) {
     event.respondWith(handleAsset(request));
   }
