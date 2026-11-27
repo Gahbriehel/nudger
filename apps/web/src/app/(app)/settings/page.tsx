@@ -37,6 +37,7 @@ export default function SettingsPage() {
 
       <Link
         href="/guide"
+        data-tour="guide-link"
         className="flex items-center gap-3 border border-border bg-card rounded-2xl p-4 shadow-sm active:bg-muted"
       >
         <span className="p-2.5 rounded-xl bg-brand-indigo/10 text-brand-indigo">

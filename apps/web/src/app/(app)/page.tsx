@@ -116,6 +116,7 @@ export default function HomePage() {
         {/* On phones the floating + button handles this */}
         <Button
           onClick={openCreateTask}
+          data-tour="add-task"
           className="hidden md:inline-flex h-10 px-4 rounded-lg font-semibold gap-1.5"
         >
           <Plus className="w-4 h-4" /> New task
@@ -125,7 +126,10 @@ export default function HomePage() {
       <QuickStats />
 
       {/* Now */}
-      <section className="border border-border bg-card p-4 sm:p-5 rounded-2xl shadow-sm space-y-5">
+      <section
+        data-tour="today"
+        className="border border-border bg-card p-4 sm:p-5 rounded-2xl shadow-sm space-y-5"
+      >
         {!hasLoaded || !agenda ? (
           <div className="flex justify-center py-8">
             <Spinner size="md" label="Loading your day..." />

@@ -71,6 +71,7 @@ export async function POST(request: Request) {
       quiet_hours_end,
       enable_weekly_report,
       enable_monthly_report,
+      tour_completed,
     } = body;
 
     const payload = {
@@ -94,6 +95,10 @@ export async function POST(request: Request) {
       }),
       ...(enable_monthly_report !== undefined && {
         enable_monthly_report: Boolean(enable_monthly_report),
+      }),
+      // true = mark the welcome tour done, false = reset it
+      ...(tour_completed !== undefined && {
+        tour_completed_at: tour_completed ? new Date().toISOString() : null,
       }),
       updated_at: new Date().toISOString(),
     };

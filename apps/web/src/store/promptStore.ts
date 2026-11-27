@@ -7,7 +7,7 @@ import { useUiStore } from "@/store/uiStore";
  * session. Priority is enforced by timing: announcements load immediately,
  * the notification ask waits a few seconds, the install ask waits longer.
  */
-export type PromptKind = "announcement" | "notifications" | "install";
+export type PromptKind = "announcement" | "notifications" | "install" | "tour";
 
 export interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;

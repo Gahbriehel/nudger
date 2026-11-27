@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { cn } from "@/lib/utils";
-import { NAV_ITEMS, isNavActive, useNudgeCount } from "./navigation";
+import { NAV_ITEMS, isNavActive, navTourId, useNudgeCount } from "./navigation";
 
 export function DashboardHeader() {
   const user = useAuthStore((s) => s.user);
@@ -49,6 +49,7 @@ export function DashboardHeader() {
               <Link
                 key={item.href}
                 href={item.href}
+                data-tour={navTourId(item.href)}
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   "relative px-3 py-2 rounded-lg text-sm font-semibold transition-colors",

@@ -137,3 +137,64 @@
 html {
   transition: color-scheme 0.2s;
 }
+
+/* Guided tour (driver.js) themed to the app. Doubled class beats driver's
+   `all: unset`, and the CSS variables make dark mode work automatically. */
+.driver-popover.nudger-tour {
+  background-color: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: 1rem;
+  padding: 1.1rem;
+  max-width: min(320px, calc(100vw - 2rem));
+  box-shadow: 0 20px 50px -12px rgb(0 0 0 / 0.35);
+}
+.nudger-tour .driver-popover-title {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.nudger-tour .driver-popover-description {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+.nudger-tour .driver-popover-footer {
+  gap: 0.5rem;
+}
+.nudger-tour .driver-popover-progress-text {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.75rem;
+  margin-right: auto;
+}
+.nudger-tour .driver-popover-footer-btn {
+  min-height: 2.25rem;
+  padding: 0 0.85rem;
+  border-radius: 0.6rem;
+  border: 1px solid hsl(var(--border));
+  background-color: transparent;
+  color: hsl(var(--foreground));
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-shadow: none;
+}
+.nudger-tour .driver-popover-footer-btn:hover,
+.nudger-tour .driver-popover-footer-btn:focus-visible {
+  background-color: hsl(var(--muted));
+}
+.nudger-tour .driver-popover-next-btn {
+  background-color: hsl(var(--primary));
+  border-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+.nudger-tour .driver-popover-next-btn:hover,
+.nudger-tour .driver-popover-next-btn:focus-visible {
+  background-color: hsl(var(--primary) / 0.9);
+}
+.nudger-tour .nudger-tour-skip {
+  border-color: transparent;
+  color: hsl(var(--muted-foreground));
+}
+.driver-popover.nudger-tour .driver-popover-arrow {
+  border-color: hsl(var(--card));
+}

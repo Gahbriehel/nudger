@@ -33,6 +33,10 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/settings", label: "Settings", icon: Settings, mobile: true },
 ];
 
+/** Stable id for guided-tour targets, e.g. "/nudgelist" -> "nav-nudgelist". */
+export const navTourId = (href: string) =>
+  `nav-${href === "/" ? "home" : href.slice(1)}`;
+
 export function isNavActive(href: string, pathname: string): boolean {
   return href === "/" ? pathname === "/" : pathname.startsWith(href);
 }
@@ -74,6 +78,7 @@ export function BottomNav() {
       <Link
         key={item.href}
         href={item.href}
+        data-tour={navTourId(item.href)}
         aria-current={active ? "page" : undefined}
         className={cn(
           "flex-1 flex flex-col items-center justify-center gap-1 h-full text-[11px] font-semibold transition-colors",
@@ -106,6 +111,7 @@ export function BottomNav() {
         <div className="flex-1 flex items-center justify-center">
           <button
             onClick={openCreateTask}
+            data-tour="add-task"
             aria-label="New task"
             className="w-14 h-14 -mt-6 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 flex items-center justify-center active:scale-95 transition-transform ring-4 ring-background"
           >

@@ -15,6 +15,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { TaskEditorModal } from "./TaskEditorModal";
 import { BottomNav } from "./navigation";
 import { OfflineBanner } from "./OfflineBanner";
+import { WelcomeTour } from "./WelcomeTour";
 import { useUiStore } from "@/store/uiStore";
 import { withTimeout } from "@/lib/platform";
 import { flushPendingCommits } from "@/lib/deferredCommit";
@@ -189,6 +190,7 @@ export function AuthenticatedLayout({
 
       <BottomNav />
       <TaskEditorModal />
+      <WelcomeTour />
 
       {/* Interruptive prompts — coordinated so at most one shows at a time */}
       <NotificationPromptModal />

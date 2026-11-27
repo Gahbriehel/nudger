@@ -1,20 +1,24 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { GUIDE_SECTIONS, QUICK_START } from "@/lib/guide";
+import { ReplayTourButton } from "@/components/dashboard/ReplayTourButton";
 
 export const metadata = { title: "How Nudger works" };
 
 export default function GuidePage() {
   return (
     <div className="space-y-6 max-w-3xl">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">
-          How Nudger works
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Nudger remembers things so you don&apos;t have to. Here&apos;s
-          everything it can do.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            How Nudger works
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Nudger remembers things so you don&apos;t have to. Here&apos;s
+            everything it can do.
+          </p>
+        </div>
+        <ReplayTourButton />
       </div>
 
       {/* Quick start */}

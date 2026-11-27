@@ -110,6 +110,8 @@ export interface UserSettings {
   enable_monthly_report?: boolean;
   last_weekly_report_date?: string | null;
   last_monthly_report_date?: string | null;
+  /** When the user finished or skipped the welcome tour (null = not yet). */
+  tour_completed_at?: string | null;
   updated_at: string;
 }
 

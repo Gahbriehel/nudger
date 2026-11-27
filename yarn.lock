@@ -1520,6 +1520,11 @@ doctrine@^2.1.0:
   dependencies:
     esutils "^2.0.2"
 
+driver.js@^1.14.0:
+  version "1.14.0"
+  resolved "https://registry.yarnpkg.com/driver.js/-/driver.js-1.14.0.tgz#1cb35b11c9d136eb10c56ee758d4df8124075c37"
+  integrity sha512-BnCFuNU8QO2rrYiDra43Ortx6D6chqMvEMF1q3fWQfsC3xNyCX4T1P1vZDTXTxGdtcXh2v5r11hxSpNLF3DJVw==
+
 dunder-proto@^1.0.0, dunder-proto@^1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/dunder-proto/-/dunder-proto-1.0.1.tgz#d7ae667e1dc83482f8b70fd0f6eefc50da30f58a"
