@@ -3,7 +3,7 @@ import { ArrowRight } from "lucide-react";
 import { GUIDE_SECTIONS, QUICK_START } from "@/lib/guide";
 import { ReplayTourButton } from "@/components/dashboard/ReplayTourButton";
 
-export const metadata = { title: "How Nudger works" };
+export const metadata = { title: "How Nudger works · Nudger" };
 
 export default function GuidePage() {
   return (

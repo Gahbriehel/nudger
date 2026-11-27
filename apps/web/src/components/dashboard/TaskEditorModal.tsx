@@ -8,6 +8,7 @@ import { useTaskStore } from "@/store/taskStore";
 import { TaskEditor } from "./TaskEditor";
 import { QuickAdd } from "./QuickAdd";
 import type { Task } from "@/types/database.types";
+import { useDialogFocus } from "@/hooks/useDialogFocus";
 
 /**
  * The single create/edit task dialog. A bottom sheet on phones, a centred
@@ -40,6 +41,9 @@ export function TaskEditorModal() {
     dirtyRef.current = false;
     closeEditor();
   }, [closeEditor]);
+
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(!!editor, dialogRef);
 
   // Escape closes; lock background scroll while open
   useEffect(() => {
@@ -79,14 +83,17 @@ export function TaskEditorModal() {
   return (
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sm:p-4">
       <div
+        aria-hidden="true"
         className="absolute inset-0 bg-foreground/30 backdrop-blur-sm"
         onClick={requestClose}
       />
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="task-editor-title"
-        className="relative border border-border bg-card w-full sm:max-w-lg rounded-t-[24px] sm:rounded-[24px] shadow-2xl px-5 pt-5 sm:p-6 overflow-hidden max-h-[92dvh] sm:max-h-[90vh] flex flex-col animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200"
+        className="relative outline-none border border-border bg-card w-full sm:max-w-lg rounded-t-[24px] sm:rounded-[24px] shadow-2xl px-5 pt-5 sm:p-6 overflow-hidden max-h-[92dvh] sm:max-h-[90vh] flex flex-col animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200"
       >
         <div className="flex items-start justify-between mb-4 pb-4 border-b border-border/50">
           <div className="flex items-center gap-3">
@@ -118,7 +125,7 @@ export function TaskEditorModal() {
             aria-label="Close"
             className="text-muted-foreground hover:text-foreground hover:bg-muted/50 p-2 -m-1 rounded-full transition-colors"
           >
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5" aria-hidden="true" />
           </button>
         </div>
         <div className="overflow-y-auto overscroll-contain -mx-1 px-1 pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] sm:pb-0">

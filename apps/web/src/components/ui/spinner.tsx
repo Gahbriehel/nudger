@@ -12,8 +12,12 @@ export function Spinner({
   ...props
 }: SpinnerProps) {
   return (
-    <div className="flex flex-col items-center justify-center gap-3.5">
+    <div
+      role="status"
+      className="flex flex-col items-center justify-center gap-3.5"
+    >
       <div
+        aria-hidden="true"
         className={cn(
           "animate-spin rounded-full border-2 border-brand-blue/20 border-t-brand-indigo dark:border-brand-indigo/30 dark:border-t-brand-blue",
           {
@@ -25,6 +29,7 @@ export function Spinner({
         )}
         {...props}
       />
+      {!label && <span className="sr-only">Loading</span>}
       {label && (
         <span
           className={cn(

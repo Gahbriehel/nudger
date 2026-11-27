@@ -35,7 +35,7 @@ export function ReportOverviewCards({ report }: ReportOverviewCardsProps) {
             className={cn(
               "inline-flex items-center gap-1 font-semibold text-[11px]",
               metrics.completionRateDelta >= 0
-                ? "text-emerald-600 dark:text-emerald-400"
+                ? "text-emerald-700 dark:text-emerald-400"
                 : "text-rose-600 dark:text-rose-400",
             )}
           >
@@ -53,7 +53,7 @@ export function ReportOverviewCards({ report }: ReportOverviewCardsProps) {
           </span>
         ),
       icon: CheckCircle2,
-      color: "text-emerald-600 dark:text-emerald-400",
+      color: "text-emerald-700 dark:text-emerald-400",
       bg: "bg-emerald-500/10 border-emerald-500/20",
     },
     {

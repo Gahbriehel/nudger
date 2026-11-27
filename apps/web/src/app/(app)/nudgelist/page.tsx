@@ -5,6 +5,7 @@ import { NudgelistView } from "@/components/dashboard/NudgelistView";
 export default function NudgelistPage() {
   return (
     <div className="space-y-6">
+      <title>Nudges · Nudger</title>
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-foreground">
           Nudges

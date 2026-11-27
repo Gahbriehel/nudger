@@ -730,7 +730,7 @@ export function TaskEditor({
                         <button
                           type="button"
                           onClick={() => handleSaveEditSubtask(idx)}
-                          className="p-1.5 rounded-lg hover:bg-green-500/10 text-green-600 dark:text-green-400 transition-colors"
+                          className="p-1.5 rounded-lg hover:bg-green-500/10 text-green-700 dark:text-green-400 transition-colors"
                           title="Save changes (Enter)"
                           aria-label="Save checklist item"
                         >

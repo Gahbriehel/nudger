@@ -15,7 +15,7 @@
     --secondary: 207 90% 54%;
     --secondary-foreground: 0 0% 100%;
     --muted: 222 20% 93%;
-    --muted-foreground: 222 16% 45%;
+    --muted-foreground: 222 16% 41%;
     --accent: 207 90% 96%;
     --accent-foreground: 207 90% 30%;
     --destructive: 0 84.2% 60.2%;
@@ -197,4 +197,37 @@ html {
 }
 .driver-popover.nudger-tour .driver-popover-arrow {
   border-color: hsl(var(--card));
+}
+
+/* Keyboard focus: every interactive element gets a visible ring unless a
+   component styles its own (utilities in components win over this rule). */
+@layer base {
+  :where(
+    a,
+    button,
+    [role="button"],
+    [role="switch"],
+    summary,
+    [tabindex]
+  ):focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+}
+
+/* Respect "reduce motion": no spinning-in, sliding or smooth scrolling.
+   Spinners keep turning slowly so loading is still visible. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .animate-spin {
+    animation-duration: 1.5s !important;
+    animation-iteration-count: infinite !important;
+  }
 }

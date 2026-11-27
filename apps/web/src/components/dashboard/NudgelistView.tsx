@@ -46,19 +46,19 @@ const SECTIONS: {
     kind: "overdue",
     title: "Overdue",
     intro: "Past their due date. Finish them or snooze to a better time.",
-    badge: "bg-red-500/15 text-red-600 dark:text-red-400",
+    badge: "bg-red-500/15 text-red-700 dark:text-red-400",
   },
   {
     kind: "forgotten",
     title: "Forgotten",
     intro: "Untouched for over a week. Still relevant?",
-    badge: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
+    badge: "bg-amber-500/15 text-amber-800 dark:text-amber-400",
   },
   {
     kind: "stale",
     title: "Going stale",
     intro: "Untouched for 3–7 days.",
-    badge: "bg-blue-500/15 text-blue-600 dark:text-blue-400",
+    badge: "bg-blue-500/15 text-blue-700 dark:text-blue-400",
   },
 ];
 
@@ -219,7 +219,7 @@ function NudgeCard({
           className={cn(
             "text-xs",
             kind === "overdue"
-              ? "text-red-600 dark:text-red-400 font-medium"
+              ? "text-red-700 dark:text-red-400 font-medium"
               : "text-muted-foreground",
           )}
         >

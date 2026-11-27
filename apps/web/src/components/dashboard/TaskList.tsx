@@ -405,7 +405,7 @@ function TaskCard({
                   className={cn(
                     "flex items-center gap-1.5 font-medium",
                     overdue
-                      ? "text-red-600 dark:text-red-400"
+                      ? "text-red-700 dark:text-red-400"
                       : "text-muted-foreground",
                   )}
                 >

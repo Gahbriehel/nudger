@@ -22,7 +22,7 @@ export function TaskDistributionBreakdown({
     flexible: {
       bg: "bg-blue-500/15",
       fill: "bg-blue-500",
-      text: "text-blue-600 dark:text-blue-400",
+      text: "text-blue-700 dark:text-blue-400",
     },
     scheduled: {
       bg: "bg-brand-indigo/15",
@@ -32,7 +32,7 @@ export function TaskDistributionBreakdown({
     recurring: {
       bg: "bg-emerald-500/15",
       fill: "bg-emerald-500",
-      text: "text-emerald-600 dark:text-emerald-400",
+      text: "text-emerald-700 dark:text-emerald-400",
     },
   };
 
@@ -41,7 +41,7 @@ export function TaskDistributionBreakdown({
       {/* Task Type Breakdown */}
       <div className="p-6 rounded-2xl border border-border bg-card/85 backdrop-blur-md shadow-sm space-y-4">
         <div className="flex items-center gap-2.5 pb-2 border-b border-border/50">
-          <div className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
+          <div className="p-2 rounded-xl bg-blue-500/10 text-blue-700 dark:text-blue-400">
             <Layers className="w-4 h-4" />
           </div>
           <div>

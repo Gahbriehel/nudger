@@ -7,6 +7,7 @@ import { SettingsView } from "@/components/dashboard/SettingsView";
 export default function SettingsPage() {
   return (
     <div className="space-y-6">
+      <title>Settings · Nudger</title>
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-foreground">
           Settings

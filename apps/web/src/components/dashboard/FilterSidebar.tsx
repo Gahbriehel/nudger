@@ -1,9 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useTaskStore } from "@/store/taskStore";
 import { cn } from "@/lib/utils";
+import { useDialogFocus } from "@/hooks/useDialogFocus";
 import { Clock, Calendar, AlarmClock, ClipboardList } from "lucide-react";
 
 interface FilterSidebarProps {
@@ -13,6 +14,8 @@ interface FilterSidebarProps {
 
 export function FilterSidebar({ open, onClose }: FilterSidebarProps) {
   const { filters, setFilters } = useTaskStore();
+  const panelRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(open, panelRef);
 
   // Lock body scroll when open
   useEffect(() => {
@@ -49,6 +52,7 @@ export function FilterSidebar({ open, onClose }: FilterSidebarProps) {
     <>
       {/* Backdrop */}
       <div
+        aria-hidden="true"
         className={cn(
           "fixed inset-0 z-40 bg-foreground/20 backdrop-blur-sm transition-opacity duration-300",
           open
@@ -60,8 +64,13 @@ export function FilterSidebar({ open, onClose }: FilterSidebarProps) {
 
       {/* Sidebar Panel */}
       <div
+        ref={panelRef}
+        tabIndex={-1}
+        // Off-screen when closed: keep it out of the tab order and the
+        // accessibility tree
+        inert={!open}
         className={cn(
-          "fixed top-0 right-0 z-50 h-full w-80 max-w-full bg-card border-l border-border shadow-2xl flex flex-col transition-transform duration-300 ease-in-out",
+          "outline-none fixed top-0 right-0 z-50 h-full w-80 max-w-full bg-card border-l border-border shadow-2xl flex flex-col transition-transform duration-300 ease-in-out",
           open ? "translate-x-0" : "translate-x-full",
         )}
         aria-label="Filter options"

@@ -24,6 +24,7 @@ function TasksPageContent() {
 
   return (
     <div className="space-y-6">
+      <title>Tasks · Nudger</title>
       <div className="flex justify-between items-center gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">

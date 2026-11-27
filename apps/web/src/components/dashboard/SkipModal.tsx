@@ -71,11 +71,11 @@ export function SkipModal({
             disabled={isSubmitting}
             className="flex items-start gap-3.5 p-4 rounded-xl border border-border bg-card hover:bg-muted/40 hover:border-amber-500/40 transition-all text-left disabled:opacity-50 group shadow-sm"
           >
-            <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 group-hover:scale-105 transition-transform flex-shrink-0 mt-0.5">
+            <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-400 group-hover:scale-105 transition-transform flex-shrink-0 mt-0.5">
               <SkipForward className="w-5 h-5" />
             </div>
             <div className="space-y-1">
-              <h4 className="text-sm font-bold text-foreground group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+              <h4 className="text-sm font-bold text-foreground group-hover:text-amber-800 dark:group-hover:text-amber-400 transition-colors">
                 {actionType === "skipped"
                   ? "Skip 1 Occurrence"
                   : "Mark 1 Missed"}

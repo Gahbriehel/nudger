@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ReportData } from "@/types/database.types";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { useDialogFocus } from "@/hooks/useDialogFocus";
 import { Copy, Check, Printer, X, FileText } from "lucide-react";
 
 interface ReportExportModalProps {
@@ -18,6 +19,9 @@ export function ReportExportModal({
   onClose,
 }: ReportExportModalProps) {
   const [copied, setCopied] = useState(false);
+
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(isOpen, dialogRef, onClose);
 
   if (!isOpen) return null;
 
@@ -94,19 +98,30 @@ export function ReportExportModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
+        aria-hidden="true"
         className="absolute inset-0 bg-foreground/30 backdrop-blur-sm"
         onClick={onClose}
       />
 
       {/* Modal Container */}
-      <div className="relative border border-border bg-card backdrop-blur-md w-full max-w-2xl rounded-2xl shadow-2xl p-6 overflow-hidden max-h-[85vh] flex flex-col">
+      <div
+        ref={dialogRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="export-report-title"
+        className="relative outline-none border border-border bg-card backdrop-blur-md w-full max-w-2xl rounded-2xl shadow-2xl p-6 overflow-hidden max-h-[85vh] flex flex-col"
+      >
         <div className="flex items-center justify-between pb-4 border-b border-border/50">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-brand-indigo/10 text-brand-indigo">
               <FileText className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-foreground">
+              <h2
+                id="export-report-title"
+                className="text-base font-bold text-foreground"
+              >
                 Export Report Summary
               </h2>
               <p className="text-xs text-muted-foreground">{timeframe.label}</p>
@@ -115,9 +130,10 @@ export function ReportExportModal({
 
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted"
+            aria-label="Close"
+            className="w-11 h-11 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted"
           >
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4" aria-hidden="true" />
           </button>
         </div>
 

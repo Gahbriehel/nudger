@@ -29,7 +29,7 @@ export function CognitiveCueInsights({ metrics }: CognitiveCueInsightsProps) {
     <div className="p-6 rounded-2xl border border-border bg-card/85 backdrop-blur-md shadow-sm space-y-5">
       <div className="flex items-center justify-between gap-3 pb-2 border-b border-border/50">
         <div className="flex items-center gap-2.5">
-          <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+          <div className="p-2 rounded-xl bg-amber-500/10 text-amber-800 dark:text-amber-400">
             <Brain className="w-4 h-4" />
           </div>
           <div>
@@ -46,7 +46,7 @@ export function CognitiveCueInsights({ metrics }: CognitiveCueInsightsProps) {
           className={cn(
             "inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold border",
             isPositive
-              ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400"
+              ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-400"
               : "bg-muted border-border text-muted-foreground",
           )}
         >

@@ -98,6 +98,9 @@ export function WelcomeTour() {
     }
     const lastIndex = TOUR_STEPS.length - 1;
     const isPhone = window.matchMedia("(max-width: 767px)").matches;
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
     let finished = false;
 
     // Tracked here rather than read from driver.js internals, which can be
@@ -127,6 +130,8 @@ export function WelcomeTour() {
     };
 
     const tour = driver({
+      animate: !reduceMotion,
+      smoothScroll: !reduceMotion,
       showProgress: true,
       progressText: "{{current}} of {{total}}",
       nextBtnText: "Next",

@@ -96,6 +96,7 @@ export default function TaskDetailPage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
+      <title>Task · Nudger</title>
       {/* Top bar */}
       <div className="flex items-center justify-between -mx-2">
         <button
@@ -212,7 +213,7 @@ export default function TaskDetailPage() {
                 className={cn(
                   "flex items-center gap-2",
                   overdue
-                    ? "text-red-600 dark:text-red-400 font-semibold"
+                    ? "text-red-700 dark:text-red-400 font-semibold"
                     : "text-muted-foreground",
                 )}
               >

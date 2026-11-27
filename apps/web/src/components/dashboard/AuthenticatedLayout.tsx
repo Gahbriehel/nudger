@@ -180,11 +180,21 @@ export function AuthenticatedLayout({
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-[calc(env(safe-area-inset-top,0px)+0.5rem)] focus:left-3 focus:z-[200] focus:rounded-lg focus:bg-foreground focus:px-4 focus:py-2.5 focus:text-sm focus:font-semibold focus:text-background"
+      >
+        Skip to main content
+      </a>
       <DashboardHeader />
       <OfflineBanner />
 
       {/* Bottom padding clears the mobile tab bar + home indicator */}
-      <main className="max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 flex-1 mt-6 md:mt-8 space-y-8 pb-[calc(env(safe-area-inset-bottom,0px)+6.5rem)] md:pb-12">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="outline-none max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 flex-1 mt-6 md:mt-8 space-y-8 pb-[calc(env(safe-area-inset-bottom,0px)+6.5rem)] md:pb-12"
+      >
         {children}
       </main>
 

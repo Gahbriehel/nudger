@@ -52,20 +52,20 @@ export function QuickStats() {
       label: "Overdue",
       value: overdue,
       color: overdue
-        ? "text-red-600 dark:text-red-400"
+        ? "text-red-700 dark:text-red-400"
         : "text-muted-foreground",
       bg: overdue ? "bg-red-500/10 border-red-500/20" : "bg-card border-border",
     },
     {
       label: "Due today",
       value: dueToday,
-      color: "text-amber-600 dark:text-amber-400",
+      color: "text-amber-800 dark:text-amber-400",
       bg: "bg-amber-500/10 border-amber-500/20",
     },
     {
       label: "Done today",
       value: doneToday,
-      color: "text-green-600 dark:text-green-400",
+      color: "text-green-700 dark:text-green-400",
       bg: "bg-green-500/10 border-green-500/20",
     },
   ];

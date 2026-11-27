@@ -50,6 +50,11 @@ export function DashboardHeader() {
                 key={item.href}
                 href={item.href}
                 data-tour={navTourId(item.href)}
+                aria-label={
+                  item.href === "/nudgelist" && nudgeCount > 0
+                    ? `${item.label}, ${nudgeCount} need attention`
+                    : undefined
+                }
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   "relative px-3 py-2 rounded-lg text-sm font-semibold transition-colors",
@@ -60,7 +65,7 @@ export function DashboardHeader() {
               >
                 {item.label}
                 {item.href === "/nudgelist" && nudgeCount > 0 && (
-                  <span className="ml-1.5 inline-flex min-w-5 h-5 px-1 items-center justify-center rounded-full bg-red-500 text-white text-[11px] font-bold">
+                  <span className="ml-1.5 inline-flex min-w-5 h-5 px-1 items-center justify-center rounded-full bg-red-600 text-white text-[11px] font-bold">
                     {nudgeCount}
                   </span>
                 )}

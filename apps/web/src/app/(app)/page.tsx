@@ -97,6 +97,7 @@ export default function HomePage() {
 
   return (
     <div className="space-y-6">
+      <title>Today · Nudger</title>
       {/* Greeting */}
       <div className="relative overflow-hidden border border-border bg-card/85 backdrop-blur-md px-5 py-4 sm:p-6 rounded-2xl flex items-center justify-between gap-4 shadow-sm before:absolute before:top-0 before:left-0 before:right-0 before:h-[3px] before:bg-gradient-to-r before:from-brand-indigo before:to-brand-blue">
         <div>
@@ -217,7 +218,7 @@ export default function HomePage() {
           href="/nudgelist"
           className="flex items-center gap-3 border border-amber-500/25 bg-amber-500/5 rounded-2xl p-4 active:bg-amber-500/10"
         >
-          <span className="w-10 h-10 shrink-0 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
+          <span className="w-10 h-10 shrink-0 rounded-full bg-amber-500/15 text-amber-800 dark:text-amber-400 flex items-center justify-center font-bold">
             {agenda.needsLook}
           </span>
           <span className="flex-1 min-w-0">
@@ -276,7 +277,7 @@ function AgendaGroup({
         className={cn(
           "text-xs font-bold uppercase tracking-wider",
           tone === "danger"
-            ? "text-red-600 dark:text-red-400"
+            ? "text-red-700 dark:text-red-400"
             : "text-muted-foreground",
         )}
       >
@@ -340,7 +341,7 @@ function AgendaRow({
         </span>
         <span className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
           {task.due_date && (
-            <span className={cn(overdue && "text-red-600 dark:text-red-400")}>
+            <span className={cn(overdue && "text-red-700 dark:text-red-400")}>
               {formatWhen(task.due_date, now)}
             </span>
           )}

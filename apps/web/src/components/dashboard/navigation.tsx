@@ -79,6 +79,9 @@ export function BottomNav() {
         key={item.href}
         href={item.href}
         data-tour={navTourId(item.href)}
+        aria-label={
+          showBadge ? `${item.label}, ${nudgeCount} need attention` : undefined
+        }
         aria-current={active ? "page" : undefined}
         className={cn(
           "flex-1 flex flex-col items-center justify-center gap-1 h-full text-[11px] font-semibold transition-colors",
@@ -89,8 +92,8 @@ export function BottomNav() {
           <Icon className="w-6 h-6" strokeWidth={active ? 2.4 : 1.8} />
           {showBadge && (
             <span
-              className="absolute -top-1.5 -right-2.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-background"
-              aria-label={`${nudgeCount} need attention`}
+              className="absolute -top-1.5 -right-2.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-background"
+              aria-hidden="true"
             >
               {nudgeCount > 99 ? "99+" : nudgeCount}
             </span>

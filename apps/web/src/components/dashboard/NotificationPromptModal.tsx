@@ -10,6 +10,7 @@ import {
 import { isPushSupported, withTimeout } from "@/lib/platform";
 import { canAsk, recordDismissal, recordDone } from "@/lib/promptCooldown";
 import { usePromptStore } from "@/store/promptStore";
+import { useDialogFocus } from "@/hooks/useDialogFocus";
 import { useTaskStore } from "@/store/taskStore";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
@@ -56,6 +57,7 @@ export function NotificationPromptModal() {
   const { tryAcquire, release, notificationContext, clearNotificationContext } =
     usePromptStore();
   const launchCheckedRef = useRef(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
   // Pending timers live outside effect cleanup: store updates (clearing the
   // context, background task refreshes) must not cancel a scheduled ask.
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -142,21 +144,30 @@ export function NotificationPromptModal() {
     }
   };
 
+  useDialogFocus(
+    showModal,
+    dialogRef,
+    isSubscribing ? undefined : handleDismiss,
+  );
+
   if (!showModal) return null;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)]">
       {/* Backdrop */}
       <div
+        aria-hidden="true"
         className="absolute inset-0 bg-background/80 backdrop-blur-sm"
         onClick={isSubscribing ? undefined : handleDismiss}
       />
 
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="notif-prompt-title"
-        className="relative border border-border bg-card/95 backdrop-blur-md w-full max-w-md rounded-3xl shadow-2xl p-7 overflow-hidden flex flex-col items-center text-center animate-in fade-in zoom-in-95 duration-300 before:absolute before:top-0 before:left-0 before:right-0 before:h-[4px] before:bg-gradient-to-r before:from-brand-indigo before:to-brand-blue"
+        className="relative outline-none border border-border bg-card/95 backdrop-blur-md w-full max-w-md rounded-3xl shadow-2xl p-7 overflow-hidden flex flex-col items-center text-center animate-in fade-in zoom-in-95 duration-300 before:absolute before:top-0 before:left-0 before:right-0 before:h-[4px] before:bg-gradient-to-r before:from-brand-indigo before:to-brand-blue"
       >
         <button
           onClick={handleDismiss}

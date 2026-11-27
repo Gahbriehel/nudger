@@ -39,7 +39,7 @@ export function InstallAppCard() {
 
       {platform.standalone ? (
         <p className="text-sm text-muted-foreground flex items-center gap-2 mt-3">
-          <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400" />
+          <CheckCircle2 className="w-4 h-4 text-green-700 dark:text-green-400" />
           You&apos;re using the installed app.
         </p>
       ) : platform.ios ? (

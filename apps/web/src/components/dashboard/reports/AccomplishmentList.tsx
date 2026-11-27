@@ -55,7 +55,7 @@ export function AccomplishmentList({ items }: AccomplishmentListProps) {
     <div className="p-6 rounded-2xl border border-border bg-card/85 backdrop-blur-md shadow-sm space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-border/50">
         <div className="flex items-center gap-2.5">
-          <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+          <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
             <CheckCircle className="w-4 h-4" />
           </div>
           <div>
@@ -124,7 +124,7 @@ export function AccomplishmentList({ items }: AccomplishmentListProps) {
                     {isSubtask ? (
                       <CheckSquare className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400 shrink-0" />
                     ) : (
-                      <CheckCircle className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      <CheckCircle className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400 shrink-0" />
                     )}
 
                     <span className="text-xs font-semibold text-foreground truncate">

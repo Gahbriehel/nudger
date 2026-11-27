@@ -3,6 +3,7 @@ import { X, AlertTriangle, Info, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "./button";
 import { Spinner } from "./spinner";
+import { useDialogFocus } from "@/hooks/useDialogFocus";
 
 export interface ModalProps {
   isOpen: boolean;
@@ -33,6 +34,11 @@ export function Modal({
   isLoading = false,
   className,
 }: ModalProps) {
+  const dialogRef = React.useRef<HTMLDivElement>(null);
+  const titleId = React.useId();
+  const descId = React.useId();
+  useDialogFocus(isOpen, dialogRef, isLoading ? undefined : onClose);
+
   // Prevent scrolling behind modal when open
   React.useEffect(() => {
     if (isOpen) {
@@ -51,25 +57,25 @@ export function Modal({
     switch (variant) {
       case "destructive":
         return (
-          <div className="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-600 dark:text-red-400">
+          <div className="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-700 dark:text-red-400">
             <AlertOctagon className="w-6 h-6" />
           </div>
         );
       case "warning":
         return (
-          <div className="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-600 dark:text-amber-400">
+          <div className="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-800 dark:text-amber-400">
             <AlertTriangle className="w-6 h-6" />
           </div>
         );
       case "info":
         return (
-          <div className="w-12 h-12 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-600 dark:text-blue-400">
+          <div className="w-12 h-12 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-700 dark:text-blue-400">
             <Info className="w-6 h-6" />
           </div>
         );
       case "success":
         return (
-          <div className="w-12 h-12 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center text-green-600 dark:text-green-400">
+          <div className="w-12 h-12 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center text-green-700 dark:text-green-400">
             <CheckCircle2 className="w-6 h-6" />
           </div>
         );
@@ -82,6 +88,7 @@ export function Modal({
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
       {/* Backdrop */}
       <div
+        aria-hidden="true"
         className="absolute inset-0 bg-background/80 backdrop-blur-sm transition-opacity duration-300"
         onClick={isLoading ? undefined : onClose}
         style={{ animation: "fadeInOverlay 0.2s ease" }}
@@ -89,8 +96,15 @@ export function Modal({
 
       {/* Dialog Body */}
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={description ? descId : undefined}
+        aria-busy={isLoading || undefined}
+        tabIndex={-1}
         className={cn(
-          "relative z-10 w-full max-w-md bg-card border border-border rounded-2xl shadow-2xl p-6 space-y-5 flex flex-col items-center text-center",
+          "relative z-10 w-full max-w-md bg-card border border-border rounded-2xl shadow-2xl p-6 space-y-5 flex flex-col items-center text-center outline-none",
           className,
         )}
         style={{
@@ -101,9 +115,10 @@ export function Modal({
         {!isLoading && (
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
+            aria-label="Close"
+            className="absolute top-2 right-2 w-11 h-11 flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
           >
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4" aria-hidden="true" />
           </button>
         )}
 
@@ -112,9 +127,14 @@ export function Modal({
 
         {/* Text Headers */}
         <div className="space-y-1.5 w-full">
-          <h2 className="text-base font-bold text-foreground">{title}</h2>
+          <h2 id={titleId} className="text-base font-bold text-foreground">
+            {title}
+          </h2>
           {description && (
-            <p className="text-xs text-muted-foreground leading-relaxed">
+            <p
+              id={descId}
+              className="text-xs text-muted-foreground leading-relaxed"
+            >
               {description}
             </p>
           )}

@@ -411,7 +411,7 @@ export function SettingsView() {
           </div>
 
           {!isPushSupported ? (
-            <div className="bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs rounded-xl p-3.5 leading-normal">
+            <div className="bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-400 text-xs rounded-xl p-3.5 leading-normal">
               ⚠️ Push notifications are not supported in your current browser or
               mode. To receive push notifications on iOS, please install Nudger
               to your Home Screen first (see Nudger App below).
@@ -432,6 +432,9 @@ export function SettingsView() {
               <div className="flex items-center gap-3">
                 {(isTogglingPush || isSendingTest) && <Spinner size="sm" />}
                 <button
+                  role="switch"
+                  aria-checked={isSubscribed}
+                  aria-label="Push notifications"
                   type="button"
                   onClick={handleTogglePush}
                   disabled={
@@ -439,8 +442,8 @@ export function SettingsView() {
                     isSendingTest ||
                     (permissionState === "denied" && !isSubscribed)
                   }
-                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                    isSubscribed ? "bg-primary" : "bg-input"
+                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+                    isSubscribed ? "bg-primary" : "bg-muted-foreground/70"
                   } ${isTogglingPush || isSendingTest || (permissionState === "denied" && !isSubscribed) ? "opacity-50 cursor-not-allowed" : ""}`}
                 >
                   <span
@@ -480,7 +483,7 @@ export function SettingsView() {
                     max_flexible_nudges_per_day: val,
                   });
                 }}
-                className="shrink-0 bg-background border border-border text-foreground text-base md:text-xs font-semibold rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+                className="shrink-0 bg-background border border-border text-foreground text-base md:text-xs font-semibold rounded-lg px-3 py-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus:ring-1 focus:ring-primary cursor-pointer"
               >
                 <option value={1}>1 / day (Minimal)</option>
                 <option value={2}>2 / day (Balanced)</option>
@@ -504,6 +507,9 @@ export function SettingsView() {
                 </div>
 
                 <button
+                  role="switch"
+                  aria-checked={quietHoursEnabled}
+                  aria-label="Quiet hours"
                   type="button"
                   onClick={() => {
                     const nextVal = !quietHoursEnabled;
@@ -513,8 +519,8 @@ export function SettingsView() {
                     });
                   }}
                   disabled={isLoadingSettings || isSavingSettings}
-                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                    quietHoursEnabled ? "bg-primary" : "bg-input"
+                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+                    quietHoursEnabled ? "bg-primary" : "bg-muted-foreground/70"
                   }`}
                 >
                   <span
@@ -587,6 +593,9 @@ export function SettingsView() {
               </div>
 
               <button
+                role="switch"
+                aria-checked={enableSubtaskNudges}
+                aria-label="Checklist and subtask nudges"
                 type="button"
                 onClick={() => {
                   const nextVal = !enableSubtaskNudges;
@@ -596,8 +605,8 @@ export function SettingsView() {
                   });
                 }}
                 disabled={isLoadingSettings || isSavingSettings}
-                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                  enableSubtaskNudges ? "bg-primary" : "bg-input"
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+                  enableSubtaskNudges ? "bg-primary" : "bg-muted-foreground/70"
                 }`}
               >
                 <span
@@ -621,6 +630,9 @@ export function SettingsView() {
               </div>
 
               <button
+                role="switch"
+                aria-checked={enableIdleNudges}
+                aria-label="Idle prompts"
                 type="button"
                 onClick={() => {
                   const nextVal = !enableIdleNudges;
@@ -630,8 +642,8 @@ export function SettingsView() {
                   });
                 }}
                 disabled={isLoadingSettings || isSavingSettings}
-                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                  enableIdleNudges ? "bg-primary" : "bg-input"
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+                  enableIdleNudges ? "bg-primary" : "bg-muted-foreground/70"
                 }`}
               >
                 <span
@@ -655,6 +667,9 @@ export function SettingsView() {
               </div>
 
               <button
+                role="switch"
+                aria-checked={enableWeeklyReport}
+                aria-label="Weekly report"
                 type="button"
                 onClick={() => {
                   const nextVal = !enableWeeklyReport;
@@ -664,8 +679,8 @@ export function SettingsView() {
                   });
                 }}
                 disabled={isLoadingSettings || isSavingSettings}
-                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                  enableWeeklyReport ? "bg-primary" : "bg-input"
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+                  enableWeeklyReport ? "bg-primary" : "bg-muted-foreground/70"
                 }`}
               >
                 <span
@@ -689,6 +704,9 @@ export function SettingsView() {
               </div>
 
               <button
+                role="switch"
+                aria-checked={enableMonthlyReport}
+                aria-label="Monthly report"
                 type="button"
                 onClick={() => {
                   const nextVal = !enableMonthlyReport;
@@ -698,8 +716,8 @@ export function SettingsView() {
                   });
                 }}
                 disabled={isLoadingSettings || isSavingSettings}
-                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                  enableMonthlyReport ? "bg-primary" : "bg-input"
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+                  enableMonthlyReport ? "bg-primary" : "bg-muted-foreground/70"
                 }`}
               >
                 <span

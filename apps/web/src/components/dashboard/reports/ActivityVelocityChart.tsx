@@ -53,7 +53,7 @@ export function ActivityVelocityChart({
         </div>
 
         {mostProductiveDay && (
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-semibold">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-400 text-xs font-semibold">
             <Award className="w-3.5 h-3.5" />
             <span>Peak Day: {mostProductiveDay}</span>
           </div>
